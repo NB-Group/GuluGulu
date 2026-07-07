@@ -1,0 +1,21 @@
+common:
+  loading: 加载中...
+  empty: 暂无数据
+  confirm: 确定
+  cancel: 取消
+  settings: 设置
+  dark_mode: 深色模式
+  light_mode: 浅色模式
+nav:
+  home: 首页
+  problem_list: 题库
+  contest_list: 比赛
+  ranking: 排名
+  blog: 讨论
+  training: 题单
+  record: 记录
+home:
+  trending: 动态
+  recent_contests: 近期比赛
+  hot_problems: 热门题目
+  recent_discussions: 最近讨论

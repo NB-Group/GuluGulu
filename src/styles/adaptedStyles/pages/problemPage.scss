@@ -1,0 +1,10 @@
+// Adapted styles for Luogu problem detail pages
+// Applied when user is on luogu.com.cn/problem/* pages
+
+.problemPage {
+  // Hide the original Luogu problem page content since GulyGuly replaces it
+  // The original content is still accessible but visually hidden
+  #app > *:not(#guly) {
+    // Keep visible for now — GulyGuly renders on top via Shadow DOM
+  }
+}
