@@ -83,7 +83,7 @@ import { useMessagePolling } from '~/composables/useMessagePolling'
 const { unreadMsgCount } = useMessagePolling()
 
 function goToMessages() {
-  window.location.href = 'https://www.luogu.com.cn/chat'
+  navigateTo(AppPage.Messages, 'https://www.luogu.com.cn/chat')
 }
 
 const scrollTop = ref<number>(0)

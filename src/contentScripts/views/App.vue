@@ -186,6 +186,13 @@ function navigateTo(pageName: AppPage, url?: string) {
   const osInstance = scrollbarRef.value?.osInstance?.()
   const scrollTopValue: number = osInstance?.elements?.().viewport?.scrollTop || 0
 
+  // Update URL even for same-page navigation (e.g. list→detail)
+  const targetUrl = url || mainStore.getLuoguWebPageURLByPage(pageName)
+  if (targetUrl && targetUrl !== window.location.href) {
+    history.pushState({ page: pageName }, '', targetUrl)
+    currentUrl.value = targetUrl
+  }
+
   if (activatedPage.value === pageName) {
     if (activatedPage.value !== AppPage.Search) {
       if (scrollTopValue === 0)
@@ -196,12 +203,6 @@ function navigateTo(pageName: AppPage, url?: string) {
     return
   }
   activatedPage.value = pageName
-  // Update browser URL to match the page
-  const targetUrl = url || mainStore.getLuoguWebPageURLByPage(pageName)
-  if (targetUrl && targetUrl !== window.location.href) {
-    history.pushState({ page: pageName }, '', targetUrl)
-    currentUrl.value = targetUrl
-  }
 }
 
 function handleBackToTop(targetScrollTop = 0 as number) {

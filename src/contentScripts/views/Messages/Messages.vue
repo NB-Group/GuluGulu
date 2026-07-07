@@ -266,7 +266,7 @@ onMounted(fetchConversations)
 
               <!-- Messages list -->
               <Loading v-if="chatLoading" />
-              <div v-else class="msg-list" flex="~ col 1" p="x-4 y-3" gap-1>
+              <div v-else class="msg-list" flex="~ col 1" p="x-4 y-3" gap-2>
                 <div v-if="messages.length === 0" text="center" style="color:var(--bew-text-3);font-size:var(--bew-base-font-size)" py-8>
                   暂无消息，发送第一条消息吧
                 </div>
