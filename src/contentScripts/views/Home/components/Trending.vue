@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { renderIcon } from '~/utils/icons'
+import { timeAgo } from '~/utils/main'
 
 interface Item {
   id: string; type: 'contest' | 'discuss'
@@ -46,12 +47,6 @@ async function fetchData() {
   loading.value = false
 }
 
-function timeAgo(ts: number): string {
-  const diff = Math.floor(Date.now() / 1000) - ts
-  if (diff < 3600) return `${Math.floor(diff / 60)}分前`
-  if (diff < 86400) return `${Math.floor(diff / 3600)}时前`
-  return `${Math.floor(diff / 86400)}天前`
-}
 function typeIcon(t: string): string {
   return { contest: 'mingcute:trophy-line', discuss: 'mingcute:comment-line' }[t] || 'mingcute:time-line'
 }

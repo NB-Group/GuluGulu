@@ -1,5 +1,11 @@
 <script setup lang="ts">
 import { renderIcon } from '~/utils/icons'
+import { AppPage } from '~/enums/appEnums'
+import { useGulyApp } from '~/composables/useAppProvider'
+
+const { navigateTo } = useGulyApp()
+
+function backToList() { navigateTo(AppPage.Training, 'https://www.luogu.com.cn/training/list') }
 
 interface TrainingSet {
   id: number; name: string; problemCount: number; markCount: number; acCount?: number
@@ -57,7 +63,6 @@ async function fetchDetail(id: number) {
 
 function openTraining(id: number) { window.open(`https://www.luogu.com.cn/training/${id}`, '_blank') }
 function openProblem(pid: string) { window.open(`https://www.luogu.com.cn/problem/${pid}`, '_blank') }
-function backToList() { window.location.href = 'https://www.luogu.com.cn/training/list' }
 
 onMounted(() => { trainingId.value ? fetchDetail(trainingId.value) : fetchTrainings() })
 </script>

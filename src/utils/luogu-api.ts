@@ -170,3 +170,18 @@ export async function fetchProblemData(pid: string): Promise<any> {
     return null
   }
 }
+
+/**
+ * Fetch a Luogu page and parse its lentille-context JSON data.
+ * Centralizes the 14+ copy-pasted fetch+regex+parse patterns.
+ */
+export async function fetchLentilleContext(url: string, opts?: { fetcher?: typeof fetch }): Promise<any | null> {
+  const f = opts?.fetcher || fetch
+  try {
+    const res = await f(url, { credentials: 'same-origin' })
+    const html = await res.text()
+    const m = html.match(/<script\s+id="lentille-context"\s+type="application\/json"[^>]*>([^<]*)<\/script>/)
+    if (m?.[1]) return JSON.parse(m[1])
+    return null
+  } catch { return null }
+}

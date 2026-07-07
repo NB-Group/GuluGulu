@@ -1,5 +1,10 @@
 <script setup lang="ts">
 import { renderIcon } from '~/utils/icons'
+import { timeAgo } from '~/utils/main'
+import { AppPage } from '~/enums/appEnums'
+import { useGulyApp } from '~/composables/useAppProvider'
+
+const { navigateTo } = useGulyApp()
 
 interface Post {
   id: number; title: string; time: number; topped: boolean; locked: boolean
@@ -29,14 +34,7 @@ async function fetchPosts() {
   } catch {}
   loading.value = false
 }
-
-function timeAgo(ts: number): string {
-  const diff = Math.floor(Date.now() / 1000) - ts
-  if (diff < 3600) return `${Math.floor(diff / 60)}分前`
-  if (diff < 86400) return `${Math.floor(diff / 3600)}时前`
-  return `${Math.floor(diff / 86400)}天前`
-}
-function openPost(id: number) { window.location.href = `https://www.luogu.com.cn/discuss/${id}` }
+function openPost(id: number) { navigateTo(AppPage.Blog, `https://www.luogu.com.cn/discuss/${id}`) }
 
 onMounted(fetchPosts)
 </script>

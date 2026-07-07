@@ -138,8 +138,36 @@ function applyFrostedGlassClasses() {
 }
 watch(() => [settings.value.disableFrostedGlass, settings.value.reduceFrostedGlassBlur], applyFrostedGlassClasses, { immediate: true })
 
+// Listen to Luogu's own SPA navigation (hooked by inject/index.js)
+function onHistoryChange() {
+  const url = window.location.href
+  if (url !== currentUrl.value) {
+    currentUrl.value = url
+    const page = getPageFromUrl()
+    if (page !== activatedPage.value) {
+      activatedPage.value = page
+    }
+  }
+}
+window.addEventListener('historyChange', onHistoryChange)
+// Handle browser back/forward buttons
+function onPopState() {
+  currentUrl.value = window.location.href
+  const page = getPageFromUrl()
+  if (page !== activatedPage.value) {
+    activatedPage.value = page
+  }
+}
+window.addEventListener('popstate', onPopState)
+
 onMounted(() => {
   window.dispatchEvent(new CustomEvent(GULY_MOUNTED))
+  // Replace initial history state to avoid duplicate entries
+  const url = mainStore.getLuoguWebPageURLByPage(activatedPage.value)
+  if (url && url !== window.location.href) {
+    history.replaceState({ page: activatedPage.value }, '', url)
+    currentUrl.value = url
+  }
 
   // Unset the body background so our AppBackground shows through
   document.body.style.setProperty('background-color', 'unset', 'important')
@@ -152,7 +180,9 @@ onMounted(() => {
   })
 })
 
-function navigateTo(pageName: AppPage) {
+const currentUrl = ref(window.location.href)
+
+function navigateTo(pageName: AppPage, url?: string) {
   const osInstance = scrollbarRef.value?.osInstance?.()
   const scrollTopValue: number = osInstance?.elements?.().viewport?.scrollTop || 0
 
@@ -166,6 +196,12 @@ function navigateTo(pageName: AppPage) {
     return
   }
   activatedPage.value = pageName
+  // Update browser URL to match the page
+  const targetUrl = url || mainStore.getLuoguWebPageURLByPage(pageName)
+  if (targetUrl && targetUrl !== window.location.href) {
+    history.pushState({ page: pageName }, '', targetUrl)
+    currentUrl.value = targetUrl
+  }
 }
 
 function handleBackToTop(targetScrollTop = 0 as number) {
@@ -224,6 +260,7 @@ function openIframeDrawer(url: string) {
 
 provide<GulyAppProvider>('GULY_APP', {
   activatedPage,
+  currentUrl,
   mainAppRef,
   scrollbarRef,
   reachTop,
@@ -268,7 +305,7 @@ provide<GulyAppProvider>('GULY_APP', {
         @settings-visibility-change="toggleSettings"
         @refresh="handleThrottledPageRefresh"
         @back-to-top="handleThrottledBackToTop"
-        @dock-item-click="(dockItem) => navigateTo(dockItem.page)"
+        @dock-item-click="(dockItem) => navigateTo(dockItem.page, dockItem.url)"
       />
     </div>
 

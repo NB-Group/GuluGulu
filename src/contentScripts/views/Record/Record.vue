@@ -1,7 +1,13 @@
 <script setup lang="ts">
 import { renderIcon } from '~/utils/icons'
+import { timeAgo } from '~/utils/main'
 import { LUOGU_LANGUAGES } from '~/utils/luogu-api'
+import { AppPage } from '~/enums/appEnums'
+import { useGulyApp } from '~/composables/useAppProvider'
+
 import hljs from 'highlight.js/lib/core'
+
+const { currentUrl, navigateTo } = useGulyApp()
 import cpp from 'highlight.js/lib/languages/cpp'
 import python from 'highlight.js/lib/languages/python'
 import java from 'highlight.js/lib/languages/java'
@@ -80,7 +86,7 @@ function loadMore() {
   currentPage.value++; fetchRecords(true)
 }
 // Detect if we're on a detail page
-const recordId = computed(() => { const m = document.URL.match(/\/record\/(\d+)/i); return m ? Number(m[1]) : null })
+const recordId = computed(() => { const m = currentUrl.value.match(/\/record\/(\d+)/i); return m ? Number(m[1]) : null })
 const detail = ref<any>(null)
 const detailLoading = ref(false)
 
@@ -94,16 +100,12 @@ async function fetchDetail(id: number) {
   detailLoading.value = false
 }
 
-function openRecord(rid: number) { window.location.href = `https://www.luogu.com.cn/record/${rid}` }
-function backToList() { window.location.href = 'https://www.luogu.com.cn/record/list' }
+function openRecord(rid: number) { navigateTo(AppPage.Record, `https://www.luogu.com.cn/record/${rid}`) }
+function backToList() { navigateTo(AppPage.Record, 'https://www.luogu.com.cn/record/list') }
 function openProblem(pid: string) { window.open(`https://www.luogu.com.cn/problem/${pid}`, '_blank') }
 function langName(id: number | string): string {
   const lang = LUOGU_LANGUAGES.find(l => l.id === Number(id))
   return lang?.name || String(id)
-}
-function timeAgo(ts: number): string {
-  const d = Math.floor(Date.now()/1000) - ts
-  if (d < 3600) return `${Math.floor(d/60)}分前`; if (d < 86400) return `${Math.floor(d/3600)}时前`; return `${Math.floor(d/86400)}天前`
 }
 
 onMounted(() => { recordId.value ? fetchDetail(recordId.value) : fetchRecords() })

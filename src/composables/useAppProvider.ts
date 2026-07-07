@@ -5,6 +5,7 @@ import type { AppPage } from '~/enums/appEnums'
 
 export interface GulyAppProvider {
   activatedPage: Ref<AppPage>
+  currentUrl: Ref<string>
   scrollbarRef: Ref<any>
   reachTop: Ref<boolean>
   mainAppRef: Ref<HTMLElement>
@@ -14,7 +15,7 @@ export interface GulyAppProvider {
   haveScrollbar: () => Promise<boolean>
   openIframeDrawer: (url: string) => void
   openSettings: () => void
-  navigateTo: (page: AppPage) => void
+  navigateTo: (page: AppPage, url?: string) => void
 }
 
 export function useGulyApp(): GulyAppProvider {

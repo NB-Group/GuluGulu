@@ -101,3 +101,12 @@ export function queryDomUntilFound(selector: string, timeout = 500, abort?: Abor
 export function openLinkToNewTab(url: string, features: string = '') {
   window.open(url, '_blank', features)
 }
+
+/** Format a Unix timestamp (seconds) as a relative time string in Chinese */
+export function timeAgo(ts: number): string {
+  const diff = Math.floor(Date.now() / 1000) - ts
+  if (diff < 60) return '刚刚'
+  if (diff < 3600) return `${Math.floor(diff / 60)}分钟前`
+  if (diff < 86400) return `${Math.floor(diff / 3600)}小时前`
+  return `${Math.floor(diff / 86400)}天前`
+}

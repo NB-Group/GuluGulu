@@ -1,6 +1,11 @@
 <script setup lang="ts">
 import { renderIcon } from '~/utils/icons'
+import { timeAgo } from '~/utils/main'
 import { parseMarkdownContent } from '~/utils/markdown'
+import { AppPage } from '~/enums/appEnums'
+import { useGulyApp } from '~/composables/useAppProvider'
+
+const { currentUrl, navigateTo } = useGulyApp()
 
 interface Post {
   id: number; title: string; time: number; topped: boolean; locked: boolean
@@ -33,7 +38,7 @@ function loadMore() {
   if (loadingMore.value || currentPage.value >= totalPages.value) return
   currentPage.value++; fetchPosts(true)
 }
-const discussId = computed(() => { const m = document.URL.match(/\/discuss\/(\d+)/i) || document.URL.match(/\/blog\/(\d+)/i); return m ? Number(m[1]) : null })
+const discussId = computed(() => { const m = currentUrl.value.match(/\/discuss\/(\d+)/i) || currentUrl.value.match(/\/blog\/(\d+)/i); return m ? Number(m[1]) : null })
 const detail = ref<any>(null)
 const detailLoading = ref(false)
 
@@ -66,14 +71,8 @@ async function fetchDetail(id: number) {
   detailLoading.value = false
 }
 
-function openPost(id: number) { window.location.href = `https://www.luogu.com.cn/discuss/${id}` }
-function goToDiscussList() { window.location.href = 'https://www.luogu.com.cn/discuss' }
-function timeAgo(ts: number): string {
-  const diff = Math.floor(Date.now()/1000) - ts
-  if (diff < 3600) return `${Math.floor(diff/60)}分钟前`
-  if (diff < 86400) return `${Math.floor(diff/3600)}小时前`
-  return `${Math.floor(diff/86400)}天前`
-}
+function openPost(id: number) { navigateTo(AppPage.Blog, `https://www.luogu.com.cn/discuss/${id}`) }
+function goToDiscussList() { navigateTo(AppPage.Blog, 'https://www.luogu.com.cn/discuss') }
 onMounted(() => { discussId.value ? fetchDetail(discussId.value) : fetchPosts() })
 
 let obs: IntersectionObserver | null = null
