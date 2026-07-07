@@ -64,7 +64,12 @@ async function fetchDetail(id: number) {
 function openTraining(id: number) { window.open(`https://www.luogu.com.cn/training/${id}`, '_blank') }
 function openProblem(pid: string) { window.open(`https://www.luogu.com.cn/problem/${pid}`, '_blank') }
 
-onMounted(() => { trainingId.value ? fetchDetail(trainingId.value) : fetchTrainings() })
+function loadTrainingContent() {
+  if (trainingId.value) { detail.value = null; fetchDetail(trainingId.value) }
+  else { detail.value = null; trainings.value = []; currentPage.value = 1; fetchTrainings() }
+}
+onMounted(loadTrainingContent)
+watch(trainingId, () => loadTrainingContent())
 </script>
 
 <template>

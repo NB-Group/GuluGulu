@@ -10,12 +10,18 @@ export const DIFFICULTY_COLOR: Record<number, string> = {
   0: '#909399', 1: '#bfbfbf', 2: '#52c41a', 3: '#3498db',
   4: '#f39c12', 5: '#e74c3c', 6: '#9b59b6', 7: '#262626', 8: '#262626',
 }
-// CCF level uses same labels/colors as problem difficulty
+// CCF level — Luogu displays as "X 级" (not problem difficulty labels)
 export function ccfLabel(lv: number): string {
-  return DIFFICULTY_LABEL[lv] || '暂无评定'
+  if (!lv || lv <= 0) return '暂无'
+  return `${lv} 级`
+}
+// CCF level color follows the user's name color on Luogu, not problem difficulty colors
+const CCF_COLORS: Record<number, string> = {
+  0: '#909399', 1: '#bfbfbf', 2: '#52c41a', 3: '#52c41a',
+  4: '#3498db', 5: '#3498db', 6: '#f39c12', 7: '#e74c3c', 8: '#262626',
 }
 export function ccfColor(lv: number): string {
-  return DIFFICULTY_COLOR[lv] || '#909399'
+  return CCF_COLORS[lv] || '#909399'
 }
 export function diffLabel(d: number): string {
   return DIFFICULTY_LABEL[d] || '暂无评定'

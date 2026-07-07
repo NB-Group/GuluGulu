@@ -142,6 +142,7 @@ function cellTooltip(cell: HeatCell): string {
 }
 
 onMounted(fetchUser)
+watch(uid, () => { if (uid.value) fetchUser() })
 </script>
 
 <template>

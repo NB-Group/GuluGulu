@@ -57,7 +57,8 @@ export function useDark() {
       nextTick(() => {
         document.body?.classList.add('dark')
       })
-
+      // Cache for synchronous access in content script (prevents flash)
+      try { localStorage.setItem('gulugulu-dark', '1') } catch {}
       window.dispatchEvent(new CustomEvent('global.themeChange', { detail: 'dark' }))
     }
     else {
@@ -66,7 +67,7 @@ export function useDark() {
       nextTick(() => {
         document.body?.classList.remove('dark')
       })
-
+      try { localStorage.setItem('gulugulu-dark', '0') } catch {}
       window.dispatchEvent(new CustomEvent('global.themeChange', { detail: 'light' }))
     }
   }

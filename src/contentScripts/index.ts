@@ -127,11 +127,18 @@ if (/https?:\/\/(?:www\.)?luogu\.com(?:\.cn)?/.test(currentUrl)
   || /https?:\/\/(?:www\.)?luogu\.org/.test(currentUrl)) {
   document.documentElement.classList.add('guly-design')
   // Set dark class synchronously before Vue mounts to prevent flash
+  // Cache is written by useDark.ts whenever theme changes
   try {
-    const stored = JSON.parse(localStorage.getItem('settings') || '{}')
-    if (stored.themeMode === 'dark' || (stored.themeMode !== 'light' && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+    const cachedDark = localStorage.getItem('gulugulu-dark')
+    if (cachedDark === '1') {
       document.documentElement.classList.add('dark')
+    } else if (cachedDark === null) {
+      // First visit: use system preference
+      if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
+        document.documentElement.classList.add('dark')
+      }
     }
+    // cachedDark === '0' means light mode — do nothing
   } catch {}
   useDark()
 }

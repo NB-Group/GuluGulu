@@ -244,6 +244,7 @@ function openOriginal() { window.open(`https://www.luogu.com.cn/contest/${contes
 function openRecord(rid: number) { window.open(`https://www.luogu.com.cn/record/${rid}`, '_blank') }
 
 onMounted(() => { fetchContestData() })
+watch(contestId, () => { if (contestId.value) fetchContestData() })
 watch(activeTab, (t) => { if (t === 'ranking' && scoreboard.value.length === 0) fetchScoreboard() })
 </script>
 
