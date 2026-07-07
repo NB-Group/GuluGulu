@@ -79,66 +79,12 @@ onMounted(async () => {
 })
 
 // === Message notification polling ===
-const unreadMsgCount = ref(0)
-const lastUnreadUsers = ref<Set<number>>(new Set())
-const notifiedOnce = ref(false)
-let msgPollTimer: ReturnType<typeof setInterval> | null = null
+import { useMessagePolling } from '~/composables/useMessagePolling'
+const { unreadMsgCount } = useMessagePolling()
 
-async function pollUnreadMessages() {
-  if (!isLogin.value) return
-  try {
-    const res = await fetch('https://www.luogu.com.cn/chat?_contentOnly=1', { credentials: 'same-origin' })
-    const json = await res.json()
-    const raw = json?.currentData?.unreadMessageCount
-    const currentUnread: Record<number, number> = {}
-    if (raw && typeof raw === 'object' && !Array.isArray(raw)) {
-      for (const [k, v] of Object.entries(raw)) currentUnread[Number(k)] = Number(v) || 0
-    }
-    const total = Object.values(currentUnread).reduce((a: number, b) => a + b, 0)
-    const newUsers = Object.keys(currentUnread).map(Number).filter(uid => !lastUnreadUsers.value.has(uid))
-
-    // Desktop notification for new senders (skip first poll to avoid spam on page load; respect user toggle)
-    const notifyEnabled = localStorage.getItem('gulugulu-msg-notify') !== 'false'
-    if (notifyEnabled && notifiedOnce.value && newUsers.length > 0 && 'Notification' in window) {
-      const msgs: any[] = json?.currentData?.latestMessages?.result || []
-      for (const uid of newUsers) {
-        const msg = msgs.find((m: any) => Number(m.sender.uid) === uid || Number(m.receiver.uid) === uid)
-        const name = msg ? (Number(msg.sender.uid) === uid ? msg.sender.name : msg.receiver.name) : '有人'
-        const preview = msg?.content?.slice(0, 80) || ''
-        try {
-          // Request permission if needed, then show notification
-          if (Notification.permission === 'granted') {
-            const n = new Notification(`${name} 发来新消息`, {
-              body: preview,
-              icon: 'https://cdn.luogu.com.cn/upload/usericon/' + uid + '.png',
-              tag: 'gulugulu-msg',
-            })
-            n.onclick = () => { window.location.href = 'https://www.luogu.com.cn/chat'; n.close() }
-          }
-        } catch {}
-      }
-    }
-    notifiedOnce.value = true
-    lastUnreadUsers.value = new Set(Object.keys(currentUnread).map(Number))
-    unreadMsgCount.value = total
-  } catch {}
-}
-function startMsgPolling() {
-  if (msgPollTimer) return
-  pollUnreadMessages()
-  msgPollTimer = setInterval(pollUnreadMessages, 15000) // 15s
-}
-function stopMsgPolling() {
-  if (msgPollTimer) { clearInterval(msgPollTimer); msgPollTimer = null }
-}
 function goToMessages() {
   window.location.href = 'https://www.luogu.com.cn/chat'
 }
-
-// Start/stop based on login state
-watch(isLogin, (v) => { if (v) startMsgPolling(); else stopMsgPolling() })
-onMounted(() => { if (isLogin.value) startMsgPolling() })
-onUnmounted(() => stopMsgPolling())
 
 const scrollTop = ref<number>(0)
 const oldScrollTop = ref<number>(0)

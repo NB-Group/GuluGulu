@@ -1,6 +1,9 @@
 <script setup lang="ts">
 import { renderIcon } from '~/utils/icons'
 import { getCsrfToken } from '~/utils/luogu-api'
+import { useMessagePolling } from '~/composables/useMessagePolling'
+
+const { notifyEnabled, toggleNotify } = useMessagePolling()
 
 interface ChatUser {
   uid: number; name: string; avatar: string; color: string; badge: string | null
@@ -27,7 +30,6 @@ const chatLoading = ref(false)
 
 const newMsg = ref('')
 const sending = ref(false)
-const notifyEnabled = ref(localStorage.getItem('gulugulu-msg-notify') !== 'false')
 
 const currentUid = computed(() => Number((window as any).__guly_user?.uid) || 0)
 const currentName = computed(() => (window as any).__guly_user?.name || '')
@@ -180,14 +182,6 @@ function formatTime(ts: number): string {
   const isToday = d.toDateString() === now.toDateString()
   if (isToday) return d.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })
   return `${d.getMonth() + 1}/${d.getDate()} ${d.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })}`
-}
-function toggleNotify() {
-  notifyEnabled.value = !notifyEnabled.value
-  localStorage.setItem('gulugulu-msg-notify', String(notifyEnabled.value))
-  // Request notification permission if enabling
-  if (notifyEnabled.value && 'Notification' in window && Notification.permission === 'default') {
-    Notification.requestPermission()
-  }
 }
 function openUser(uid: number) { window.open(`https://www.luogu.com.cn/user/${uid}`, '_blank') }
 function handleKeydown(e: KeyboardEvent) {
