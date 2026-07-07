@@ -342,6 +342,7 @@ onMounted(fetchConversations)
   line-height: 1.5;
   white-space: pre-wrap;
   word-break: break-word;
+  margin-bottom: 8px;
 }
 .msg-mine {
   background: var(--bew-theme-color);

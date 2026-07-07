@@ -108,7 +108,12 @@ function langName(id: number | string): string {
   return lang?.name || String(id)
 }
 
-onMounted(() => { recordId.value ? fetchDetail(recordId.value) : fetchRecords() })
+function loadContent() {
+  if (recordId.value) { detail.value = null; fetchDetail(recordId.value) }
+  else { detail.value = null; currentPage.value = 1; records.value = []; fetchRecords() }
+}
+onMounted(loadContent)
+watch(recordId, () => loadContent())
 let obs: IntersectionObserver | null = null
 onMounted(() => {
   obs = new IntersectionObserver((e) => { if (e[0]?.isIntersecting && !loading.value && !loadingMore.value) loadMore() }, { rootMargin: '400px' })

@@ -125,8 +125,15 @@ let beforeLoadedStyleEl: HTMLStyleElement | undefined
 // Apply dark mode + guly-design class on ALL Luogu pages (including auth)
 if (/https?:\/\/(?:www\.)?luogu\.com(?:\.cn)?/.test(currentUrl)
   || /https?:\/\/(?:www\.)?luogu\.org/.test(currentUrl)) {
-  useDark()
   document.documentElement.classList.add('guly-design')
+  // Set dark class synchronously before Vue mounts to prevent flash
+  try {
+    const stored = JSON.parse(localStorage.getItem('settings') || '{}')
+    if (stored.themeMode === 'dark' || (stored.themeMode !== 'light' && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+      document.documentElement.classList.add('dark')
+    }
+  } catch {}
+  useDark()
 }
 
 if (isSupportedPages() || isSupportedIframePages()) {
@@ -134,18 +141,10 @@ if (isSupportedPages() || isSupportedIframePages()) {
     beforeLoadedStyleEl = injectCSS(`
       html.guly-design {
         background-color: var(--bew-bg);
-        transition: background-color 0.2s ease-in;
       }
 
       body {
         display: none;
-      }
-    `)
-
-    // Add opacity transition effect for page loaded
-    injectCSS(`
-      body {
-        transition: opacity 0.5s;
       }
     `)
   }

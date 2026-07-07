@@ -73,7 +73,13 @@ async function fetchDetail(id: number) {
 
 function openPost(id: number) { navigateTo(AppPage.Blog, `https://www.luogu.com.cn/discuss/${id}`) }
 function goToDiscussList() { navigateTo(AppPage.Blog, 'https://www.luogu.com.cn/discuss') }
-onMounted(() => { discussId.value ? fetchDetail(discussId.value) : fetchPosts() })
+// Load appropriate content based on URL (list vs detail)
+function loadContent() {
+  if (discussId.value) { detail.value = null; fetchDetail(discussId.value) }
+  else { detail.value = null; currentPage.value = 1; posts.value = []; fetchPosts() }
+}
+onMounted(loadContent)
+watch(discussId, () => loadContent())
 
 let obs: IntersectionObserver | null = null
 onMounted(() => {
