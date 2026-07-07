@@ -41,13 +41,13 @@ interface ProblemData {
 
 const difficultyMap: Record<number, { label: string; color: string }> = {
   0: { label: '暂无评定', color: '#909399' },
-  1: { label: '入门', color: '#52c41a' },
-  2: { label: '普及−', color: '#3498db' },
-  3: { label: '普及/提高−', color: '#e6a23c' },
+  1: { label: '入门', color: '#bfbfbf' },
+  2: { label: '普及−', color: '#52c41a' },
+  3: { label: '普及/提高−', color: '#3498db' },
   4: { label: '普及+/提高', color: '#f39c12' },
   5: { label: '提高+/省选−', color: '#e74c3c' },
   6: { label: '省选/NOI−', color: '#9b59b6' },
-  7: { label: 'NOI/NOI+/CTSC', color: '#e91e63' },
+  7: { label: 'NOI/NOI+/CTSC', color: '#262626' },
 }
 
 const problem = ref<ProblemData>({
@@ -324,10 +324,6 @@ onMounted(() => {
                 <span v-html="renderIcon('mingcute:code-line', 16)" style="display:contents" />
                 提交代码
               </Button>
-              <Button type="secondary" @click="openOriginalPage">
-                <span v-html="renderIcon('mingcute:external-link-line', 16)" style="display:contents" />
-                原站查看
-              </Button>
             </div>
           </div>
         </div>
@@ -387,13 +383,13 @@ onMounted(() => {
                   <span v-html="renderIcon('mingcute:arrow-right-line', 14)" style="display:contents" />
                   样例 {{ idx + 1 }} — 输入
                 </div>
-                <pre><code>{{ sample.input }}</code></pre>
+                <pre style="margin:0 0 12px 0"><code>{{ sample.input }}</code></pre>
 
                 <div class="sample-header" style="border-top: 1px solid var(--bew-border-color);">
                   <span v-html="renderIcon('mingcute:arrow-left-line', 14)" style="display:contents" />
                   样例 {{ idx + 1 }} — 输出
                 </div>
-                <pre><code>{{ sample.output }}</code></pre>
+                <pre style="margin:0 0 12px 0"><code>{{ sample.output }}</code></pre>
 
                 <div v-if="sample.explanation" class="sample-header" style="border-top: 1px solid var(--bew-border-color);">
                   <span v-html="renderIcon('mingcute:bulb-line', 14)" style="display:contents" />

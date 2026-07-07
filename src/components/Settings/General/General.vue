@@ -48,14 +48,14 @@ const searchBarModeOptions = computed(() => [
 
     <SettingsItemGroup title="性能">
       <SettingsItem title="禁用毛玻璃效果" desc="关闭毛玻璃可提升低配设备性能">
-        <Radio v-model="settings.frostGlass" />
+        <Radio v-model="settings.disableFrostedGlass" />
       </SettingsItem>
       <SettingsItem
-        v-if="settings.frostGlass"
+        v-if="!settings.disableFrostedGlass"
         title="降低毛玻璃模糊强度"
         desc="减少模糊可提升性能"
       >
-        <Radio v-model="settings.reducedBlur" />
+        <Radio v-model="settings.reduceFrostedGlassBlur" />
       </SettingsItem>
       <SettingsItem title="禁用阴影" desc="关闭阴影效果可小幅提升性能">
         <Radio v-model="settings.disableShadow" />

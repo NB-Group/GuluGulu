@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { renderIcon } from '~/utils/icons'
 import { getCsrfToken } from '~/utils/luogu-api'
 
 interface ChatUser {
@@ -26,8 +27,10 @@ const chatLoading = ref(false)
 
 const newMsg = ref('')
 const sending = ref(false)
+const notifyEnabled = ref(localStorage.getItem('gulugulu-msg-notify') !== 'false')
 
 const currentUid = computed(() => Number((window as any).__guly_user?.uid) || 0)
+const currentName = computed(() => (window as any).__guly_user?.name || '')
 
 // ============================================================
 // Fetch conversations
@@ -42,7 +45,12 @@ async function fetchConversations() {
     const res = await fetch('https://www.luogu.com.cn/chat?_contentOnly=1', { credentials: 'same-origin' })
     const json = await res.json()
     const msgs: Message[] = json?.currentData?.latestMessages?.result || []
-    const unread: Record<number, number> = json?.currentData?.unreadMessageCount || {}
+    const rawUnread = json?.currentData?.unreadMessageCount
+    // unreadMessageCount may be object {} or array []
+    const unread: Record<string, number> = {}
+    if (rawUnread && typeof rawUnread === 'object' && !Array.isArray(rawUnread)) {
+      for (const [k, v] of Object.entries(rawUnread)) unread[String(k)] = Number(v) || 0
+    }
 
     // Group latest messages by conversation partner
     const map = new Map<number, Conversation>()
@@ -52,7 +60,7 @@ async function fetchConversations() {
         map.set(other.uid, {
           user: other,
           lastMsg: msg,
-          unread: unread[String(other.uid)] || unread[other.uid] || 0,
+          unread: unread[String(other.uid)] || 0,
         })
       }
     }
@@ -76,7 +84,9 @@ async function openChat(uid: number, user?: ChatUser) {
       headers: { 'X-Requested-With': 'XMLHttpRequest' },
     })
     const json = await res.json()
-    messages.value = (json?.messages?.result || []).reverse()
+    const result = json?.messages?.result || []
+    // Sort by time: oldest first → newest last (chat order)
+    messages.value = [...result].sort((a: any, b: any) => (a.time || 0) - (b.time || 0))
 
     // Clear unread
     try {
@@ -87,12 +97,18 @@ async function openChat(uid: number, user?: ChatUser) {
         credentials: 'same-origin',
         body: JSON.stringify({ user: uid }),
       })
-      // Update local unread count
       const conv = conversations.value.find(c => c.user.uid === uid)
       if (conv) conv.unread = 0
     } catch {}
   } catch {}
   chatLoading.value = false
+
+  // Scroll to bottom after messages render
+  await nextTick()
+  requestAnimationFrame(() => {
+    const el = document.querySelector('.msg-list')
+    if (el) el.scrollTop = el.scrollHeight
+  })
 }
 
 function closeChat() {
@@ -118,19 +134,35 @@ async function sendMessage() {
     })
     const json = await res.json()
     if (json?._empty !== undefined || res.ok) {
-      // Add sent message locally
-      messages.value.push({
+      const newMsgObj: Message = {
         id: Date.now(),
-        sender: { uid: currentUid.value, name: (window as any).__guly_user?.name || '', avatar: `https://cdn.luogu.com.cn/upload/usericon/${currentUid.value}.png`, color: '', badge: null },
+        sender: { uid: currentUid.value, name: currentName.value, avatar: `https://cdn.luogu.com.cn/upload/usericon/${currentUid.value}.png`, color: '', badge: null },
         receiver: activeChatUser.value || { uid: activeChatUid.value!, name: '', avatar: '', color: '', badge: null },
         time: Math.floor(Date.now() / 1000),
         status: 2,
         content: text,
-      })
+      }
+      messages.value.push(newMsgObj)
       newMsg.value = ''
+
+      // Update conversation in sidebar
+      const idx = conversations.value.findIndex(c => c.user.uid === activeChatUid.value)
+      if (idx !== -1) {
+        conversations.value[idx] = { ...conversations.value[idx], lastMsg: newMsgObj, unread: 0 }
+      } else {
+        // New conversation — insert at top
+        conversations.value.unshift({
+          user: activeChatUser.value || { uid: activeChatUid.value!, name: '', avatar: '', color: '', badge: null },
+          lastMsg: newMsgObj,
+          unread: 0,
+        })
+      }
+
       nextTick(() => {
-        const el = document.querySelector('.msg-list')
-        if (el) el.scrollTop = el.scrollHeight
+        requestAnimationFrame(() => {
+          const el = document.querySelector('.msg-list')
+          if (el) el.scrollTop = el.scrollHeight
+        })
       })
     }
   } catch (e: any) {
@@ -149,6 +181,14 @@ function formatTime(ts: number): string {
   if (isToday) return d.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })
   return `${d.getMonth() + 1}/${d.getDate()} ${d.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })}`
 }
+function toggleNotify() {
+  notifyEnabled.value = !notifyEnabled.value
+  localStorage.setItem('gulugulu-msg-notify', String(notifyEnabled.value))
+  // Request notification permission if enabling
+  if (notifyEnabled.value && 'Notification' in window && Notification.permission === 'default') {
+    Notification.requestPermission()
+  }
+}
 function openUser(uid: number) { window.open(`https://www.luogu.com.cn/user/${uid}`, '_blank') }
 function handleKeydown(e: KeyboardEvent) {
   if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage() }
@@ -166,11 +206,20 @@ onMounted(fetchConversations)
         <!-- ============================================================ -->
         <!-- Messages Layout: sidebar + chat area -->
         <!-- ============================================================ -->
-        <div class="chat-layout" flex="~" h-full rounded="$bew-radius" shadow="[var(--bew-shadow-1),var(--bew-shadow-edge-glow-1)]" border="1 $bew-border-color" style="backdrop-filter:var(--bew-filter-glass-1)" overflow="hidden">
+        <div class="chat-layout" flex="~" h-full bg="$bew-content" rounded="$bew-radius" shadow="[var(--bew-shadow-1),var(--bew-shadow-edge-glow-1)]" border="1 $bew-border-color" style="backdrop-filter:var(--bew-filter-glass-1)" overflow="hidden">
           <!-- Sidebar: conversation list -->
           <div class="chat-sidebar" w="300px" shrink-0 border="r-1 $bew-border-color" bg="$bew-content" flex="~ col">
-            <div p-4 border="b-1 $bew-border-color" bg="$bew-fill-1">
+            <div p-4 border="b-1 $bew-border-color" bg="$bew-fill-1" flex="~ items-center justify-between">
               <h2 style="font-size:var(--bew-base-font-size);color:var(--bew-text-1);font-weight:700">私信</h2>
+              <button
+                @click="toggleNotify"
+                :title="notifyEnabled ? '桌面通知已开启' : '桌面通知已关闭'"
+                style="background:none;border:1px solid var(--bew-border-color);border-radius:999px;cursor:pointer;padding:3px 10px;font-size:11px;font-weight:600;color:var(--bew-text-2);display:flex;align-items:center;gap:4px;transition:all .2s"
+                :style="notifyEnabled ? { background: 'var(--bew-theme-color-20)', color: 'var(--bew-theme-color)', borderColor: 'var(--bew-theme-color-30)' } : {}"
+              >
+                <span v-html="renderIcon(notifyEnabled ? 'mingcute:notification-line' : 'mingcute:notification-off-line', 13)" style="display:contents" />
+                {{ notifyEnabled ? '提醒' : '静音' }}
+              </button>
             </div>
             <div flex="1" overflow="y-auto">
               <div v-if="conversations.length === 0" p-8 text="center" style="color:var(--bew-text-3);font-size:var(--bew-base-font-size)">
@@ -223,36 +272,22 @@ onMounted(fetchConversations)
 
               <!-- Messages list -->
               <Loading v-if="chatLoading" />
-              <div v-else class="msg-list" flex="~ col 1" p-4 gap-2>
+              <div v-else class="msg-list" flex="~ col 1" p="x-4 y-3" gap-1>
                 <div v-if="messages.length === 0" text="center" style="color:var(--bew-text-3);font-size:var(--bew-base-font-size)" py-8>
                   暂无消息，发送第一条消息吧
                 </div>
-                <div
-                  v-for="msg in messages" :key="msg.id"
-                  flex="~"
-                  :style="{ justifyContent: msg.sender.uid === currentUid ? 'flex-end' : 'flex-start' }"
-                >
+                <TransitionGroup name="msg-fade" tag="div" appear>
                   <div
-                    :style="{
-                      maxWidth: '70%',
-                      padding: '10px 14px',
-                      borderRadius: '12px',
-                      fontSize: 'var(--bew-base-font-size)',
-                      lineHeight: '1.5',
-                      whiteSpace: 'pre-wrap',
-                      wordBreak: 'break-word',
-                      background: msg.sender.uid === currentUid ? 'var(--bew-theme-color)' : 'var(--bew-fill-2)',
-                      color: msg.sender.uid === currentUid ? 'white' : 'var(--bew-text-1)',
-                      borderBottomRightRadius: msg.sender.uid === currentUid ? '4px' : '12px',
-                      borderBottomLeftRadius: msg.sender.uid === currentUid ? '12px' : '4px',
-                    }"
+                    v-for="msg in messages" :key="msg.id"
+                    flex="~"
+                    :style="{ justifyContent: Number(msg.sender.uid) === currentUid ? 'flex-end' : 'flex-start' }"
                   >
-                    {{ msg.content }}
-                    <div :style="{ fontSize: '.7em', marginTop: '4px', opacity: .7, textAlign: 'right' }">
-                      {{ formatTime(msg.time) }}
+                    <div class="msg-bubble" :class="Number(msg.sender.uid) === currentUid ? 'msg-mine' : 'msg-other'">
+                      {{ msg.content }}
+                      <div class="msg-time">{{ formatTime(msg.time) }}</div>
                     </div>
                   </div>
-                </div>
+                </TransitionGroup>
               </div>
 
               <!-- Input area -->
@@ -283,25 +318,71 @@ onMounted(fetchConversations)
 
 <style lang="scss" scoped>
 .chat-layout {
-  min-height: 70vh;
-  max-height: calc(100vh - var(--bew-top-bar-height) - 60px);
+  height: calc(100vh - var(--bew-top-bar-height) - 60px);
+  min-height: 400px;
 }
 .chat-sidebar {
   overflow-y: auto;
-  @media (max-width: 768px) {
-    width: 100% !important;
-    border-right: none !important;
-  }
+  @media (max-width: 768px) { width: 100% !important; border-right: none !important; }
 }
 .chat-area {
-  min-height: 0; /* critical: allows flex child to shrink for scrolling */
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
 }
 .msg-list {
   min-height: 0;
+  flex: 1;
   overflow-y: auto;
   &::-webkit-scrollbar { width: 5px; }
   &::-webkit-scrollbar-track { background: transparent; }
   &::-webkit-scrollbar-thumb { background: var(--bew-border-color); border-radius: 3px; &:hover { background: var(--bew-text-4); } }
 }
 .conversation-item:hover { background: var(--bew-fill-2); }
+/* Message bubbles */
+.msg-bubble {
+  max-width: 70%;
+  padding: 10px 14px;
+  border-radius: 12px;
+  font-size: var(--bew-base-font-size);
+  line-height: 1.5;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.msg-mine {
+  background: var(--bew-theme-color);
+  color: #fff;
+  border-bottom-right-radius: 4px;
+}
+.msg-other {
+  background: var(--bew-fill-2);
+  color: var(--bew-text-1);
+  border-bottom-left-radius: 4px;
+}
+.msg-time {
+  font-size: .7em;
+  margin-top: 4px;
+  opacity: .7;
+  text-align: right;
+}
+/* Message fade animation */
+.msg-fade-enter-active,
+.msg-fade-appear-active {
+  transition: opacity 0.3s ease, transform 0.3s ease;
+}
+.msg-fade-leave-active {
+  transition: opacity 0.2s ease;
+  position: absolute;
+}
+.msg-fade-enter-from,
+.msg-fade-appear-from {
+  opacity: 0;
+  transform: translateY(10px);
+}
+.msg-fade-leave-to {
+  opacity: 0;
+}
+.msg-fade-move {
+  transition: transform 0.3s ease;
+}
 </style>

@@ -1,245 +1,297 @@
 <script setup lang="ts">
 import { renderIcon } from '~/utils/icons'
+import { getCsrfToken } from '~/utils/luogu-api'
+import { ccfLabel, ccfColor } from '~/utils/difficulty'
 
-const props = defineProps<{
-  uid?: string
-}>()
+const uid = computed(() => {
+  const m = document.URL.match(/\/user\/(\d+)/)
+  return m ? Number(m[1]) : null
+})
 
-// Extract UID from URL if no prop
-function extractUidFromUrl(): string {
-  const match = document.URL.match(/\/user\/(\d+)/i)
-  return match?.[1] || '1'
+interface UserData {
+  uid: number; name: string; avatar: string; color: string; ccfLevel: number
+  slogan: string; background: string; badge: string | null
+  followingCount: number; followerCount: number; ranking: number
+  passedProblemCount: number; submittedProblemCount: number
+  registerTime: number; introduction: string; userRelationship: number
+  eloValue: number | null
 }
 
-const userId = computed(() => props.uid || extractUidFromUrl())
+const user = ref<UserData | null>(null)
+const currentViewer = ref<any>(null)
+const prizes = ref<any[]>([])
+const gu = ref<any>(null)
+const dailyCounts = ref<Record<string, [number, number]>>({})
+const loading = ref(true)
+const errorMsg = ref('')
 
-interface RecentActivity {
-  id: string
-  type: 'ac' | 'contest' | 'blog' | 'submit'
-  title: string
-  time: number
-  detail?: string
+const relationshipLabel = computed(() => {
+  const r = user.value?.userRelationship || 0
+  if (r === 2 || r === 3) return '互相关注'
+  if (r === 1) return '已关注'
+  return null
+})
+
+function colorVar(c: string): string {
+  const m: Record<string, string> = { Red: '#e74c3c', Green: '#52c41a', Blue: '#3498db', Orange: '#f39c12', Purple: '#9b59b6', Gray: '#95a5a6' }
+  return m[c] || '#52c41a'
 }
 
-const now = Math.floor(Date.now() / 1000)
-const hour = 3600
-
-const mockUser = {
-  uid: '1',
-  username: 'NaCly_Fish',
-  avatar: '',
-  rating: 3241,
-  rank: 1,
-  bio: '一名热爱算法的 OIer，喜欢数学和数据结构。Fish & Chips!',
-  followingCount: 42,
-  followerCount: 1024,
-  solvedCount: 1847,
-  contestCount: 156,
-  blogCount: 23,
-  discussCount: 67,
-  registerDate: '2019-03-15',
+async function fetchUser() {
+  if (!uid.value) { errorMsg.value = '无效的用户ID'; loading.value = false; return }
+  loading.value = true; errorMsg.value = ''
+  try {
+    const res = await fetch(`https://www.luogu.com.cn/user/${uid.value}`, { credentials: 'same-origin' })
+    const html = await res.text()
+    const m = html.match(/<script\s+id="lentille-context"\s+type="application\/json"[^>]*>([^<]*)<\/script>/)
+    if (m?.[1]) {
+      const ctx = JSON.parse(m[1])
+      const u = ctx?.data?.user
+      if (u) {
+        user.value = {
+          uid: u.uid, name: u.name, avatar: u.avatar, color: u.color,
+          ccfLevel: u.ccfLevel || 0, slogan: u.slogan || '', background: u.background || '',
+          badge: u.badge, followingCount: u.followingCount || 0,
+          followerCount: u.followerCount || 0, ranking: u.ranking || 0,
+          passedProblemCount: u.passedProblemCount || 0,
+          submittedProblemCount: u.submittedProblemCount || 0,
+          registerTime: u.registerTime || 0,
+          introduction: u.introduction || '',
+          userRelationship: u.userRelationship || 0,
+          eloValue: u.eloValue,
+        }
+      }
+      currentViewer.value = ctx?.user || null
+      prizes.value = ctx?.data?.prizes || []
+      gu.value = ctx?.data?.gu || null
+      dailyCounts.value = ctx?.data?.dailyCounts || {}
+    }
+  } catch (e: any) { errorMsg.value = e.message }
+  loading.value = false
 }
 
-const recentActivities: RecentActivity[] = [
-  { id: '1', type: 'ac', title: 'AC 了 P9999 超难题目', time: now - hour * 1, detail: '100 分' },
-  { id: '2', type: 'contest', title: '参加了 洛谷 2024 七月月赛 Div.1', time: now - hour * 3, detail: 'Rank 5' },
-  { id: '3', type: 'ac', title: 'AC 了 P8888 中等题目', time: now - hour * 6, detail: '100 分' },
-  { id: '4', type: 'blog', title: '发表了博客：动态规划从入门到精通', time: now - hour * 12, detail: '' },
-  { id: '5', type: 'ac', title: 'AC 了 P7777 简单题目', time: now - hour * 24, detail: '100 分' },
-  { id: '6', type: 'submit', title: '提交了 P6666 的解答', time: now - hour * 36, detail: '50 分' },
-]
-
-const activityIcons: Record<string, string> = {
-  ac: 'mingcute:check-circle-fill',
-  contest: 'mingcute:trophy-fill',
-  blog: 'mingcute:comment-fill',
-  submit: 'mingcute:code-fill',
+function openUser(uid: number) { window.open(`https://www.luogu.com.cn/user/${uid}`, '_blank') }
+function formatDate(ts: number): string {
+  return new Date(ts * 1000).toLocaleDateString('zh-CN')
 }
 
-const activityColors: Record<string, { icon: string; bg: string }> = {
-  ac: { icon: '#52c41a', bg: '#52c41a15' },
-  contest: { icon: '#1890ff', bg: '#1890ff15' },
-  blog: { icon: '#722ed1', bg: '#722ed115' },
-  submit: { icon: '#faad14', bg: '#faad1415' },
+// ============================================================
+// Heatmap (GitHub-style contribution graph)
+// ============================================================
+interface HeatCell {
+  date: string; count: number; level: number; dayOfWeek: number
+  weekIndex: number; dayIndex: number
+}
+const heatmapCells = computed<HeatCell[]>(() => {
+  const now = new Date()
+  const cells: HeatCell[] = []
+  // Go back 365 days
+  for (let i = 364; i >= 0; i--) {
+    const d = new Date(now)
+    d.setDate(d.getDate() - i)
+    const key = d.toISOString().slice(0, 10)
+    const entry = dailyCounts.value[key]
+    cells.push({
+      date: key,
+      count: entry?.[0] || 0,
+      level: entry?.[1] || 0,
+      dayOfWeek: d.getDay(),
+      weekIndex: Math.floor((364 - i) / 7),
+      dayIndex: d.getDay(),
+    })
+  }
+  return cells
+})
+const heatmapWeeks = computed(() => {
+  // Group cells by week
+  const weeks: HeatCell[][] = []
+  for (let i = 0; i < heatmapCells.value.length; i += 7) {
+    weeks.push(heatmapCells.value.slice(i, i + 7))
+  }
+  return weeks
+})
+const heatmapMonths = computed(() => {
+  const months: { label: string; startWeek: number }[] = []
+  const seen = new Set<string>()
+  for (let w = 0; w < heatmapWeeks.value.length; w++) {
+    const week = heatmapWeeks.value[w]
+    const mid = week[Math.floor(week.length / 2)]
+    if (!mid) continue
+    const label = `${Number(mid.date.slice(5, 7))}月`
+    if (!seen.has(label) || w === heatmapWeeks.value.length - 1) {
+      months.push({ label, startWeek: w })
+      seen.add(label)
+    }
+  }
+  return months
+})
+function cellColor(level: number): string {
+  if (level <= 0) return 'var(--bew-fill-2)'
+  const colors = [
+    'var(--bew-fill-2)',
+    'var(--bew-theme-color-20)',
+    'var(--bew-theme-color-40)',
+    'var(--bew-theme-color-60)',
+    'var(--bew-theme-color)',
+  ]
+  return colors[Math.min(level, 4)] || colors[4]
+}
+function cellTooltip(cell: HeatCell): string {
+  if (cell.count === 0) return `${cell.date} — 无提交`
+  return `${cell.date} — ${cell.count} 题`
 }
 
-function getRatingColor(rating: number): string {
-  if (rating >= 3000)
-    return '#FF0000'
-  if (rating >= 2600)
-    return '#FF8C00'
-  if (rating >= 2200)
-    return '#AA00AA'
-  if (rating >= 1800)
-    return '#0000FF'
-  if (rating >= 1400)
-    return '#03A89E'
-  return '#808080'
-}
-
-function getRatingLabel(rating: number): string {
-  if (rating >= 3000)
-    return 'NOI 巨佬'
-  if (rating >= 2600)
-    return '省选'
-  if (rating >= 2200)
-    return '提高'
-  if (rating >= 1800)
-    return '普及+/提高'
-  if (rating >= 1400)
-    return '普及'
-  return '入门'
-}
-
-function formatTime(ts: number): string {
-  const diff = Math.floor(Date.now() / 1000) - ts
-  if (diff < 3600)
-    return `${Math.floor(diff / 60)} 分钟前`
-  if (diff < 86400)
-    return `${Math.floor(diff / 3600)} 小时前`
-  return `${Math.floor(diff / 86400)} 天前`
-}
-
-function openOriginalPage() {
-  window.open(`https://www.luogu.com.cn/user/${userId.value}`, '_blank')
-}
+onMounted(fetchUser)
 </script>
 
 <template>
   <div class="page-container" w-full h-full p="x-4 md:x-8 lg:x-16" pos="relative">
-    <!-- User Profile Card -->
-    <div
-      bg="$bew-content" rounded="$bew-radius" p-6 mb-6
-      shadow="[var(--bew-shadow-1),var(--bew-shadow-edge-glow-1)]"
-      border="1 $bew-border-color"
-      style="backdrop-filter: var(--bew-filter-glass-1)"
-    >
-      <div flex="~ col md:row gap-6" items="start md:items-center">
-        <!-- Avatar area -->
-        <div flex="~ col" items="center" gap-3 shrink-0>
-          <div
-            w="80px" h="80px" rounded-full overflow-hidden
-            bg="$bew-fill-2"
-            flex="~" items="center" justify="center"
-            border="3 solid" pos="relative"
-            :style="{ borderColor: `${getRatingColor(mockUser.rating)}40` }"
+    <Loading v-if="loading" />
+    <div v-if="!loading && errorMsg" bg="$bew-content" rounded="$bew-radius" p-8 border="1 $bew-border-color" text="center $bew-text-2" style="backdrop-filter:var(--bew-filter-glass-1)">
+      <span v-html="renderIcon('mingcute:warning-line', 32)" style="display:contents" /><p mt-2>{{ errorMsg }}</p>
+    </div>
+
+    <Transition name="content-reveal">
+      <div v-if="!loading && user" w-full>
+        <!-- Profile Card -->
+        <div bg="$bew-content" rounded="$bew-radius" p-6 mb-6 shadow="[var(--bew-shadow-1),var(--bew-shadow-edge-glow-1)]" border="1 $bew-border-color" style="backdrop-filter:var(--bew-filter-glass-1)">
+          <div flex="~ col md:row gap-6" items="start md:items-center">
+            <!-- Avatar -->
+            <div flex="~ col" items="center" gap-2 shrink-0>
+              <div w="80px" h="80px" rounded-full overflow-hidden bg="$bew-fill-2" border="3 solid" :style="{ borderColor: `${colorVar(user.color)}40` }">
+                <img :src="user.avatar" style="width:100%;height:100%;object-fit:cover" @error="(e:any) => e.target.style.display='none'" />
+              </div>
+              <span text="xs" fw-bold px-2 py-0.5 rounded-full :style="{ background: `${ccfColor(user.ccfLevel)}20`, color: ccfColor(user.ccfLevel) }">
+                {{ ccfLabel(user.ccfLevel) }}
+              </span>
+              <span v-if="relationshipLabel" text="xs" px-2 py-0.5 rounded-full bg="$bew-theme-color-20" style="color:var(--bew-theme-color);font-weight:600">{{ relationshipLabel }}</span>
+            </div>
+
+            <!-- Info -->
+            <div flex="~ col 1" gap-2>
+              <div flex="~ items-center gap-3">
+                <h1 style="font-size:1.5rem;font-weight:700" :style="{ color: colorVar(user.color) }">{{ user.name }}</h1>
+                <span text="xs $bew-text-2" px-2 py-0.5 rounded-full bg="$bew-fill-1">UID: {{ user.uid }}</span>
+              </div>
+              <p v-if="user.slogan" style="font-size:var(--bew-base-font-size);color:var(--bew-text-2)">{{ user.slogan }}</p>
+              <div flex="~ gap-1 wrap" style="font-size:var(--bew-base-font-size);color:var(--bew-text-3)">
+                <span>关注 <strong style="color:var(--bew-text-1)">{{ user.followingCount }}</strong></span>
+                <span mx-1>|</span>
+                <span>粉丝 <strong style="color:var(--bew-text-1)">{{ user.followerCount }}</strong></span>
+                <span mx-1>|</span>
+                <span>排名 <strong style="color:var(--bew-text-1)">#{{ user.ranking.toLocaleString() }}</strong></span>
+                <span mx-1>|</span>
+                <span>注册于 {{ formatDate(user.registerTime) }}</span>
+              </div>
+              <!-- GU Score -->
+              <div v-if="gu" flex="~ gap-3" style="font-size:var(--bew-base-font-size)">
+                <span>Rating: <strong style="color:var(--bew-warning-color)">{{ gu.rating || 0 }}</strong></span>
+                <span>练习: <strong style="color:var(--bew-success-color)">{{ gu.scores?.practice || 0 }}</strong></span>
+                <span>比赛: <strong style="color:var(--bew-theme-color)">{{ gu.scores?.contest || 0 }}</strong></span>
+                <span>社交: <strong style="color:var(--bew-text-3)">{{ gu.scores?.social || 0 }}</strong></span>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- Introduction -->
+          <div v-if="user.introduction" mt-4 p-4 rounded="$bew-radius" bg="$bew-fill-1" style="font-size:var(--bew-base-font-size);color:var(--bew-text-2);line-height:1.7;white-space:pre-wrap">
+            {{ user.introduction.replace(/^>\s*/gm, '').replace(/\*\*/g, '').replace(/\*/g, '').replace(/~~/g, '') }}
+          </div>
+        </div>
+
+        <!-- Stats -->
+        <div grid="~ cols-2 md:cols-4" gap-4 mb-6>
+          <div v-for="stat in [
+            { label: '通过', value: user.passedProblemCount, icon: 'check-circle-line', color: '#52c41a' },
+            { label: '提交', value: user.submittedProblemCount, icon: 'code-line', color: '#1890ff' },
+            { label: '粉丝', value: user.followerCount, icon: 'user-4-line', color: '#722ed1' },
+            { label: '关注', value: user.followingCount, icon: 'user-follow-line', color: '#faad14' },
+          ]" :key="stat.label"
+            bg="$bew-content" rounded="$bew-radius" p-4 shadow="[var(--bew-shadow-1),var(--bew-shadow-edge-glow-1)]" border="1 $bew-border-color" style="backdrop-filter:var(--bew-filter-glass-1)"
+            flex="~ items-center gap-3"
           >
-            <img
-              :src="`https://cdn.luogu.com.cn/upload/usericon/${userId}.png`"
-              style="width: 100%; height: 100%; object-fit: cover; position: absolute; inset: 0;"
-              @error="(e) => { (e.target as HTMLImageElement).style.display = 'none' }"
-            >
-            <span v-html="renderIcon('mingcute:user-4-line', 32)" :style="{ color: getRatingColor(mockUser.rating) }" style="pointer-events: none;" />
+            <span v-html="renderIcon('mingcute:'+stat.icon, 24)" :style="{ color: stat.color, display:'contents' }" />
+            <div>
+              <div style="font-size:var(--bew-base-font-size);color:var(--bew-text-3)">{{ stat.label }}</div>
+              <div style="font-size:1.2rem;font-weight:700;color:var(--bew-text-1)">{{ (stat.value || 0).toLocaleString() }}</div>
+            </div>
           </div>
-          <span
-            text="xs" fw-bold p="x-2 y-0.5" rounded="$bew-radius-half"
-            :style="{
-              backgroundColor: `${getRatingColor(mockUser.rating)}20`,
-              color: getRatingColor(mockUser.rating),
-            }"
-          >
-            {{ getRatingLabel(mockUser.rating) }}
-          </span>
         </div>
 
-        <!-- User info -->
-        <div flex="~ col 1" gap-2>
-          <div flex="~ items-center gap-3">
-            <h1 text="2xl" fw-bold :style="{ color: getRatingColor(mockUser.rating) }">
-              {{ mockUser.username }}
-            </h1>
-            <span text="xs $bew-text-2" p="x-2 y-0.5" rounded="$bew-radius-half" bg="$bew-fill-1">
-              UID: {{ mockUser.uid }}
+        <!-- Heatmap -->
+        <div v-if="Object.keys(dailyCounts).length > 0" bg="$bew-content" rounded="$bew-radius" p-6 mb-6 shadow="[var(--bew-shadow-1),var(--bew-shadow-edge-glow-1)]" border="1 $bew-border-color" style="backdrop-filter:var(--bew-filter-glass-1)" overflow="auto">
+          <h2 style="font-size:var(--bew-base-font-size);color:var(--bew-text-1);font-weight:700" mb-3>练习记录</h2>
+          <div class="heatmap" style="min-width:fit-content">
+            <!-- Month labels -->
+            <div flex="~" style="margin-left:28px;font-size:10px;color:var(--bew-text-4)" mb-1>
+              <span v-for="m in heatmapMonths" :key="m.startWeek" :style="{ marginLeft: m.startWeek === 0 ? '0' : '0', width: (m.startWeek === heatmapMonths[0]?.startWeek ? 'auto' : 'auto'), flex: '1' }" v-text="m.label" />
+            </div>
+            <div flex="~">
+              <!-- Day labels -->
+              <div flex="~ col" style="gap:3px;margin-right:6px;font-size:10px;color:var(--bew-text-4)" py-2>
+                <span v-for="day in ['一','','三','','五','','日']" :key="day" style="height:12px;line-height:12px">{{ day }}</span>
+              </div>
+              <!-- Heatmap grid -->
+              <div flex="~" style="gap:3px">
+                <div v-for="(week, wi) in heatmapWeeks" :key="wi" flex="~ col" style="gap:3px">
+                  <div
+                    v-for="(cell, di) in week" :key="di"
+                    class="heat-cell"
+                    style="width:12px;height:12px;border-radius:2px"
+                    :style="{ background: cellColor(cell.level) }"
+                  >
+                    <span class="heat-tooltip">{{ cellTooltip(cell) }}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <!-- Legend -->
+            <div flex="~ items-center justify-end gap-1" mt-2 style="font-size:10px;color:var(--bew-text-4)">
+              <span>少</span>
+              <span v-for="lv in [0,1,2,3,4]" :key="lv" style="width:12px;height:12px;border-radius:2px" :style="{ background: cellColor(lv) }" />
+              <span>多</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Prizes -->
+        <div v-if="prizes.length > 0" bg="$bew-content" rounded="$bew-radius" p-6 mb-6 shadow="[var(--bew-shadow-1),var(--bew-shadow-edge-glow-1)]" border="1 $bew-border-color" style="backdrop-filter:var(--bew-filter-glass-1)">
+          <h2 style="font-size:var(--bew-base-font-size);color:var(--bew-text-1);font-weight:700" mb-3>获奖记录</h2>
+          <div flex="~ wrap" gap-2>
+            <span v-for="(p, i) in prizes" :key="i" text="sm $bew-text-1" px-3 py-1 rounded-full bg="$bew-fill-1">
+              {{ p.prize?.year }} {{ p.prize?.contest }} {{ p.prize?.prize }}
             </span>
           </div>
-
-          <div flex="~ items-center gap-2">
-            <span text="2xl" fw-bold :style="{ color: getRatingColor(mockUser.rating) }">
-              {{ mockUser.rating }}
-            </span>
-            <span text="sm $bew-text-2">
-              Rating / Rank #{{ mockUser.rank }}
-            </span>
-          </div>
-
-          <p text="sm $bew-text-2">{{ mockUser.bio }}</p>
-
-          <div flex="~ gap-1 wrap">
-            <span text="xs $bew-text-3">关注 {{ mockUser.followingCount }}</span>
-            <span text="xs $bew-text-3" mx-1>|</span>
-            <span text="xs $bew-text-3">粉丝 {{ mockUser.followerCount }}</span>
-            <span text="xs $bew-text-3" mx-1>|</span>
-            <span text="xs $bew-text-3">注册于 {{ mockUser.registerDate }}</span>
-          </div>
         </div>
-
-        <!-- Action -->
-        <Button type="secondary" shrink-0 @click="openOriginalPage">
-          <span v-html="renderIcon('mingcute:external-link-line', 16)" style="display:contents" />
-          原站查看
-        </Button>
       </div>
-    </div>
-
-    <!-- Stats Section -->
-    <div
-      grid="~ cols-2 md:cols-4" gap-4 mb-6
-    >
-      <div
-        v-for="stat in [
-          { label: '已通过', value: mockUser.solvedCount, icon: 'mingcute:check-circle-line' },
-          { label: '比赛参与', value: mockUser.contestCount, icon: 'mingcute:trophy-line' },
-          { label: '博客', value: mockUser.blogCount, icon: 'mingcute:comment-line' },
-          { label: '讨论', value: mockUser.discussCount, icon: 'mingcute:message-line' },
-        ]"
-        :key="stat.label"
-        bg="$bew-content" rounded="$bew-radius" p-4
-        shadow="[var(--bew-shadow-1),var(--bew-shadow-edge-glow-1)]"
-        border="1 $bew-border-color"
-        style="backdrop-filter: var(--bew-filter-glass-1)"
-        flex="~ col" items="center" gap-1
-      >
-        <span v-html="renderIcon(stat.icon, 24)" style="display:contents; color: var(--bew-theme-color);" />
-        <span text="2xl $bew-text-1" fw-bold>{{ stat.value }}</span>
-        <span text="xs $bew-text-3">{{ stat.label }}</span>
-      </div>
-    </div>
-
-    <!-- Recent Activities -->
-    <div
-      bg="$bew-content" rounded="$bew-radius"
-      shadow="[var(--bew-shadow-1),var(--bew-shadow-edge-glow-1)]"
-      border="1 $bew-border-color"
-      style="backdrop-filter: var(--bew-filter-glass-1)"
-      overflow="hidden"
-    >
-      <div bg="$bew-fill-1" p="x-6 y-3" border="b-1 $bew-border-color">
-        <h2 text="lg $bew-text-1" fw-bold>最近活动</h2>
-      </div>
-
-      <div
-        v-for="(activity, index) in recentActivities"
-        :key="activity.id"
-        flex="~ items-center gap-3" p="x-6 y-3"
-        border="b-1 $bew-border-color"
-        :class="index === recentActivities.length - 1 ? '' : ''"
-      >
-        <div
-          w="32px" h="32px" rounded-full
-          flex="~" items="center" justify="center" shrink-0
-          :style="{ backgroundColor: activityColors[activity.type].bg }"
-        >
-          <span v-html="renderIcon(activityIcons[activity.type], 18)" :style="{ color: activityColors[activity.type].icon }" style="display:contents" />
-        </div>
-        <div flex="~ col 1" gap-0.5>
-          <span text="sm $bew-text-1">{{ activity.title }}</span>
-          <span text="xs $bew-text-3">{{ formatTime(activity.time) }}</span>
-        </div>
-        <span
-          v-if="activity.detail"
-          text="xs $bew-text-2" fw-bold
-        >{{ activity.detail }}</span>
-      </div>
-    </div>
+    </Transition>
   </div>
 </template>
+
+<style lang="scss" scoped>
+.heat-cell {
+  position: relative;
+  cursor: pointer;
+  &:hover .heat-tooltip {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+}
+.heat-tooltip {
+  opacity: 0;
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 50%;
+  transform: translateX(-50%) translateY(4px);
+  background: var(--bew-text-1);
+  color: var(--bew-content);
+  font-size: 11px;
+  white-space: nowrap;
+  padding: 3px 8px;
+  border-radius: 4px;
+  pointer-events: none;
+  z-index: 10;
+  transition: opacity 0.15s ease, transform 0.15s ease;
+}
+</style>

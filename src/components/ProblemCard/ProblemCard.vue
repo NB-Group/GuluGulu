@@ -24,11 +24,11 @@ const difficultyColor = computed(() => {
     return 'var(--bew-text-3)'
   const d = props.problem.difficulty
   if (d <= 1)
-    return '#52c41a' // green - easy
+    return '#bfbfbf' // gray - 入门
   if (d <= 3)
     return '#1890ff' // blue - medium
   if (d <= 5)
-    return '#722ed1' // purple - hard
+    return '#262626' // black - NOI
   if (d <= 7)
     return '#eb2f96' // pink - very hard
   return '#262626' // black - expert

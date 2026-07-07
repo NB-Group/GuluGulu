@@ -72,6 +72,7 @@
     "eslint-plugin-simple-import-sort": "^12.1.0",
     "esno": "^4.7.0",
     "fs-extra": "^11.2.0",
+    "gh": "^2.8.9",
     "jsdom": "^24.1.0",
     "knip": "^5.19.0",
     "kolorist": "^1.8.0",

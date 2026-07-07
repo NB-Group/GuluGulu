@@ -148,18 +148,20 @@ onUnmounted(() => obs?.disconnect())
           <!-- Test case blocks — Luogu-style colored squares -->
           <div v-if="detail.detail?.judgeResult?.subtasks?.length" mt-4>
             <div style="font-size:var(--bew-base-font-size);color:var(--bew-text-2);font-weight:600" mb-2>测试点详情</div>
-            <div v-for="sub in detail.detail.judgeResult.subtasks" :key="sub.id" mb-3>
-              <div flex="~ wrap" gap-2>
-                <div v-for="(tc, key) in sub.testCases||{}" :key="key" class="tc-block" :style="{background:statusColor(parseInt(tc.status))}">
-                  <div class="tc-content">
-                    <div class="tc-info">{{ tc.time }}ms / {{ (tc.memory/1024).toFixed(1) }}MB</div>
-                    <div class="tc-status">{{ statusLabel(parseInt(tc.status)) }}</div>
+            <template v-for="sub in detail.detail.judgeResult.subtasks" :key="sub.id">
+              <div mb-3>
+                <div flex="~ wrap" gap-2>
+                  <div v-for="(tc, idx) in Object.entries(sub.testCases||{}).sort(([a],[b])=>Number(a)-Number(b)).map(([,v])=>v)" :key="idx" class="tc-block" :style="{background:statusColor(parseInt(tc.status))}">
+                    <div class="tc-content">
+                      <div class="tc-info">{{ tc.time }}ms / {{ (tc.memory/1024).toFixed(1) }}MB</div>
+                      <div class="tc-status">{{ statusLabel(parseInt(tc.status)) }}</div>
+                    </div>
+                    <div class="tc-id">#{{ idx+1 }}</div>
+                    <div class="tc-msg">{{ tc.score }} 分 · {{ tc.description || '' }}</div>
                   </div>
-                  <div class="tc-id">#{{ Number(key)+1 }}</div>
-                  <div class="tc-msg">{{ tc.score }} 分 · {{ tc.description || '' }}</div>
                 </div>
               </div>
-            </div>
+            </template>
           </div>
 
           <!-- Source code with highlighting -->

@@ -27,6 +27,7 @@ export async function getManifest() {
       'storage',
       'declarativeNetRequest',
       'tabs',
+      'notifications',
       ...isFirefox
         ? ['webRequest', 'webRequestBlocking', 'cookies']
         : [],

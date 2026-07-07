@@ -130,6 +130,14 @@ watch(() => settings.value.pageMaxWidth, (width) => {
   if (el) el.style.setProperty('--bew-page-max-width', `${width}px`)
 }, { immediate: true })
 
+// Apply frosted glass CSS classes to document root
+function applyFrostedGlassClasses() {
+  const root = document.documentElement
+  root.classList.toggle('disable-frosted-glass', settings.value.disableFrostedGlass)
+  root.classList.toggle('reduce-frosted-glass-blur', !settings.value.disableFrostedGlass && settings.value.reduceFrostedGlassBlur)
+}
+watch(() => [settings.value.disableFrostedGlass, settings.value.reduceFrostedGlassBlur], applyFrostedGlassClasses, { immediate: true })
+
 onMounted(() => {
   window.dispatchEvent(new CustomEvent(GULY_MOUNTED))
 

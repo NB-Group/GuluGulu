@@ -14,8 +14,8 @@ export interface Settings {
   disableLightDarkModeSwitcherOnDock: boolean
   backToTopAndRefreshButtonsAreSeparated: boolean
   alwaysUseDock: boolean
-  frostGlass: boolean
-  reducedBlur: boolean
+  disableFrostedGlass: boolean
+  reduceFrostedGlassBlur: boolean
   disableShadow: boolean
   baseFontSize: number
   pageMaxWidth: number
@@ -58,8 +58,8 @@ export const originalSettings: Settings = {
   disableLightDarkModeSwitcherOnDock: false,
   backToTopAndRefreshButtonsAreSeparated: false,
   alwaysUseDock: true,
-  frostGlass: true,
-  reducedBlur: false,
+  disableFrostedGlass: false,
+  reduceFrostedGlassBlur: false,
   disableShadow: false,
   baseFontSize: 14.8,
   pageMaxWidth: 2280,

@@ -1,8 +1,9 @@
 * {
   outline-color: var(--bew-theme-color-80);
   font-feature-settings: "tnum";
-  // outline-width: 2px;
-  // outline-offset: 2px;
+}
+html, body {
+  transition: background-color 0.3s ease, color 0.3s ease;
 }
 
 .dark {
@@ -26,8 +27,11 @@ html.bewly-design > ::-webkit-scrollbar-track {
 }
 
 ::-webkit-scrollbar-thumb {
-  background-color: rgba(120, 120, 140, 0.44);
+  background-color: var(--bew-text-4);
   border-radius: 20px;
+  &:hover {
+    background-color: var(--bew-text-3);
+  }
 }
 
 ::-webkit-scrollbar-corner {
