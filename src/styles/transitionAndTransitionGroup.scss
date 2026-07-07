@@ -1,0 +1,94 @@
+.page-fade-enter-active,
+.page-fade-leave-active {
+  transition: opacity 0.3s ease;
+  transform: translateZ(0);
+}
+.page-fade-enter-from,
+.page-fade-leave-to {
+  opacity: 0;
+}
+
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.3s ease;
+}
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+}
+
+.slide-fade-enter-active,
+.slide-fade-leave-active {
+  transition: all 0.5s ease;
+}
+.slide-fade-enter-from,
+.slide-fade-leave-to {
+  opacity: 0;
+}
+
+.list-enter-active,
+.list-leave-active {
+  transition: all 0.5s ease;
+}
+.list-enter-from,
+.list-leave-to {
+  opacity: 0;
+  transform: translateY(24px);
+}
+
+.modal-enter-active,
+.modal-leave-active {
+  transition: all 0.5s ease;
+  transform: translateZ(0);
+}
+.modal-enter-from,
+.modal-leave-to {
+  opacity: 0;
+  transform: scale(1.05) translateZ(0);
+}
+
+.dropdown-enter-active,
+.dropdown-leave-active {
+  transition: all 0.3s ease;
+  transform: translateZ(0);
+}
+.dropdown-enter-from,
+.dropdown-leave-to {
+  opacity: 0;
+  transform: scale(0.95) translateY(-16px) translateZ(0);
+  filter: blur(4px);
+}
+
+// Content reveal: fade-in + slight slide-up for post-loading content
+.content-reveal-enter-active {
+  transition: opacity 0.4s ease, transform 0.4s ease;
+}
+.content-reveal-enter-from {
+  opacity: 0;
+  transform: translateY(12px);
+}
+
+// Staggered row animation — use with :style="{ '--row-index': index }" on each item
+.stagger-row {
+  opacity: 0;
+  animation: stagger-fade-in 0.45s ease forwards;
+  animation-delay: calc(var(--row-index, 0) * 40ms + 0.05s);
+}
+
+@keyframes stagger-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+// Staggered card animation for grid layouts
+.stagger-card {
+  opacity: 0;
+  animation: stagger-fade-in 0.4s ease forwards;
+  animation-delay: calc(var(--card-index, 0) * 60ms + 0.05s);
+}

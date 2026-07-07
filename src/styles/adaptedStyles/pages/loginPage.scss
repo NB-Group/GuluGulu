@@ -1,0 +1,141 @@
+// GulyGuly adapted styles for Luogu login/auth pages
+// Matches GulyGuly's frosted glass design
+
+.guly-design {
+  .lfe-body {
+    background: var(--bew-bg) !important;
+    min-height: 100vh;
+  }
+
+  .main-rect {
+    backdrop-filter: var(--bew-filter-glass-1);
+  }
+
+  .l-card.main-container,
+  .main-container {
+    background: var(--bew-content) !important;
+    border: 1px solid var(--bew-border-color) !important;
+    border-radius: var(--bew-radius) !important;
+    box-shadow: var(--bew-shadow-1), var(--bew-shadow-edge-glow-1) !important;
+    padding: 40px 32px !important;
+  }
+
+  .main-container .logo {
+    display: none;
+  }
+
+  .lfe-h2.title {
+    color: var(--bew-text-1) !important;
+    font-weight: 700 !important;
+    font-size: 1.35rem !important;
+    margin-bottom: 24px !important;
+  }
+
+  .lfe-caption {
+    color: var(--bew-text-2) !important;
+    font-weight: 600 !important;
+    font-size: 0.85rem !important;
+    margin-bottom: 8px !important;
+  }
+
+  .input-group {
+    border-radius: var(--bew-radius-half) !important;
+  }
+
+  .lauth-container input[type="text"],
+  .lauth-container input[type="password"],
+  .step-1 input,
+  .step-2 input {
+    background: var(--bew-fill-1) !important;
+    border: 1px solid var(--bew-border-color) !important;
+    border-radius: var(--bew-radius-half) !important;
+    color: var(--bew-text-1) !important;
+    padding: 10px 14px !important;
+    font-size: 0.95rem !important;
+    outline: none !important;
+    transition: border-color 0.2s, box-shadow 0.2s !important;
+
+    &:focus {
+      border-color: var(--bew-theme-color) !important;
+      box-shadow: 0 0 0 2px var(--bew-theme-color-30) !important;
+    }
+
+    &::placeholder {
+      color: var(--bew-text-4) !important;
+    }
+  }
+
+  button.solid, button[class*="solid"] {
+    background: var(--bew-theme-color) !important;
+    color: white !important;
+    border: none !important;
+    border-radius: var(--bew-radius-half) !important;
+    padding: 10px 24px !important;
+    font-weight: 700 !important;
+    font-size: 0.95rem !important;
+    cursor: pointer !important;
+    transition: background 0.2s, transform 0.2s, box-shadow 0.2s !important;
+    box-shadow: 0 2px 8px var(--bew-theme-color-30) !important;
+
+    &:hover {
+      background: var(--bew-theme-color-80) !important;
+      box-shadow: 0 4px 16px var(--bew-theme-color-40) !important;
+    }
+
+    &:active {
+      transform: scale(0.97) !important;
+    }
+  }
+
+  .openids a {
+    background: var(--bew-fill-1) !important;
+    border: 1px solid var(--bew-border-color) !important;
+    border-radius: var(--bew-radius-half) !important;
+    color: var(--bew-text-1) !important;
+    padding: 8px 20px !important;
+    font-size: 0.9rem !important;
+    font-weight: 600 !important;
+    transition: background 0.2s !important;
+
+    &:hover {
+      background: var(--bew-fill-2) !important;
+    }
+  }
+
+  hr {
+    border-color: var(--bew-border-color) !important;
+    margin: 20px 0 !important;
+  }
+
+  .lauth-container .step-1,
+  .lauth-container .step-2 {
+    color: var(--bew-text-1) !important;
+  }
+
+  .error, .lfe-error {
+    color: var(--bew-error-color) !important;
+    font-size: 0.85rem !important;
+  }
+
+  .lauth-container .user-preview {
+    color: var(--bew-text-1) !important;
+
+    img {
+      border-radius: 50% !important;
+      border: 2px solid var(--bew-theme-color) !important;
+    }
+
+    .username {
+      color: var(--bew-text-1) !important;
+      font-weight: 700 !important;
+    }
+  }
+
+  .cf-turnstile {
+    margin: 12px 0 !important;
+  }
+
+  .page-loading {
+    background: var(--bew-theme-color) !important;
+  }
+}

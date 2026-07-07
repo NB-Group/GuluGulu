@@ -1,0 +1,11 @@
+node_modules/
+dist/
+.DS_Store
+*.log
+extension/
+extension-firefox/
+extension-safari/
+extension.zip
+extension.crx
+.vite/
+.claude/
