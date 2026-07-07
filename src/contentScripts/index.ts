@@ -299,6 +299,17 @@ function injectApp() {
   container.id = 'guly'
   container.setAttribute('data-version', version)
   container.setAttribute('data-dev', import.meta.env.DEV ? 'true' : 'false')
+  // Apply dark class BEFORE Shadow DOM creation to prevent any flash
+  try {
+    const cachedDark = localStorage.getItem('gulugulu-dark')
+    if (cachedDark === '1') {
+      container.classList.add('dark')
+      document.documentElement.classList.add('dark')
+    } else if (cachedDark === null && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+      container.classList.add('dark')
+      document.documentElement.classList.add('dark')
+    }
+  } catch {}
   const root = document.createElement('div')
   const shadowDOM = container.attachShadow?.({ mode: 'open' }) || container
   const resetStyleEl = document.createElement('style')
