@@ -6,8 +6,6 @@ import { AppPage } from '~/enums/appEnums'
 import { useGulyApp } from '~/composables/useAppProvider'
 
 import hljs from 'highlight.js/lib/core'
-
-const { currentUrl, navigateTo } = useGulyApp()
 import cpp from 'highlight.js/lib/languages/cpp'
 import python from 'highlight.js/lib/languages/python'
 import java from 'highlight.js/lib/languages/java'
@@ -17,6 +15,8 @@ hljs.registerLanguage('c', cpp)
 hljs.registerLanguage('python', python)
 hljs.registerLanguage('java', java)
 
+const { currentUrl, navigateTo } = useGulyApp()
+
 function highlightCode(code: string, lang: string): string {
   try {
     const map: Record<string, string> = { '28': 'cpp', '3': 'cpp', '4': 'cpp', '11': 'cpp', '12': 'cpp', '27': 'cpp', '2': 'c', '7': 'python', '25': 'python', '8': 'java' }
@@ -25,76 +25,102 @@ function highlightCode(code: string, lang: string): string {
   } catch { return code }
 }
 
-interface RecordItem {
-  rid: number; problem: { pid: string; name: string }; status: string; score: number
-  time: number; memory: number; language: string; submitTime: number; user?: { name: string; uid: number }
+// ============================================================
+// Status maps — record-level AND test-case-level
+// ============================================================
+const statusMap: Record<number, { label: string; color: string }> = {
+  0: { label: 'Waiting', color: '#909399' },
+  1: { label: 'Judging', color: '#3498db' },
+  2: { label: 'Compiling', color: '#3498db' },
+  3: { label: 'Running', color: '#3498db' },
+  4: { label: 'Accepted', color: '#52c41a' },
+  5: { label: 'Unaccepted', color: '#e74c3c' },
+  6: { label: 'Wrong Answer', color: '#e74c3c' },
+  7: { label: 'Time Limit Exceeded', color: '#f39c12' },
+  8: { label: 'Memory Limit Exceeded', color: '#f39c12' },
+  9: { label: 'Runtime Error', color: '#e74c3c' },
+  10: { label: 'Compile Error', color: '#e74c3c' },
+  11: { label: 'Output Limit Exceeded', color: '#f39c12' },
+  12: { label: 'Accepted', color: '#52c41a' },
+  14: { label: 'Unaccepted', color: '#e74c3c' },
 }
 
+// Test case status codes (different from record-level!)
+const tcStatusMap: Record<number, { label: string; color: string }> = {
+  0: { label: '?', color: '#909399' },
+  1: { label: 'AC', color: '#52c41a' },    // some versions use 1
+  2: { label: 'WA', color: '#e74c3c' },
+  3: { label: 'TLE', color: '#052242' },    // Luogu's actual TLE color: dark navy
+  4: { label: 'MLE', color: '#e74c3c' },
+  5: { label: 'TLE', color: '#052242' },
+  6: { label: 'WA', color: '#e74c3c' },
+  7: { label: 'RE', color: '#e74c3c' },
+  8: { label: 'CE', color: '#e74c3c' },
+  9: { label: 'OLE', color: '#f39c12' },
+  10: { label: 'UKE', color: '#e74c3c' },
+  11: { label: 'PC', color: '#f39c12' },
+  12: { label: 'AC', color: '#52c41a' },
+  13: { label: 'SC', color: '#52c41a' },
+}
+
+function tcStatus(tc: any): { label: string; color: string } {
+  const st = parseInt(tc.status)
+  if (!isNaN(st) && tcStatusMap[st]) return tcStatusMap[st]
+  // Fallback: parse description
+  const desc = (tc.description || '').toLowerCase()
+  if (desc.includes('accepted') || tc.score > 0) return { label: 'AC', color: '#52c41a' }
+  if (desc.includes('wrong answer')) return { label: 'WA', color: '#e74c3c' }
+  if (desc.includes('time limit')) return { label: 'TLE', color: '#052242' }
+  if (desc.includes('memory limit')) return { label: 'MLE', color: '#e74c3c' }
+  if (desc.includes('runtime error')) return { label: 'RE', color: '#e74c3c' }
+  return { label: '?', color: '#909399' }
+}
+
+// Format time: Luogu shows "1.20s" for >=1000ms, "Nms" otherwise
+function formatTime(ms: number): string {
+  if (ms >= 1000) return (ms / 1000).toFixed(2) + 's'
+  return ms + 'ms'
+}
+
+// Format memory: Luogu shows "812.00KB" or "1.04MB"
+function formatMemory(bytes: number): string {
+  if (bytes >= 1024 * 1024) return (bytes / 1024 / 1024).toFixed(2) + 'MB'
+  return (bytes / 1024).toFixed(2) + 'KB'
+}
+
+function statusLabel(s: number): string {
+  return statusMap[s]?.label || String(s)
+}
+function statusColor(s: number): string {
+  return statusMap[s]?.color || '#909399'
+}
+
+// ============================================================
+// Record list
+// ============================================================
+interface RecordItem {
+  rid: number; problem: { pid: string; name: string }; status: number; score: number | null
+  time: number; memory: number; language: string; submitTime: number
+}
 const records = ref<RecordItem[]>([])
 const loading = ref(true); const loadingMore = ref(false); const errorMsg = ref('')
-const currentPage = ref(1); const totalCount = ref(0); const pageSize = 50
+const listPage = ref(1); const totalCount = ref(0)
+const perPage = 20 // Luogu API uses 20 per page
 const sentinelRef = ref<HTMLDivElement>()
-const totalPages = computed(() => Math.max(1, Math.ceil(totalCount.value / pageSize)))
-
-const statusMap: Record<number, { label: string; color: string }> = {
-  0: { label: '等待', color: '#909399' }, 1: { label: '评测中', color: '#3498db' },
-  2: { label: '编译中', color: '#3498db' }, 3: { label: '运行中', color: '#3498db' },
-  4: { label: 'AC', color: '#52c41a' }, 5: { label: 'WA', color: '#e74c3c' },
-  6: { label: 'TLE', color: '#f39c12' }, 7: { label: 'MLE', color: '#f39c12' },
-  8: { label: 'RE', color: '#e74c3c' }, 9: { label: 'CE', color: '#e74c3c' },
-  10: { label: 'OLE', color: '#f39c12' }, 11: { label: 'UKE', color: '#e74c3c' },
-  12: { label: 'AC', color: '#52c41a' }, 14: { label: 'WA', color: '#e74c3c' },
-}
-// Test case status uses different codes from record-level status.
-// Parse description text for correct classification.
-function tcStatusColor(tc: any): string {
-  const desc = (tc.description || '').toLowerCase()
-  if (desc.includes('accepted') || desc.includes('correct') || tc.score > 0) return '#52c41a'
-  if (desc.includes('wrong answer')) return '#e74c3c'
-  if (desc.includes('time limit')) return '#f39c12'
-  if (desc.includes('memory limit')) return '#f39c12'
-  if (desc.includes('runtime error')) return '#e74c3c'
-  if (desc.includes('compile error')) return '#e74c3c'
-  return statusMap[parseInt(tc.status)]?.color || '#909399'
-}
-function tcStatusLabel(tc: any): string {
-  const desc = (tc.description || '').toLowerCase()
-  if (desc.includes('accepted') || desc.includes('correct') || tc.score > 0) return 'AC'
-  if (desc.includes('wrong answer')) return 'WA'
-  if (desc.includes('time limit')) return 'TLE'
-  if (desc.includes('memory limit')) return 'MLE'
-  if (desc.includes('runtime error')) return 'RE'
-  if (desc.includes('compile error')) return 'CE'
-  return statusMap[parseInt(tc.status)]?.label || '?'
-}
-
-function statusLabel(s: any): string {
-  if (typeof s === 'number') return statusMap[s]?.label || `#${s}`
-  const n = parseInt(s)
-  if (!isNaN(n)) return statusMap[n]?.label || `#${n}`
-  return String(s?.name || s?.shortName || s || '?')
-}
-function statusColor(s: any): string {
-  if (typeof s === 'number') return statusMap[s]?.color || '#909399'
-  const n = parseInt(s)
-  if (!isNaN(n)) return statusMap[n]?.color || '#909399'
-  const colors: Record<string, string> = { 'Accepted': '#52c41a', 'Wrong Answer': '#e74c3c' }
-  return colors[s?.name || s?.shortName || ''] || '#909399'
-}
+const totalPages = computed(() => Math.max(1, Math.ceil(totalCount.value / perPage)))
 
 async function fetchRecords(append = false) {
   if (append) loadingMore.value = true; else loading.value = true
   errorMsg.value = ''
   try {
-    const qs = currentPage.value > 1 ? `&page=${currentPage.value}` : ''
-    const res = await fetch(`https://www.luogu.com.cn/record/list?_contentOnly=1${qs}`, { credentials: 'same-origin' })
+    const res = await fetch(`https://www.luogu.com.cn/record/list?_contentOnly=1&page=${listPage.value}`, { credentials: 'same-origin' })
     const json = await res.json()
     const recs = json?.currentData?.records
     if (recs) {
       const items = (recs.result || []).map((rc: any) => ({
         rid: rc.id || 0, problem: { pid: rc.problem?.pid || '', name: rc.problem?.title || '' },
-        status: rc.status, score: rc.score || 0, time: rc.time || 0, memory: rc.memory || 0,
-        language: rc.language || '', submitTime: rc.submitTime || 0, user: rc.user,
+        status: rc.status, score: rc.score, time: rc.time || 0, memory: rc.memory || 0,
+        language: rc.language || '', submitTime: rc.submitTime || 0,
       }))
       records.value = append ? [...records.value, ...items] : items
       totalCount.value = recs.count || items.length
@@ -104,10 +130,13 @@ async function fetchRecords(append = false) {
 }
 
 function loadMore() {
-  if (loadingMore.value || currentPage.value >= totalPages.value) return
-  currentPage.value++; fetchRecords(true)
+  if (loadingMore.value || listPage.value >= totalPages.value) return
+  listPage.value++; fetchRecords(true)
 }
-// Detect if we're on a detail page
+
+// ============================================================
+// Record detail
+// ============================================================
 const recordId = computed(() => { const m = currentUrl.value.match(/\/record\/(\d+)/i); return m ? Number(m[1]) : null })
 const detail = ref<any>(null)
 const detailLoading = ref(false)
@@ -122,7 +151,7 @@ async function fetchDetail(id: number) {
   detailLoading.value = false
 }
 
-// Normalize subtasks (object or array) and testCases (object or array) to a uniform structure
+// Normalize subtasks/testCases into display-ready groups
 const testCaseGroups = computed(() => {
   const subs = detail.value?.detail?.judgeResult?.subtasks
   if (!subs) return []
@@ -130,9 +159,21 @@ const testCaseGroups = computed(() => {
   return subList.map((sub: any) => {
     const tcs = sub.testCases
     const caseList = Array.isArray(tcs) ? tcs : Object.values(tcs || {})
-    return { score: sub.score, fullScore: sub.fullScore, cases: caseList }
-  }).filter((g: any) => g.cases.length > 0)
+    return {
+      id: sub.id ?? 0,
+      score: sub.score,
+      fullScore: sub.fullScore,
+      status: sub.status,
+      cases: caseList.map((tc: any) => ({
+        id: tc.id, status: parseInt(tc.status), score: tc.score,
+        time: tc.time, memory: tc.memory,
+        description: tc.description || '',
+        ...tcStatus(tc),
+      })),
+    }
+  }).filter(g => g.cases.length > 0)
 })
+
 function openRecord(rid: number) { navigateTo(AppPage.Record, `https://www.luogu.com.cn/record/${rid}`) }
 function backToList() { navigateTo(AppPage.Record, 'https://www.luogu.com.cn/record/list') }
 function openProblem(pid: string) { window.open(`https://www.luogu.com.cn/problem/${pid}`, '_blank') }
@@ -143,10 +184,12 @@ function langName(id: number | string): string {
 
 function loadContent() {
   if (recordId.value) { detail.value = null; fetchDetail(recordId.value) }
-  else { detail.value = null; currentPage.value = 1; records.value = []; fetchRecords() }
+  else { detail.value = null; listPage.value = 1; records.value = []; fetchRecords() }
 }
 onMounted(loadContent)
 watch(recordId, () => loadContent())
+
+// Infinite scroll observer
 let obs: IntersectionObserver | null = null
 onMounted(() => {
   obs = new IntersectionObserver((e) => { if (e[0]?.isIntersecting && !loading.value && !loadingMore.value) loadMore() }, { rootMargin: '1200px' })
@@ -158,7 +201,9 @@ onUnmounted(() => obs?.disconnect())
 
 <template>
   <div class="page-container" w-full h-full p="x-4 md:x-8 lg:x-16" pos="relative">
+    <!-- ============================================================ -->
     <!-- Detail View -->
+    <!-- ============================================================ -->
     <template v-if="recordId">
       <div bg="$bew-content" rounded="$bew-radius" p-6 mb-6 shadow="[var(--bew-shadow-1),var(--bew-shadow-edge-glow-1)]" border="1 $bew-border-color" style="backdrop-filter:var(--bew-filter-glass-1)">
         <button @click="backToList" style="background:none;border:none;cursor:pointer;color:var(--bew-theme-color);font-size:var(--bew-base-font-size)" mb-2>← 返回记录列表</button>
@@ -168,45 +213,49 @@ onUnmounted(() => obs?.disconnect())
       <Transition name="content-reveal">
         <div v-if="!detailLoading && detail" bg="$bew-content" rounded="$bew-radius" p-6 shadow="[var(--bew-shadow-1),var(--bew-shadow-edge-glow-1)]" border="1 $bew-border-color" style="backdrop-filter:var(--bew-filter-glass-1)">
           <!-- Status header -->
-          <div flex="~ items-center gap-3" mb-4 pb-4 border="b-1 $bew-border-color">
+          <div flex="~ items-center gap-4" mb-4 pb-4 border="b-1 $bew-border-color">
             <div :style="{fontSize:'1.5em',fontWeight:700,color:statusColor(detail.status)}">{{ statusLabel(detail.status) }}</div>
-            <div v-if="detail.score!=null" :style="{fontSize:'1.2em',fontWeight:600,color:detail.score>=100?'var(--bew-success-color)':'var(--bew-error-color)'}">{{ detail.score }}分</div>
-          </div>
-          <!-- Info grid -->
-          <div grid="~ cols-2 md:cols-4" gap-4 mb-4 style="font-size:var(--bew-base-font-size)">
-            <div><span style="color:var(--bew-text-3)">题目</span><br><span @click="openProblem(detail.problem.pid)" style="color:var(--bew-theme-color);cursor:pointer;font-weight:500">{{ detail.problem.pid }} {{ detail.problem.title }}</span></div>
-            <div><span style="color:var(--bew-text-3)">时间</span><br><span style="color:var(--bew-text-1)">{{ detail.time }}ms</span></div>
-            <div><span style="color:var(--bew-text-3)">内存</span><br><span style="color:var(--bew-text-1)">{{ (detail.memory/1024).toFixed(1) }}MB</span></div>
-            <div><span style="color:var(--bew-text-3)">语言</span><br><span style="color:var(--bew-text-1)">{{ langName(detail.language) }} {{ detail.enableO2 ? '(O2)' : '' }}</span></div>
-            <div><span style="color:var(--bew-text-3)">代码长度</span><br><span style="color:var(--bew-text-1)">{{ detail.sourceCodeLength }}B</span></div>
-            <div><span style="color:var(--bew-text-3)">提交时间</span><br><span style="color:var(--bew-text-1)">{{ new Date(detail.submitTime*1000).toLocaleString('zh-CN') }}</span></div>
-          </div>
-          <!-- Compile message if CE -->
-          <div v-if="detail.detail?.compileResult?.message" bg="$bew-fill-1" rounded="$bew-radius" p-4 mb-4 style="font-size:var(--bew-base-font-size);white-space:pre-wrap;font-family:monospace;max-height:300px;overflow-y:auto;color:var(--bew-text-1)">
-            {{ detail.detail.compileResult.message }}
-          </div>
-          <!-- Test case blocks — Luogu-style colored squares -->
-          <div v-if="testCaseGroups.length > 0" mt-4>
-            <div style="font-size:var(--bew-base-font-size);color:var(--bew-text-2);font-weight:600" mb-2>测试点详情</div>
-            <template v-for="(sub, si) in testCaseGroups" :key="si">
-              <div v-if="testCaseGroups.length > 1" style="font-size:.85em;color:var(--bew-text-3);font-weight:600" mb-1>Subtask {{ si + 1 }} ({{ sub.score }}/{{ sub.fullScore }} 分)</div>
-              <div mb-3>
-                <div flex="~ wrap" gap-2>
-                  <div v-for="(tc, idx) in sub.cases" :key="idx" class="tc-block" :style="{background:tcStatusColor(tc)}">
-                    <div class="tc-content">
-                      <div class="tc-info">{{ tc.time }}ms / {{ (tc.memory/1024).toFixed(1) }}MB</div>
-                      <div class="tc-status">{{ tcStatusLabel(tc) }}</div>
-                    </div>
-                    <div class="tc-id">#{{ idx+1 }}</div>
-                    <div class="tc-msg">{{ tc.score }} 分 · {{ tc.description || '' }}</div>
-                  </div>
-                </div>
-              </div>
-            </template>
+            <div v-if="detail.score != null" :style="{fontSize:'1.2em',fontWeight:600,color:detail.status===12||detail.status===4?'var(--bew-success-color)':'var(--bew-error-color)'}">{{ detail.score }} 分</div>
           </div>
 
-          <!-- Source code with highlighting -->
-          <div v-if="detail.sourceCode" mt-4>
+          <!-- Info grid -->
+          <div grid="~ cols-2 md:cols-4" gap-4 mb-6 style="font-size:var(--bew-base-font-size)">
+            <div><span style="color:var(--bew-text-3)">题目</span><br><span @click="openProblem(detail.problem.pid)" style="color:var(--bew-theme-color);cursor:pointer;font-weight:500">{{ detail.problem.pid }} {{ detail.problem.title }}</span></div>
+            <div><span style="color:var(--bew-text-3)">用时</span><br><span style="color:var(--bew-text-1)">{{ formatTime(detail.time || 0) }}</span></div>
+            <div><span style="color:var(--bew-text-3)">内存</span><br><span style="color:var(--bew-text-1)">{{ formatMemory(detail.memory || 0) }}</span></div>
+            <div><span style="color:var(--bew-text-3)">语言</span><br><span style="color:var(--bew-text-1)">{{ langName(detail.language) }} {{ detail.enableO2 ? '(O2)' : '' }}</span></div>
+            <div><span style="color:var(--bew-text-3)">代码长度</span><br><span style="color:var(--bew-text-1)">{{ detail.sourceCodeLength }} B</span></div>
+            <div><span style="color:var(--bew-text-3)">提交时间</span><br><span style="color:var(--bew-text-1)">{{ new Date(detail.submitTime*1000).toLocaleString('zh-CN') }}</span></div>
+          </div>
+
+          <!-- Compile error message -->
+          <div v-if="detail.detail?.compileResult?.message" bg="$bew-fill-1" rounded="$bew-radius" p-4 mb-6 style="font-size:var(--bew-base-font-size);white-space:pre-wrap;font-family:monospace;max-height:300px;overflow-y:auto;color:var(--bew-text-1)">
+            {{ detail.detail.compileResult.message }}
+          </div>
+
+          <!-- Test case blocks — Luogu-style colored squares -->
+          <template v-if="testCaseGroups.length > 0">
+            <div v-for="(sub, si) in testCaseGroups" :key="si" mb-6>
+              <div v-if="testCaseGroups.length > 1" style="font-size:.85em;color:var(--bew-text-2);font-weight:600" mb-2>
+                Subtask #{{ sub.id }} {{ sub.fullScore != null ? `(${sub.score ?? 0}/${sub.fullScore} 分)` : `(${sub.score ?? 0} 分)` }}
+              </div>
+              <div flex="~ wrap" gap-2>
+                <div
+                  v-for="(tc, idx) in sub.cases" :key="idx"
+                  class="tc-block"
+                  :style="{ backgroundColor: tc.color }"
+                >
+                  <div class="tc-line1">{{ formatTime(tc.time || 0) }} / {{ formatMemory(tc.memory || 0) }}</div>
+                  <div class="tc-line2">{{ tc.label }}</div>
+                  <div class="tc-line3">#{{ idx + 1 }}</div>
+                  <div class="tc-line4">{{ tc.score ?? 0 }} 分<div v-if="tc.description" class="tc-desc">{{ tc.description }}</div></div>
+                </div>
+              </div>
+            </div>
+          </template>
+
+          <!-- Source code -->
+          <div v-if="detail.sourceCode" mt-6>
             <div style="font-size:var(--bew-base-font-size);color:var(--bew-text-2);font-weight:600" mb-2>源代码</div>
             <pre bg="$bew-fill-1" rounded="$bew-radius" p-4 style="font-size:var(--bew-base-font-size);font-family:monospace;max-height:400px;overflow:auto;color:var(--bew-text-1);tab-size:4" v-html="highlightCode(detail.sourceCode, String(detail.language))" />
           </div>
@@ -214,55 +263,66 @@ onUnmounted(() => obs?.disconnect())
       </Transition>
     </template>
 
+    <!-- ============================================================ -->
     <!-- List View -->
+    <!-- ============================================================ -->
     <template v-else>
-    <div bg="$bew-content" rounded="$bew-radius" p-6 mb-6 shadow="[var(--bew-shadow-1),var(--bew-shadow-edge-glow-1)]" border="1 $bew-border-color" style="backdrop-filter:var(--bew-filter-glass-1)">
-      <h1 style="font-size:var(--bew-base-font-size);color:var(--bew-text-1);font-weight:700" mb-2>评测记录</h1>
-      <p style="font-size:var(--bew-base-font-size);color:var(--bew-text-2)">共 {{ totalCount }} 条记录</p>
-    </div>
+      <div bg="$bew-content" rounded="$bew-radius" p-6 mb-6 shadow="[var(--bew-shadow-1),var(--bew-shadow-edge-glow-1)]" border="1 $bew-border-color" style="backdrop-filter:var(--bew-filter-glass-1)">
+        <h1 style="font-size:var(--bew-base-font-size);color:var(--bew-text-1);font-weight:700" mb-2>评测记录</h1>
+        <p style="font-size:var(--bew-base-font-size);color:var(--bew-text-2)">共 {{ totalCount }} 条记录</p>
+      </div>
 
-    <Loading v-if="loading" />
-    <div v-if="!loading && errorMsg" bg="$bew-content" rounded="$bew-radius" p-8 border="1 $bew-border-color" text="center $bew-text-2">
-      <span v-html="renderIcon('mingcute:warning-line',32)" style="display:contents"/><p mt-2>{{ errorMsg }}</p>
-    </div>
+      <Loading v-if="loading" />
+      <div v-if="!loading && errorMsg" bg="$bew-content" rounded="$bew-radius" p-8 border="1 $bew-border-color" text="center $bew-text-2">
+        <span v-html="renderIcon('mingcute:warning-line',32)" style="display:contents"/><p mt-2>{{ errorMsg }}</p>
+      </div>
 
-    <Transition name="content-reveal">
-      <div v-if="!loading && records.length>0" bg="$bew-content" rounded="$bew-radius" shadow="[var(--bew-shadow-1),var(--bew-shadow-edge-glow-1)]" border="1 $bew-border-color" style="backdrop-filter:var(--bew-filter-glass-1)" overflow="hidden">
-        <div v-for="(r, idx) in records" :key="r.rid" class="stagger-row hover:bg-$bew-fill-2" :style="{'--row-index':idx}" flex="~ items-center" p="x-4 md:x-6 y-3" border="b-1 $bew-border-color" cursor="pointer" duration-200 @click="openRecord(r.rid)">
-          <div w="80px" flex-shrink-0>
-            <span :style="{color:statusColor(r.status),fontSize:'var(--bew-base-font-size)',fontWeight:600}">{{ statusLabel(r.status) }}</span>
-          </div>
-          <div flex="1" min-w-0>
-            <div @click.stop="openProblem(r.problem.pid)" style="font-size:var(--bew-base-font-size);color:var(--bew-text-1);font-weight:500;cursor:pointer" class="hover:underline">{{ r.problem.pid }} {{ r.problem.name }}</div>
-            <div flex="~ gap-3" mt-1 style="font-size:calc(var(--bew-base-font-size) * 0.85);color:var(--bew-text-3)">
-              <span>#{{ r.rid }}</span>
-              <span v-if="r.time">{{ r.time }}ms</span>
-              <span v-if="r.memory">{{ (r.memory/1024).toFixed(1) }}MB</span>
-              <span>{{ langName(r.language) }}</span>
-              <span>{{ timeAgo(r.submitTime) }}</span>
+      <Transition name="content-reveal">
+        <div v-if="!loading && records.length>0" bg="$bew-content" rounded="$bew-radius" shadow="[var(--bew-shadow-1),var(--bew-shadow-edge-glow-1)]" border="1 $bew-border-color" style="backdrop-filter:var(--bew-filter-glass-1)" overflow="hidden">
+          <div v-for="(r, idx) in records" :key="r.rid" class="stagger-row hover:bg-$bew-fill-2" :style="{'--row-index':idx}" flex="~ items-center" p="x-4 md:x-6 y-3" border="b-1 $bew-border-color" cursor="pointer" duration-200 @click="openRecord(r.rid)">
+            <div w="80px" flex-shrink-0>
+              <span :style="{color:statusColor(r.status),fontSize:'var(--bew-base-font-size)',fontWeight:600}">{{ statusLabel(r.status) }}</span>
+            </div>
+            <div flex="1" min-w-0>
+              <div @click.stop="openProblem(r.problem.pid)" style="font-size:var(--bew-base-font-size);color:var(--bew-text-1);font-weight:500;cursor:pointer" class="hover:underline">{{ r.problem.pid }} {{ r.problem.name }}</div>
+              <div flex="~ gap-3" mt-1 style="font-size:calc(var(--bew-base-font-size) * 0.85);color:var(--bew-text-3)">
+                <span>#{{ r.rid }}</span>
+                <span v-if="r.time">{{ formatTime(r.time) }}</span>
+                <span v-if="r.memory">{{ formatMemory(r.memory) }}</span>
+                <span>{{ langName(r.language) }}</span>
+                <span>{{ timeAgo(r.submitTime) }}</span>
+              </div>
+            </div>
+            <div v-if="r.score != null" flex-shrink-0 text-right style="font-size:var(--bew-base-font-size);font-weight:600" :style="{color:r.score===100?'var(--bew-success-color)':'var(--bew-error-color)'}">
+              {{ r.score }} 分
             </div>
           </div>
-          <div v-if="r.score != null" flex-shrink-0 text-right style="font-size:var(--bew-base-font-size);font-weight:600" :style="{color:r.score>=100?'var(--bew-success-color)':'var(--bew-error-color)'}">
-            {{ r.score }}分
-          </div>
         </div>
-      </div>
-    </Transition>
+      </Transition>
 
-    <Loading v-if="loadingMore" />
-    <div v-if="!loading && records.length>0 && currentPage<totalPages" ref="sentinelRef" style="height:60px;display:flex;align-items:center;justify-content:center;font-size:var(--bew-base-font-size);color:var(--bew-text-3)">向下滚动加载更多...</div>
-    <div v-if="!loading && records.length>0 && currentPage>=totalPages" style="font-size:var(--bew-base-font-size);color:var(--bew-text-3);text-align:center;padding-bottom:2rem">已加载全部 {{ totalCount }} 条记录</div>
+      <Loading v-if="loadingMore" />
+      <div v-if="!loading && records.length>0 && listPage<totalPages" ref="sentinelRef" style="height:60px;display:flex;align-items:center;justify-content:center;font-size:var(--bew-base-font-size);color:var(--bew-text-3)">向下滚动加载更多...</div>
+      <div v-if="!loading && records.length>0 && listPage>=totalPages" style="font-size:var(--bew-base-font-size);color:var(--bew-text-3);text-align:center;padding-bottom:2rem">已加载全部 {{ totalCount }} 条记录</div>
     </template>
   </div>
 </template>
 
 <style lang="scss" scoped>
-.tc-block { width:120px;border-radius:8px;padding:8px;color:#fff;font-size:var(--bew-base-font-size); }
-.tc-content { margin-bottom:4px; }
-.tc-info { font-size:.75em;opacity:.9; }
-.tc-status { font-weight:700;font-size:1em; }
-.tc-id { font-size:.8em;font-weight:600; }
-.tc-msg { font-size:.7em;margin-top:2px; }
+/* Luogu-style test case blocks */
+.tc-block {
+  width: 120px;
+  border-radius: 8px;
+  padding: 8px 10px;
+  color: #fff;
+  font-size: var(--bew-base-font-size);
+  line-height: 1.3;
+}
+.tc-line1 { font-size: .7em; opacity: .85; }
+.tc-line2 { font-size: 1em; font-weight: 700; margin-top: 1px; }
+.tc-line3 { font-size: .75em; font-weight: 600; opacity: .9; margin-top: 1px; }
+.tc-line4 { font-size: .65em; opacity: .8; margin-top: 1px; }
+.tc-desc { font-size: inherit; opacity: .7; word-break: break-word; margin-top: 1px; }
+
 :deep(pre code) { font-family:"Cascadia Code","Fira Code","JetBrains Mono",monospace;font-size:.875em; }
 :deep(.hljs-keyword) { color:#c678dd; }
 :deep(.hljs-string) { color:#98c379; }
