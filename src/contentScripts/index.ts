@@ -147,7 +147,10 @@ if (isSupportedPages() || isSupportedIframePages()) {
   if (!isAuthPage()) {
     beforeLoadedStyleEl = injectCSS(`
       html.guly-design {
-        background-color: var(--bew-bg);
+        background-color: #f5f5f5;
+      }
+      html.guly-design.dark {
+        background-color: #1a1a1a;
       }
 
       body {
