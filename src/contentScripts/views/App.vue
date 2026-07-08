@@ -38,7 +38,7 @@ function getPageFromUrl(): AppPage {
   if (/\/training\/list/i.test(url)) return AppPage.Training
   if (/\/training\/\d+/i.test(url)) return AppPage.Training
   if (/\/team\//i.test(url)) return AppPage.Team
-  if (/\/problem\/solution\//i.test(url)) return AppPage.Solution
+  if (/\/problem\/solution/i.test(url)) return AppPage.Solution
   if (/\/record\//i.test(url)) return AppPage.Record
   if (/\/chat/i.test(url) && !/\/discuss/i.test(url)) return AppPage.Messages
   if (/\/search/i.test(url) || /\/problem\/keyword/i.test(url)) return AppPage.Search

@@ -24,13 +24,18 @@ async function fetchPosts(append = false) {
   if (append) loadingMore.value = true; else loading.value = true
   errorMsg.value = ''
   try {
-    const data = await browser.runtime.sendMessage({ contentScriptQuery: 'BLOG.getList', page: currentPage.value })
-    if (data?.error) { errorMsg.value = data.error }
-    else if (data?.data?.posts) {
-      const r = data.data.posts
-      posts.value = append ? [...posts.value, ...(r.result || [])] : (r.result || [])
-      totalCount.value = r.count || 0
-    } else { errorMsg.value = '数据格式不匹配' }
+    const qs = currentPage.value > 1 ? `?page=${currentPage.value}` : ''
+    const res = await fetch(`https://www.luogu.com.cn/discuss${qs}`, { credentials: 'same-origin' })
+    const html = await res.text()
+    const m = html.match(/<script\s+id="lentille-context"\s+type="application\/json"[^>]*>([^<]*)<\/script>/)
+    if (m?.[1]) {
+      const ctx = JSON.parse(m[1])
+      const r = ctx?.data?.posts || ctx?.currentData?.posts
+      if (r) {
+        posts.value = append ? [...posts.value, ...(r.result || [])] : (r.result || [])
+        totalCount.value = r.count || 0
+      } else { errorMsg.value = '数据格式不匹配' }
+    } else { errorMsg.value = '请先登录洛谷' }
   } catch (e: any) { errorMsg.value = friendlyError(e) }
   finally { loading.value = false; loadingMore.value = false }
 }
