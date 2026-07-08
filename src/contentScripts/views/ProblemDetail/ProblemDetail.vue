@@ -227,14 +227,23 @@ async function handleSubmit() {
     submitResult.value = `提交成功！评测记录 #${result.rid}`
     window.open(`https://www.luogu.com.cn/record/${result.rid}`, '_blank')
   }
+  else if (result.needCaptcha) {
+    submitError.value = ''
+    // Open a verification popup — user completes Turnstile there, then re-submits here
+    const w = 400; const h = 500
+    const left = (screen.width - w) / 2; const top = (screen.height - h) / 2
+    window.open(`https://www.luogu.com.cn/problem/${problemId.value}`, 'luogu-verify', `width=${w},height=${h},left=${left},top=${top}`)
+    submitError.value = '请在弹出的验证窗口中完成人机验证，然后返回此页面重新提交。'
+  }
   else if (result.status === 403) {
-    submitError.value = '请先登录洛谷后再提交'
+    submitError.value = result.errorMessage || '请先登录洛谷后再提交'
   }
   else {
     submitError.value = result.errorMessage || `提交失败 (HTTP ${result.status})`
   }
 }
 
+function copyText(text: string) { navigator.clipboard.writeText(text) }
 function openLuoguIDE() {
   // Open Luogu's own IDE for code submission (handles Cloudflare/captcha natively)
   window.open(`https://www.luogu.com.cn/problem/${problemId.value}#submit`, '_blank')
@@ -381,13 +390,13 @@ onMounted(() => {
               <div v-for="(sample, idx) in problem.samples" :key="idx" class="sample-io" mb-4>
                 <div class="sample-header" flex="~ items-center justify-between">
                   <span><span v-html="renderIcon('mingcute:arrow-right-line', 14)" style="display:contents" /> 样例 {{ idx + 1 }} — 输入</span>
-                  <button class="copy-btn" @click="navigator.clipboard.writeText(sample.input)" title="复制输入">复制</button>
+                  <button class="copy-btn" @click="copyText(sample.input)" title="复制输入">复制</button>
                 </div>
                 <pre style="margin:0 0 12px 0"><code>{{ sample.input }}</code></pre>
 
                 <div class="sample-header" style="border-top: 1px solid var(--bew-border-color)" flex="~ items-center justify-between">
                   <span><span v-html="renderIcon('mingcute:arrow-left-line', 14)" style="display:contents" /> 样例 {{ idx + 1 }} — 输出</span>
-                  <button class="copy-btn" @click="navigator.clipboard.writeText(sample.output)" title="复制输出">复制</button>
+                  <button class="copy-btn" @click="copyText(sample.output)" title="复制输出">复制</button>
                 </div>
                 <pre style="margin:0 0 12px 0"><code>{{ sample.output }}</code></pre>
 

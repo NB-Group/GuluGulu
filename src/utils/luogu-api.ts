@@ -102,6 +102,7 @@ export interface SubmitResult {
   rid?: number
   status?: number
   errorMessage?: string
+  needCaptcha?: boolean
 }
 
 /**
@@ -128,12 +129,35 @@ export async function submitCode(payload: SubmitPayload): Promise<SubmitResult> 
       }),
     })
 
-    const data = await res.json()
+    const contentType = res.headers.get('content-type') || ''
+    const text = await res.text()
 
+    // Cloudflare challenge returns HTML
+    if (contentType.includes('text/html') || text.includes('cf-browser-verify') || text.includes('Just a moment') || text.includes('__cf')) {
+      return { status: 503, errorMessage: '洛谷要求完成人机验证。请先在洛谷任意页面手动刷新一次以完成验证，再返回提交代码。' }
+    }
+
+    let data: any
+    try { data = JSON.parse(text) } catch {
+      return { status: 0, errorMessage: '提交失败：洛谷返回了非预期的响应' }
+    }
+
+    // Success
     if (data.rid || data.data?.rid) {
       return { status: 200, rid: data.rid || data.data?.rid }
     }
 
+    // Luogu captcha required (InvalidCaptchaException) — Cloudflare Turnstile was destroyed when we cleared body
+    if (data.errorType?.includes('Captcha') || data.data?.includes('验证码') || data.errorMessage?.includes('验证码')) {
+      return { status: 403, errorMessage: '需要人机验证。点击下方按钮打开洛谷验证窗口，完成后关闭即可提交。', needCaptcha: true }
+    }
+
+    // "不合法的来源" — origin/referer check failed
+    if (data.data?.includes('不合法的来源') || data.errorMessage?.includes('不合法的来源')) {
+      return { status: 403, errorMessage: '不合法的来源，请刷新页面后重试。' }
+    }
+
+    // Other auth / permission errors
     if (data.status === 403 || data.errorCode === 403) {
       return { status: 403, errorMessage: data.data || data.errorMessage || '请先登录洛谷' }
     }

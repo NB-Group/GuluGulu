@@ -5,13 +5,16 @@ import { runWhenIdle } from '~/utils/lazyLoad'
 import { executeTimes } from '~/utils/timer'
 
 /**
- * Inject the View Transition control styles into the MAIN document (once).
- *
- * These rules target `::view-transition-*` pseudo-elements, which live in the
+ * Inject the persistent View Transition control styles into the MAIN document
+ * (once). These target `::view-transition-*` pseudo-elements, which live in the
  * main document's top-layer — NOT inside our Shadow DOM. The copy that ships in
- * main.scss is injected into the Shadow DOM and therefore never applies, which
- * left the browser's default cross-fade running alongside our clip-path
- * animation and produced a one-frame "flash" at the end of the transition.
+ * main.scss is injected into the Shadow DOM and therefore never applies.
+ *
+ * We suppress the browser's DEFAULT cross-fade animation on the root snapshots
+ * (that cross-fade, running alongside our clip reveal, was one cause of the
+ * flash). The actual clip-path reveal animation is added per-toggle by
+ * `runClipReveal` below, as a plain CSS animation — which Firefox supports
+ * reliably, unlike JS `Element.animate({ pseudoElement })`.
  */
 let viewTransitionStyleInjected = false
 function ensureViewTransitionStyles() {
@@ -24,16 +27,60 @@ function ensureViewTransitionStyles() {
   style.textContent = `
     ::view-transition-old(root),
     ::view-transition-new(root) {
-      animation: none !important;
+      animation: none;
       mix-blend-mode: normal;
-      transition: none !important;
     }
-    ::view-transition-old(root) { z-index: 1; }
-    ::view-transition-new(root) { z-index: 2147483646; }
-    .dark::view-transition-old(root) { z-index: 2147483646; }
-    .dark::view-transition-new(root) { z-index: 1; }
   `
   document.head.appendChild(style)
+}
+
+/**
+ * Drive the circular clip-path reveal purely via CSS on the view-transition
+ * pseudo-elements. Returns a promise that resolves when the animation ends.
+ *
+ * Why CSS instead of `document.documentElement.animate(..., { pseudoElement })`:
+ *  - Firefox's support for JS-driven view-transition pseudo-element animation
+ *    is fragile/late (see bug 1921112), so it silently did nothing there.
+ *  - `animation-fill-mode: both` applies the 0% keyframe (`circle(0)`) at the
+ *    moment the pseudo-elements are created, so the browser never paints a
+ *    single unclipped "full-screen new theme" frame before the reveal starts —
+ *    which was the residual first-frame flash in Chrome.
+ */
+function runClipReveal(x: number, y: number, endRadius: number): Promise<void> {
+  const clipStart = `circle(0px at ${x}px ${y}px)`
+  const clipEnd = `circle(${endRadius}px at ${x}px ${y}px)`
+
+  // ALWAYS grow the NEW snapshot from a 0-radius circle to full screen, kept on
+  // top. This is direction-independent (looks the same for dark→light and
+  // light→dark) and, crucially, the END state is the new theme covering the
+  // whole viewport at the top layer. So even if a browser (Firefox) tears the
+  // pseudo-elements down a frame late, whatever shows through is the NEW theme —
+  // never the old one flashing back. (Shrinking the OLD snapshot instead left a
+  // window where Firefox re-revealed the old theme full-screen → the flash.)
+  const animName = `guly-clip-${Date.now()}`
+  const style = document.createElement('style')
+  style.textContent = `
+    ::view-transition-old(root) { z-index: 1; }
+    ::view-transition-new(root) { z-index: 2147483646; }
+    ::view-transition-new(root) {
+      animation: ${animName} 300ms ease-in-out both;
+    }
+    @keyframes ${animName} {
+      from { clip-path: ${clipStart}; }
+      to { clip-path: ${clipEnd}; }
+    }
+  `
+  document.head.appendChild(style)
+
+  return new Promise<void>((resolve) => {
+    // Resolve slightly after the animation duration; the pseudo-elements are
+    // torn down by the browser when the transition finishes, so we just need to
+    // clean up our injected style afterwards.
+    setTimeout(() => {
+      style.remove()
+      resolve()
+    }, 350)
+  })
 }
 
 export function useDark() {
@@ -136,21 +183,6 @@ export function useDark() {
       style.appendChild(document.createTextNode(styleString))
       document.head.appendChild(style)
 
-      // Since the above normal dom style cannot be applied in shadow dom style
-      // We need to add this style again to the shadow dom
-      const shadowDomStyle = document.createElement('style')
-      const shadowDomStyleString = `
-            *, *::before, *::after
-            {-webkit-transition:none!important;-moz-transition:none!important;-o-transition:none!important;-ms-transition:none!important;transition:none!important; will-change: background}`
-      shadowDomStyle.appendChild(document.createTextNode(shadowDomStyleString))
-
-      const gulyShadowRoot = document.getElementById('guly')?.shadowRoot
-      const gulyWrapper = gulyShadowRoot?.getElementById('guly-wrapper')
-      if (!gulyWrapper)
-        throw new Error('mainAppRef is not found')
-
-      gulyWrapper.appendChild(shadowDomStyle)
-
       const transition: any = (document as any).startViewTransition(async () => {
         updateThemeSettings()
         // Apply the theme classes to the DOM synchronously here, instead of
@@ -163,34 +195,12 @@ export function useDark() {
         await nextTick()
       })
 
-      transition.ready.then(() => {
-        const clipPath = [
-              `circle(0px at ${x}px ${y}px)`,
-              `circle(${endRadius}px at ${x}px ${y}px)`,
-        ]
-        const animation = document.documentElement.animate(
-          {
-            clipPath: currentAppColorScheme.value === 'dark'
-              ? [...clipPath].reverse()
-              : clipPath,
-          },
-          {
-            duration: 300,
-            easing: 'ease-in-out',
-            // Keep the final clip-path after the animation ends. Without this the
-            // clip-path snaps back to its default (unclipped) value for one frame,
-            // re-revealing the old snapshot full-screen → the "flash" bug.
-            fill: 'forwards',
-            pseudoElement: currentAppColorScheme.value === 'dark'
-              ? '::view-transition-old(root)'
-              : '::view-transition-new(root)',
-          },
-        )
-        animation.addEventListener('finish', () => {
-          document.head.removeChild(style!)
-          gulyWrapper.removeChild(shadowDomStyle!)
-        }, { once: true })
-      })
+      transition.ready
+        .then(() => runClipReveal(x, y, endRadius))
+        .catch(() => {})
+        .finally(() => {
+          style.remove()
+        })
     }
   }
 
