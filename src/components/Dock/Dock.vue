@@ -434,6 +434,7 @@ const dockTransformStyle = computed((): { transform: string, transformOrigin: st
   }
 
   .back-to-top-or-refresh-btn {
+    overflow: hidden; /* SVG stroke animation stays inside button */
     --uno: "transform active:important-scale-90 hover:scale-110";
     --uno: "lg:w-45px w-35px lg:h-45px h-35px";
     --uno: "grid place-items-center";

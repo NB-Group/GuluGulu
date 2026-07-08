@@ -368,7 +368,7 @@ onMounted(() => {
         <!-- ============================================================ -->
         <!-- Statement Tab -->
         <!-- ============================================================ -->
-        <Transition name="content-reveal" mode="out-in">
+        <Transition name="page-fade" mode="out-in">
           <div
             v-if="activeTab === 'statement'"
             :key="'statement'"

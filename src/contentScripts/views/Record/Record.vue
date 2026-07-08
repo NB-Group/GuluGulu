@@ -122,6 +122,17 @@ async function fetchDetail(id: number) {
   detailLoading.value = false
 }
 
+// Normalize subtasks (object or array) and testCases (object or array) to a uniform structure
+const testCaseGroups = computed(() => {
+  const subs = detail.value?.detail?.judgeResult?.subtasks
+  if (!subs) return []
+  const subList = Array.isArray(subs) ? subs : Object.values(subs)
+  return subList.map((sub: any) => {
+    const tcs = sub.testCases
+    const caseList = Array.isArray(tcs) ? tcs : Object.values(tcs || {})
+    return { score: sub.score, fullScore: sub.fullScore, cases: caseList }
+  }).filter((g: any) => g.cases.length > 0)
+})
 function openRecord(rid: number) { navigateTo(AppPage.Record, `https://www.luogu.com.cn/record/${rid}`) }
 function backToList() { navigateTo(AppPage.Record, 'https://www.luogu.com.cn/record/list') }
 function openProblem(pid: string) { window.open(`https://www.luogu.com.cn/problem/${pid}`, '_blank') }
@@ -175,12 +186,13 @@ onUnmounted(() => obs?.disconnect())
             {{ detail.detail.compileResult.message }}
           </div>
           <!-- Test case blocks — Luogu-style colored squares -->
-          <div v-if="detail.detail?.judgeResult?.subtasks?.length" mt-4>
+          <div v-if="testCaseGroups.length > 0" mt-4>
             <div style="font-size:var(--bew-base-font-size);color:var(--bew-text-2);font-weight:600" mb-2>测试点详情</div>
-            <template v-for="sub in detail.detail.judgeResult.subtasks" :key="sub.id">
+            <template v-for="(sub, si) in testCaseGroups" :key="si">
+              <div v-if="testCaseGroups.length > 1" style="font-size:.85em;color:var(--bew-text-3);font-weight:600" mb-1>Subtask {{ si + 1 }} ({{ sub.score }}/{{ sub.fullScore }} 分)</div>
               <div mb-3>
                 <div flex="~ wrap" gap-2>
-                  <div v-for="(tc, idx) in Object.entries(sub.testCases||{}).sort(([a],[b])=>Number(a)-Number(b)).map(([,v])=>v)" :key="idx" class="tc-block" :style="{background:tcStatusColor(tc)}">
+                  <div v-for="(tc, idx) in sub.cases" :key="idx" class="tc-block" :style="{background:tcStatusColor(tc)}">
                     <div class="tc-content">
                       <div class="tc-info">{{ tc.time }}ms / {{ (tc.memory/1024).toFixed(1) }}MB</div>
                       <div class="tc-status">{{ tcStatusLabel(tc) }}</div>
