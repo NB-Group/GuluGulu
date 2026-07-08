@@ -1,36 +1,70 @@
 import { marked } from 'marked'
+import { markedHighlight } from 'marked-highlight'
 import hljs from 'highlight.js'
 import katex from 'katex'
 // @ts-ignore
 import katexCSS from 'katex/dist/katex.min.css?raw'
+// @ts-ignore
+import hljsLightCSS from 'highlight.js/styles/github.css?raw'
+// @ts-ignore
+import hljsDarkCSS from 'highlight.js/styles/github-dark.css?raw'
 
 // ============================================================
-// Inject KaTeX CSS into Shadow DOM (once)
+// Inject KaTeX CSS and Highlight.js CSS into Shadow DOM (once)
 // ============================================================
 let cssInjected = false
+let hljsLightEl: HTMLStyleElement | null = null
+let hljsDarkEl: HTMLStyleElement | null = null
+
 export function injectKatexCSS() {
   if (cssInjected) return
   try {
     const host = document.querySelector('#guly')?.shadowRoot
     if (host) {
-      const style = document.createElement('style')
-      style.textContent = katexCSS
-      host.appendChild(style)
+      const kaTeXStyle = document.createElement('style')
+      kaTeXStyle.textContent = katexCSS
+      host.appendChild(kaTeXStyle)
+
+      // Light theme (default visible)
+      hljsLightEl = document.createElement('style')
+      hljsLightEl.textContent = hljsLightCSS
+      hljsLightEl.id = 'guly-hljs-light'
+      host.appendChild(hljsLightEl)
+
+      // Dark theme (hidden by default)
+      hljsDarkEl = document.createElement('style')
+      hljsDarkEl.textContent = hljsDarkCSS
+      hljsDarkEl.id = 'guly-hljs-dark'
+      hljsDarkEl.disabled = true
+      host.appendChild(hljsDarkEl)
+
+      // Toggle on theme change
+      const observer = new MutationObserver(() => {
+        const isDark = document.querySelector('#guly')?.classList.contains('dark')
+        if (hljsLightEl) hljsLightEl.disabled = !!isDark
+        if (hljsDarkEl) hljsDarkEl.disabled = !isDark
+      })
+      observer.observe(document.querySelector('#guly')!, { attributes: true, attributeFilter: ['class'] })
+
       cssInjected = true
     }
   } catch {}
 }
 
 // ============================================================
-// Configure marked
+// Configure marked with code highlighting (marked v18 API)
 // ============================================================
-marked.setOptions({
+marked.use(markedHighlight({
+  langPrefix: 'hljs language-',
   highlight(code: string, lang: string) {
     if (lang && hljs.getLanguage(lang)) {
-      try { return hljs.highlight(code, { language: lang }).value } catch {}
+      return hljs.highlight(code, { language: lang }).value
     }
-    try { return hljs.highlightAuto(code).value } catch { return code }
+    return hljs.highlightAuto(code).value
   },
+}))
+
+marked.setOptions({
   breaks: true,
   gfm: true,
 })

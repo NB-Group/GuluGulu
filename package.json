@@ -41,6 +41,7 @@
     "highlight.js": "^11.11.1",
     "katex": "^0.17.0",
     "marked": "^18.0.5",
+    "marked-highlight": "^2.2.4",
     "md5": "^2.3.0",
     "mitt": "^3.0.1",
     "overlayscrollbars": "2.7.3",

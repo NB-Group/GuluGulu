@@ -670,7 +670,7 @@ onMounted(() => {
           <div flex="~ col" items="center" justify="center" py-12 text="$bew-text-2">
             <span v-html="renderIcon('mingcute:bulb-line', 48)" style="display:contents" />
             <p text="lg" mt-4 mb-2>题解</p>
-            <p text="sm $bew-text-3" mb-4>查看本题的题解和讨论</p>
+            <p text="sm $bew-text-3" mb-4>查看本题的题解</p>
             <Button type="primary" @click="openSolutionsPage">
               <span v-html="renderIcon('mingcute:document-line', 16)" style="display:contents" />
               查看题解

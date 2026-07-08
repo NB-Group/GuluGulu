@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { renderIcon } from '~/utils/icons'
 import { timeAgo } from '~/utils/main'
-import { friendlyError } from '~/utils/luogu-api'
+import { friendlyError, getCsrfToken } from '~/utils/luogu-api'
 import { parseMarkdownContent } from '~/utils/markdown'
 import { AppPage } from '~/enums/appEnums'
 import { useGulyApp } from '~/composables/useAppProvider'
@@ -58,15 +58,19 @@ async function fetchDetail(id: number) {
     if (m?.[1]) {
       const ctx = JSON.parse(m[1])
       // Structure: ctx.currentData.post (or .data.post)
-      const raw = ctx?.currentData?.post || ctx?.data?.post || null
+      const cd = ctx?.data || ctx?.currentData || {}
+      const raw = cd?.post || null
       if (raw && typeof raw === 'object') {
         detail.value = {
           ...raw,
           content: raw.content || raw.body || raw.text || '',
           author: raw.author || raw.user || raw.poster || {},
         }
+        const reps = cd?.replies?.result || cd?.replies || []
+        replies.value = Array.isArray(reps) ? reps : []
       } else {
         detail.value = null
+        replies.value = []
       }
     } else {
       detail.value = null
@@ -75,6 +79,35 @@ async function fetchDetail(id: number) {
     console.error('[GuluGulu] fetchDetail error:', e)
   }
   detailLoading.value = false
+}
+
+async function postReply() {
+  const text = replyContent.value.trim()
+  if (!text || !discussId.value || replySending.value) return
+  replySending.value = true
+  replyError.value = ''
+  try {
+    const csrf = getCsrfToken()
+    const res = await fetch(`https://www.luogu.com.cn/discuss/${discussId.value}/reply`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrf, 'X-Requested-With': 'XMLHttpRequest' },
+      credentials: 'same-origin',
+      body: JSON.stringify({ content: text }),
+    })
+    const json = await res.json()
+    if (json.code === 200 || json.rid || json.id) {
+      replies.value.push({
+        id: json.rid || json.id || Date.now(),
+        author: { uid: Number((window as any).__guly_user?.uid) || 0, name: (window as any).__guly_user?.name || '', avatar: `https://cdn.luogu.com.cn/upload/usericon/${(window as any).__guly_user?.uid || 0}.png`, color: '' },
+        time: Math.floor(Date.now() / 1000),
+        content: text,
+      })
+      replyContent.value = ''
+    } else {
+      replyError.value = json?.data || json?.msg || '回复失败'
+    }
+  } catch (e: any) { replyError.value = friendlyError(e) }
+  replySending.value = false
 }
 
 function openPost(id: number) { navigateTo(AppPage.Blog, `https://www.luogu.com.cn/discuss/${id}`) }
@@ -113,6 +146,39 @@ onUnmounted(() => obs?.disconnect())
       <Transition name="content-reveal">
         <div v-if="!detailLoading && detail" bg="$bew-content" rounded="$bew-radius" p-6 shadow="[var(--bew-shadow-1),var(--bew-shadow-edge-glow-1)]" border="1 $bew-border-color" style="backdrop-filter:var(--bew-filter-glass-1)">
           <div class="markdown-body" style="font-size:var(--bew-base-font-size);color:var(--bew-text-1);line-height:1.8" v-html="parseMarkdownContent(detail.content || detail.body || '*(无内容)*')" />
+
+          <!-- Replies -->
+          <div mt-8 pt-6 border="t-1 $bew-border-color">
+            <h3 style="font-size:var(--bew-base-font-size);color:var(--bew-text-1);font-weight:700" mb-4>{{ replies.length }} 条回复</h3>
+
+            <div v-if="replies.length > 0" flex="~ col" gap-3 mb-6>
+              <div v-for="r in replies" :key="r.id" class="reply-item" p-4 rounded="$bew-radius" bg="$bew-fill-1">
+                <div flex="~ items-center gap-2" mb-2>
+                  <img :src="r.author?.avatar" style="width:22px;height:22px;border-radius:50%;object-fit:cover" @error="(e:any)=>{e.target.style.display='none'}" />
+                  <span :style="{color:r.author?.color?`var(--bew-${r.author.color})`:'var(--bew-text-1)',fontWeight:600,fontSize:'var(--bew-base-font-size)'}">{{ r.author?.name }}</span>
+                  <span style="font-size:.8em;color:var(--bew-text-4)">{{ new Date(r.time*1000).toLocaleString('zh-CN') }}</span>
+                </div>
+                <div class="markdown-body" style="font-size:var(--bew-base-font-size);color:var(--bew-text-1);line-height:1.6" v-html="parseMarkdownContent(r.content)" />
+              </div>
+            </div>
+
+            <!-- Reply input -->
+            <div flex="~ items-end gap-2">
+              <textarea
+                v-model="replyContent"
+                style="flex:1;background:var(--bew-fill-1);color:var(--bew-text-1);border:1px solid var(--bew-border-color);border-radius:var(--bew-radius);padding:8px 12px;font-size:var(--bew-base-font-size);resize:none;min-height:60px;max-height:150px;font-family:inherit;outline:none"
+                placeholder="写下你的回复..."
+                @keydown.enter.ctrl="postReply"
+              />
+              <button
+                style="background:var(--bew-theme-color);color:white;border:none;border-radius:var(--bew-radius);padding:8px 20px;cursor:pointer;font-size:var(--bew-base-font-size);font-weight:600;white-space:nowrap"
+                :disabled="replySending || !replyContent.trim()"
+                :style="{ opacity: (replySending || !replyContent.trim()) ? .5 : 1 }"
+                @click="postReply"
+              >{{ replySending ? '发送中...' : '回复' }}</button>
+            </div>
+            <div v-if="replyError" mt-2 p-2 rounded="$bew-radius" style="background:var(--bew-error-color-20);color:var(--bew-error-color);font-size:.85em">{{ replyError }}</div>
+          </div>
         </div>
       </Transition>
     </template>
