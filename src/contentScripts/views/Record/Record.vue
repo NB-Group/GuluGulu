@@ -174,6 +174,20 @@ const testCaseGroups = computed(() => {
   }).filter(g => g.cases.length > 0)
 })
 
+// Tooltip state for test case blocks
+const hoveredTc = ref<{ key: string; desc: string; x: number; y: number } | null>(null)
+let tcHideTimer: ReturnType<typeof setTimeout> | null = null
+
+function showTcTooltip(e: MouseEvent, key: string, desc: string) {
+  if (tcHideTimer) { clearTimeout(tcHideTimer); tcHideTimer = null }
+  if (!desc) return
+  const rect = (e.currentTarget as HTMLElement).getBoundingClientRect()
+  hoveredTc.value = { key, desc, x: rect.left + rect.width / 2, y: rect.top - 8 }
+}
+function hideTcTooltip() {
+  tcHideTimer = setTimeout(() => { hoveredTc.value = null }, 150)
+}
+
 function openRecord(rid: number) { navigateTo(AppPage.Record, `https://www.luogu.com.cn/record/${rid}`) }
 function backToList() { navigateTo(AppPage.Record, 'https://www.luogu.com.cn/record/list') }
 function openProblem(pid: string) { window.open(`https://www.luogu.com.cn/problem/${pid}`, '_blank') }
@@ -244,11 +258,13 @@ onUnmounted(() => obs?.disconnect())
                   v-for="(tc, idx) in sub.cases" :key="idx"
                   class="tc-block"
                   :style="{ backgroundColor: tc.color }"
+                  @mouseenter="showTcTooltip($event, `${sub.id}-${idx}`, tc.description)"
+                  @mouseleave="hideTcTooltip"
                 >
                   <div class="tc-line1">{{ formatTime(tc.time || 0) }} / {{ formatMemory(tc.memory || 0) }}</div>
                   <div class="tc-line2">{{ tc.label }}</div>
                   <div class="tc-line3">#{{ idx + 1 }}</div>
-                  <div class="tc-line4" :title="tc.description || ''">{{ tc.score ?? 0 }} 分</div>
+                  <div class="tc-line4">{{ tc.score ?? 0 }} 分</div>
                 </div>
               </div>
             </div>
@@ -304,6 +320,17 @@ onUnmounted(() => obs?.disconnect())
       <div v-if="!loading && records.length>0 && listPage<totalPages" ref="sentinelRef" style="height:60px;display:flex;align-items:center;justify-content:center;font-size:var(--bew-base-font-size);color:var(--bew-text-3)">向下滚动加载更多...</div>
       <div v-if="!loading && records.length>0 && listPage>=totalPages" style="font-size:var(--bew-base-font-size);color:var(--bew-text-3);text-align:center;padding-bottom:2rem">已加载全部 {{ totalCount }} 条记录</div>
     </template>
+
+    <!-- TC description tooltip (fixed-position, inside shadow DOM) -->
+    <Transition name="tc-tip">
+      <div
+        v-if="hoveredTc"
+        class="tc-tooltip"
+        :style="{ left: hoveredTc.x + 'px', top: hoveredTc.y + 'px' }"
+        @mouseenter="() => { if (tcHideTimer) { clearTimeout(tcHideTimer); tcHideTimer = null } }"
+        @mouseleave="hideTcTooltip"
+      >{{ hoveredTc.desc }}</div>
+    </Transition>
   </div>
 </template>
 
@@ -321,6 +348,28 @@ onUnmounted(() => obs?.disconnect())
 .tc-line2 { font-size: 1em; font-weight: 700; margin-top: 1px; }
 .tc-line3 { font-size: .75em; font-weight: 600; opacity: .9; margin-top: 1px; }
 .tc-line4 { font-size: .65em; opacity: .8; margin-top: 1px; cursor: default; }
+
+/* TC description tooltip */
+.tc-tooltip {
+  position: fixed;
+  transform: translate(-50%, -100%);
+  background: rgba(0,0,0,.85);
+  color: #fff;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: calc(var(--bew-base-font-size) * 0.8);
+  max-width: 360px;
+  white-space: pre-wrap;
+  word-break: break-word;
+  line-height: 1.4;
+  z-index: 99999;
+  pointer-events: auto;
+  box-shadow: 0 4px 12px rgba(0,0,0,.3);
+}
+.tc-tip-enter-active { transition: opacity .2s ease, transform .2s ease; }
+.tc-tip-leave-active { transition: opacity .15s ease, transform .15s ease; }
+.tc-tip-enter-from { opacity: 0; transform: translate(-50%, calc(-100% + 6px)); }
+.tc-tip-leave-to { opacity: 0; transform: translate(-50%, calc(-100% + 4px)); }
 
 :deep(pre code) { font-family:"Cascadia Code","Fira Code","JetBrains Mono",monospace;font-size:.875em; }
 :deep(.hljs-keyword) { color:#c678dd; }
