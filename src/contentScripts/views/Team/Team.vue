@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { renderIcon } from '~/utils/icons'
+import { timeAgo } from '~/utils/main'
 import { friendlyError } from '~/utils/luogu-api'
 import { AppPage } from '~/enums/appEnums'
 import { useGulyApp } from '~/composables/useAppProvider'
@@ -72,12 +73,6 @@ function openTeam(id: number) { navigateTo(AppPage.Team, `https://www.luogu.com.
 function openUser(uid: number) { window.open(`https://www.luogu.com.cn/user/${uid}`, '_blank') }
 function openPost(id: number) { navigateTo(AppPage.Blog, `https://www.luogu.com.cn/discuss/${id}`) }
 function backToTeams() { navigateTo(AppPage.Team, 'https://www.luogu.com.cn/user/mine/team') }
-function timeAgo(ts: number): string {
-  const d = Math.floor(Date.now() / 1000) - ts
-  if (d < 3600) return `${Math.floor(d / 60)}分前`
-  if (d < 86400) return `${Math.floor(d / 3600)}时前`
-  return `${Math.floor(d / 86400)}天前`
-}
 function formatDate(ts: number): string { return new Date(ts * 1000).toLocaleDateString('zh-CN') }
 function typeLabel(t: number): string { return t === 2 ? '教学' : t === 1 ? '比赛' : '普通' }
 
