@@ -19,6 +19,8 @@ const trainings = ref<TrainingSet[]>([])
 const loading = ref(true); const errorMsg = ref('')
 
 // Detail state
+const detail = ref<any>(null)
+const currentPage = ref(1)
 const trainingId = computed(() => { const m = document.URL.match(/\/training\/(\d+)/i); return m ? Number(m[1]) : null })
 const detailProblems = ref<TrainingProblem[]>([])
 const detailName = ref('')
