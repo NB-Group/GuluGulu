@@ -195,16 +195,34 @@ async function onDOMLoaded() {
     const csrfMeta = document.querySelector<HTMLMetaElement>('meta[name="csrf-token"]')
     const csrfToken = csrfMeta?.getAttribute('content') || ''
 
-    // _uid cookie is HttpOnly — must use background script to read it
+    // Extract user info BEFORE clearing body — from lentille-context on the page
     let userIdCookie = ''
     let userName = ''
     try {
-      const resp = await browser.runtime.sendMessage({ contentScriptQuery: 'HOME.getLoginState' })
-      if (resp?.uid) {
-        userIdCookie = resp.uid
-        userName = resp.name || ''
+      const lcEl = document.getElementById('lentille-context')
+      if (lcEl?.textContent) {
+        const lc = JSON.parse(lcEl.textContent)
+        const user = lc?.currentUser || lc?.data?.user || lc?.user || null
+        if (user) {
+          userIdCookie = String(user.uid || user.id || '')
+          userName = user.name || user.username || ''
+        }
       }
-    } catch {
+    } catch {}
+
+    // Fallback: ask background to read HttpOnly _uid cookie
+    if (!userIdCookie) {
+      try {
+        const resp = await browser.runtime.sendMessage({ contentScriptQuery: 'HOME.getLoginState' })
+        if (resp?.uid) {
+          userIdCookie = resp.uid
+          userName = userName || resp.name || ''
+        }
+      } catch {}
+    }
+
+    // Last-resort fallback: document.cookie (won't read HttpOnly but worth trying)
+    if (!userIdCookie) {
       userIdCookie = document.cookie.match(/(?:^|;\s*)_uid=(\d+)/)?.[1] || ''
     }
 
