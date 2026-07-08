@@ -1,79 +1,94 @@
 <script lang="ts" setup>
-import type { Ref } from 'vue'
-
 interface Props {
   min?: number
   max?: number
   modelValue: number
   label: string
 }
-const props = withDefaults(defineProps<Props>(), {
-  min: 0,
-  max: 100,
-})
-
+const props = withDefaults(defineProps<Props>(), { min: 0, max: 100 })
 const emit = defineEmits(['update:modelValue'])
 
-const modelValue = ref<number>(props.modelValue)
-const rangeRef = ref<HTMLInputElement>() as Ref<HTMLInputElement>
+const val = ref(props.modelValue)
+const sliderRef = ref<HTMLInputElement>()
+
+function updateFill(v: number) {
+  const el = sliderRef.value
+  if (!el) return
+  const pct = ((v - props.min) / (props.max - props.min)) * 100
+  el.style.background = `linear-gradient(to right, var(--bew-theme-color) ${pct}%, var(--bew-fill-1) ${pct}%)`
+}
+
+function onInput(e: Event) {
+  const v = Number((e.target as HTMLInputElement).value)
+  val.value = v
+  emit('update:modelValue', v)
+  updateFill(v)
+}
 
 onMounted(() => {
-  modelValue.value = props.modelValue
-  const progress = (modelValue.value / Number(rangeRef.value.max)) * 100
+  val.value = props.modelValue
+  nextTick(() => updateFill(props.modelValue))
+})
 
-  rangeRef.value.style.background = `linear-gradient(to right, var(--bew-theme-color) ${progress}%, var(--bew-fill-1) ${progress}%) no-repeat`
-
-  if (rangeRef.value) {
-    rangeRef.value.addEventListener('input', (event: Event) => {
-      const tempSliderValue = Number((event.target as HTMLInputElement).value)
-      emit('update:modelValue', Number(tempSliderValue))
-
-      const progress = (tempSliderValue / Number(rangeRef.value.max)) * 100
-
-      rangeRef.value.style.background = `linear-gradient(to right, var(--bew-theme-color) ${progress}%, var(--bew-fill-1) ${progress}%) no-repeat`
-    })
-  }
+watch(() => props.modelValue, (v) => {
+  val.value = v
+  updateFill(v)
 })
 </script>
 
 <template>
-  <label cursor-pointer flex items-center gap-3 w="$b-slider-width">
+  <label cursor-pointer flex items-center gap-3 w="100%">
     <input
-      ref="rangeRef"
-      v-model="modelValue" type="range" :min="min" :max="max" class="slider"
-      appearance-none outline-none bg="$bew-fill-1" rounded="$b-slider-height"
-      border="size-$b-border-width color-$bew-border-color" w="$b-slider-width" h="$b-slider-height"
+      ref="sliderRef"
+      v-model="val" type="range" :min="min" :max="max" class="slider"
+      @input="onInput"
     >
     <span text="sm $bew-text-2" shrink-0>{{ label }}</span>
   </label>
 </template>
 
 <style lang="scss" scoped>
-label {
-  --b-border-width: 2px;
-  --b-slider-height: 10px;
-  --b-slider-width: 100%;
-  --b-thumb-width: calc(20px - var(--b-border-width));
-  --b-thumb-height: calc(20px - var(--b-border-width));
-}
-
 input[type="range"] {
-  &::-webkit-slider-thumb {
-    --uno: "appearance-none w-$b-thumb-height h-$b-thumb-height bg-white rounded-$b-thumb-height";
-    --uno: "ring-$bew-border-color ring-2 cursor-pointer duration-300";
-  }
+  appearance: none;
+  outline: none;
+  width: 100%;
+  height: 10px;
+  border-radius: 5px;
+  border: 2px solid var(--bew-border-color);
 
+  &::-webkit-slider-thumb {
+    appearance: none;
+    width: 18px;
+    height: 18px;
+    background: #fff;
+    border-radius: 50%;
+    box-shadow: 0 0 0 2px var(--bew-border-color);
+    cursor: pointer;
+    transition: box-shadow .2s;
+  }
   &::-webkit-slider-thumb:hover {
-    --uno: "ring-$bew-theme-color";
+    box-shadow: 0 0 0 2px var(--bew-theme-color);
   }
 
   &::-moz-range-thumb {
-    --uno: "appearance-none w-$b-thumb-height h-$b-thumb-height bg-white rounded-$b-thumb-height";
-    --uno: "ring-$bew-border-color ring-2 cursor-pointer duration-300";
+    appearance: none;
+    width: 18px;
+    height: 18px;
+    background: #fff;
+    border-radius: 50%;
+    box-shadow: 0 0 0 2px var(--bew-border-color);
+    cursor: pointer;
+    border: none;
+    transition: box-shadow .2s;
+  }
+  &::-moz-range-thumb:hover {
+    box-shadow: 0 0 0 2px var(--bew-theme-color);
   }
 
-  &::-moz-range-thumb:hover {
-    --uno: "ring-$bew-theme-color";
+  &::-moz-range-track {
+    height: 10px;
+    border-radius: 5px;
+    background: transparent;
   }
 }
 </style>
