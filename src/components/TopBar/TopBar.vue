@@ -46,35 +46,14 @@ const hideTopBar = ref<boolean>(false)
 const headerTarget = ref(null)
 const { isOutside: isOutsideTopBar } = useMouseInElement(headerTarget)
 
-// Check login state: uses stored value from content script (set via background API)
+// Check login state from lentille-context (extracted by content script before body clear)
 const isLogin = ref(false)
-onMounted(async () => {
-  // Try stored first
+onMounted(() => {
   const stored = (window as any).__guly_user
   if (stored?.uid && stored.uid !== '0') {
     isLogin.value = true
     userUid.value = Number(stored.uid)
     if (stored.name) userName.value = stored.name
-  }
-  // Fetch fresh data from background (also gets name)
-  try {
-    const resp = await browser.runtime.sendMessage({ contentScriptQuery: 'HOME.getLoginState' })
-    console.log('[GuluGulu TopBar] login state:', resp)
-    if (resp?.uid && resp.uid !== '0') {
-      isLogin.value = true
-      userUid.value = Number(resp.uid)
-      if (resp.name) userName.value = resp.name
-    }
-  } catch (e) {
-    console.log('[GuluGulu TopBar] login check failed:', e)
-  }
-  // Fallback to document.cookie
-  if (!isLogin.value) {
-    const m = document.cookie.match(/(?:^|;\s*)_uid=(\d+)/)
-    if (m && m[1] && m[1] !== '0') {
-      isLogin.value = true
-      userUid.value = Number(m[1])
-    }
   }
 })
 
