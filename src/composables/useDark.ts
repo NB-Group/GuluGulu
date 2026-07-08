@@ -120,6 +120,8 @@ export function useDark() {
       // @ts-expect-error: Transition API
       const transition = document.startViewTransition(async () => {
         updateThemeSettings()
+        // Wait for Vue to flush DOM updates (dark class) before the browser
+        // captures the "new" snapshot — otherwise it may capture the old theme.
         await nextTick()
       })
 
@@ -137,6 +139,10 @@ export function useDark() {
           {
             duration: 300,
             easing: 'ease-in-out',
+            // Keep the final clip-path after the animation ends. Without this the
+            // clip-path snaps back to its default (unclipped) value for one frame,
+            // re-revealing the old snapshot full-screen → the "flash" bug.
+            fill: 'forwards',
             pseudoElement: currentAppColorScheme.value === 'dark'
               ? '::view-transition-old(root)'
               : '::view-transition-new(root)',

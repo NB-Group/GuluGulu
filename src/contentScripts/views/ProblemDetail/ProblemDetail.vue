@@ -379,15 +379,15 @@ onMounted(() => {
             <div v-if="problem.samples.length > 0" mt-8>
               <h2 mb-4>样例</h2>
               <div v-for="(sample, idx) in problem.samples" :key="idx" class="sample-io" mb-4>
-                <div class="sample-header">
-                  <span v-html="renderIcon('mingcute:arrow-right-line', 14)" style="display:contents" />
-                  样例 {{ idx + 1 }} — 输入
+                <div class="sample-header" flex="~ items-center justify-between">
+                  <span><span v-html="renderIcon('mingcute:arrow-right-line', 14)" style="display:contents" /> 样例 {{ idx + 1 }} — 输入</span>
+                  <button class="copy-btn" @click="navigator.clipboard.writeText(sample.input)" title="复制输入">复制</button>
                 </div>
                 <pre style="margin:0 0 12px 0"><code>{{ sample.input }}</code></pre>
 
-                <div class="sample-header" style="border-top: 1px solid var(--bew-border-color);">
-                  <span v-html="renderIcon('mingcute:arrow-left-line', 14)" style="display:contents" />
-                  样例 {{ idx + 1 }} — 输出
+                <div class="sample-header" style="border-top: 1px solid var(--bew-border-color)" flex="~ items-center justify-between">
+                  <span><span v-html="renderIcon('mingcute:arrow-left-line', 14)" style="display:contents" /> 样例 {{ idx + 1 }} — 输出</span>
+                  <button class="copy-btn" @click="navigator.clipboard.writeText(sample.output)" title="复制输出">复制</button>
                 </div>
                 <pre style="margin:0 0 12px 0"><code>{{ sample.output }}</code></pre>
 
@@ -583,5 +583,15 @@ onMounted(() => {
   &::placeholder {
     color: var(--bew-text-4);
   }
+}
+.copy-btn {
+  background: none;
+  border: 1px solid var(--bew-border-color);
+  border-radius: 4px;
+  color: var(--bew-text-3);
+  font-size: .75em;
+  padding: 1px 8px;
+  cursor: pointer;
+  &:hover { background: var(--bew-fill-2); color: var(--bew-text-1); }
 }
 </style>

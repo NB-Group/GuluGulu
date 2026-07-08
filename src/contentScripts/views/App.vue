@@ -162,11 +162,14 @@ window.addEventListener('popstate', onPopState)
 
 onMounted(() => {
   window.dispatchEvent(new CustomEvent(GULY_MOUNTED))
-  // Replace initial history state to avoid duplicate entries
-  const url = mainStore.getLuoguWebPageURLByPage(activatedPage.value)
-  if (url && url !== window.location.href) {
-    history.replaceState({ page: activatedPage.value }, '', url)
-    currentUrl.value = url
+  // Only normalize URL for list pages (not detail pages with IDs)
+  const detailPages = [AppPage.ProblemDetail, AppPage.Blog, AppPage.Record, AppPage.ContestDetail, AppPage.Training, AppPage.UserProfile]
+  if (!detailPages.includes(activatedPage.value)) {
+    const url = mainStore.getLuoguWebPageURLByPage(activatedPage.value)
+    if (url && url !== window.location.href) {
+      history.replaceState({ page: activatedPage.value }, '', url)
+      currentUrl.value = url
+    }
   }
 
   // Unset the body background so our AppBackground shows through

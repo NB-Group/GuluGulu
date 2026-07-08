@@ -43,7 +43,29 @@ const statusMap: Record<number, { label: string; color: string }> = {
   6: { label: 'TLE', color: '#f39c12' }, 7: { label: 'MLE', color: '#f39c12' },
   8: { label: 'RE', color: '#e74c3c' }, 9: { label: 'CE', color: '#e74c3c' },
   10: { label: 'OLE', color: '#f39c12' }, 11: { label: 'UKE', color: '#e74c3c' },
-  12: { label: 'AC', color: '#52c41a' },
+  12: { label: 'AC', color: '#52c41a' }, 14: { label: 'WA', color: '#e74c3c' },
+}
+// Test case status uses different codes from record-level status.
+// Parse description text for correct classification.
+function tcStatusColor(tc: any): string {
+  const desc = (tc.description || '').toLowerCase()
+  if (desc.includes('accepted') || desc.includes('correct') || tc.score > 0) return '#52c41a'
+  if (desc.includes('wrong answer')) return '#e74c3c'
+  if (desc.includes('time limit')) return '#f39c12'
+  if (desc.includes('memory limit')) return '#f39c12'
+  if (desc.includes('runtime error')) return '#e74c3c'
+  if (desc.includes('compile error')) return '#e74c3c'
+  return statusMap[parseInt(tc.status)]?.color || '#909399'
+}
+function tcStatusLabel(tc: any): string {
+  const desc = (tc.description || '').toLowerCase()
+  if (desc.includes('accepted') || desc.includes('correct') || tc.score > 0) return 'AC'
+  if (desc.includes('wrong answer')) return 'WA'
+  if (desc.includes('time limit')) return 'TLE'
+  if (desc.includes('memory limit')) return 'MLE'
+  if (desc.includes('runtime error')) return 'RE'
+  if (desc.includes('compile error')) return 'CE'
+  return statusMap[parseInt(tc.status)]?.label || '?'
 }
 
 function statusLabel(s: any): string {
@@ -158,10 +180,10 @@ onUnmounted(() => obs?.disconnect())
             <template v-for="sub in detail.detail.judgeResult.subtasks" :key="sub.id">
               <div mb-3>
                 <div flex="~ wrap" gap-2>
-                  <div v-for="(tc, idx) in Object.entries(sub.testCases||{}).sort(([a],[b])=>Number(a)-Number(b)).map(([,v])=>v)" :key="idx" class="tc-block" :style="{background:statusColor(parseInt(tc.status))}">
+                  <div v-for="(tc, idx) in Object.entries(sub.testCases||{}).sort(([a],[b])=>Number(a)-Number(b)).map(([,v])=>v)" :key="idx" class="tc-block" :style="{background:tcStatusColor(tc)}">
                     <div class="tc-content">
                       <div class="tc-info">{{ tc.time }}ms / {{ (tc.memory/1024).toFixed(1) }}MB</div>
-                      <div class="tc-status">{{ statusLabel(parseInt(tc.status)) }}</div>
+                      <div class="tc-status">{{ tcStatusLabel(tc) }}</div>
                     </div>
                     <div class="tc-id">#{{ idx+1 }}</div>
                     <div class="tc-msg">{{ tc.score }} 分 · {{ tc.description || '' }}</div>

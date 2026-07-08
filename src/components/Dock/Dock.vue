@@ -269,8 +269,8 @@ const dockTransformStyle = computed((): { transform: string, transformOrigin: st
             @mouseenter="hoveringDockItem.themeMode = true"
             @mouseleave="hoveringDockItem.themeMode = false"
           >
-            <span v-if="isDark" v-html="renderIcon('line-md:moon-to-sunny-outline-transition', 22)" style="display:contents" />
-            <span v-else v-html="renderIcon('line-md:sunny-outline-to-moon-transition', 22)" style="display:contents" />
+            <span v-if="isDark" v-html="renderIcon('line-md:moon-to-sunny-outline-transition', 22)" style="display:contents;pointer-events:none" />
+            <span v-else v-html="renderIcon('line-md:sunny-outline-to-moon-transition', 22)" style="display:contents;pointer-events:none" />
           </button>
         </div>
 
