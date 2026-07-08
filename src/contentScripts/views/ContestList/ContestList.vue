@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { renderIcon } from '~/utils/icons'
+import { friendlyError } from '~/utils/luogu-api'
 
 interface Contest {
   id: number; name: string; startTime: number; endTime: number; status: string
@@ -24,7 +25,7 @@ async function fetchContests() {
       }))
       totalCount.value = r.count || contests.value.length
     } else { errorMsg.value = '数据格式不匹配' }
-  } catch (e: any) { errorMsg.value = e.message }
+  } catch (e: any) { errorMsg.value = friendlyError(e) }
   finally { loading.value = false }
 }
 
@@ -58,7 +59,7 @@ onMounted(fetchContests)
 
     <Transition name="content-reveal">
       <div v-if="!loading && contests.length>0" grid="~ cols-1 md:cols-2 xl:cols-3" gap-4 mb-6>
-        <div v-for="c in contests" :key="c.id" class="contest-card" bg="$bew-content" rounded="$bew-radius" p-5 shadow="[var(--bew-shadow-1),var(--bew-shadow-edge-glow-1)]" border="1 $bew-border-color" cursor="pointer" style="backdrop-filter:var(--bew-filter-glass-1)" @click="openContest(c.id)">
+        <div v-for="(c, idx) in contests" :key="c.id" class="stagger-card contest-card" :style="{ '--card-index': idx, backdropFilter: 'var(--bew-filter-glass-1)' }" bg="$bew-content" rounded="$bew-radius" p-5 shadow="[var(--bew-shadow-1),var(--bew-shadow-edge-glow-1)]" border="1 $bew-border-color" cursor="pointer" @click="openContest(c.id)">
           <div flex="~ items-center justify-between" mb-3>
             <span :style="{background:`${statusColor(c.status as any)}20`,color:statusColor(c.status as any),fontSize:'var(--bew-base-font-size)',fontWeight:600,padding:'2px 10px',borderRadius:'9999px'}">{{ statusLabel(c.status as any) }}</span>
             <span v-if="c.rated" style="font-size:var(--bew-base-font-size);color:var(--bew-success-color);font-weight:600">Rated</span>

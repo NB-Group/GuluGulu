@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { renderIcon } from '~/utils/icons'
-import { getCsrfToken } from '~/utils/luogu-api'
+import { getCsrfToken, friendlyError } from '~/utils/luogu-api'
 import { useMessagePolling } from '~/composables/useMessagePolling'
 
 const { notifyEnabled, toggleNotify } = useMessagePolling()
@@ -27,12 +27,42 @@ const activeChatUid = ref<number | null>(null)
 const activeChatUser = ref<ChatUser | null>(null)
 const messages = ref<Message[]>([])
 const chatLoading = ref(false)
+const loadingOlder = ref(false)
+
+// Pagination: page=1 oldest, page=N newest. Default returns last page.
+const msgPage = ref(0)
+const msgTotalPages = ref(0)
 
 const newMsg = ref('')
 const sending = ref(false)
 
 const currentUid = computed(() => Number((window as any).__guly_user?.uid) || 0)
 const currentName = computed(() => (window as any).__guly_user?.name || '')
+
+// Refs for auto-scroll
+const msgListRef = ref<HTMLDivElement>()
+const msgEndRef = ref<HTMLDivElement>()
+
+// ============================================================
+// Scroll-to-top detection for loading older messages
+// ============================================================
+function onMsgListScroll() {
+  const el = msgListRef.value
+  if (!el || loadingOlder.value || chatLoading.value) return
+  // Fire at 300px from top — by the time user reaches top, more messages are already there
+  if (el.scrollTop <= 300 && msgPage.value > 1) {
+    loadOlderMessages()
+  }
+}
+
+// ============================================================
+// Auto-scroll helper
+// ============================================================
+function scrollToBottom(smooth = false) {
+  nextTick(() => {
+    msgEndRef.value?.scrollIntoView({ behavior: smooth ? 'smooth' : 'instant', block: 'end' })
+  })
+}
 
 // ============================================================
 // Fetch conversations
@@ -48,13 +78,11 @@ async function fetchConversations() {
     const json = await res.json()
     const msgs: Message[] = json?.currentData?.latestMessages?.result || []
     const rawUnread = json?.currentData?.unreadMessageCount
-    // unreadMessageCount may be object {} or array []
     const unread: Record<string, number> = {}
     if (rawUnread && typeof rawUnread === 'object' && !Array.isArray(rawUnread)) {
       for (const [k, v] of Object.entries(rawUnread)) unread[String(k)] = Number(v) || 0
     }
 
-    // Group latest messages by conversation partner
     const map = new Map<number, Conversation>()
     for (const msg of msgs) {
       const other = getOppositeUser(msg)
@@ -67,12 +95,12 @@ async function fetchConversations() {
       }
     }
     conversations.value = [...map.values()]
-  } catch (e: any) { errorMsg.value = e.message }
+  } catch (e: any) { errorMsg.value = friendlyError(e) }
   loading.value = false
 }
 
 // ============================================================
-// Fetch conversation with specific user
+// Fetch conversation with specific user — preload last 3 pages
 // ============================================================
 async function openChat(uid: number, user?: ChatUser) {
   activeChatUid.value = uid
@@ -81,19 +109,52 @@ async function openChat(uid: number, user?: ChatUser) {
   chatLoading.value = true
 
   try {
+    // First request: get the latest (default → last page) to learn total/pagination
     const res = await fetch(`https://www.luogu.com.cn/api/chat/record?user=${uid}`, {
       credentials: 'same-origin',
       headers: { 'X-Requested-With': 'XMLHttpRequest' },
     })
     const json = await res.json()
-    const result = json?.messages?.result || []
-    // Sort by time: oldest first → newest last (chat order)
-    messages.value = [...result].sort((a: any, b: any) => (a.time || 0) - (b.time || 0))
+    const latest = (json?.messages?.result || []).sort((a: any, b: any) => (a.time || 0) - (b.time || 0))
+
+    const total = json?.messages?.count || latest.length
+    const perPage = json?.messages?.perPage || 50
+    msgTotalPages.value = Math.max(1, Math.ceil(total / perPage))
+    // Default (no page param) always returns last page
+    msgPage.value = msgTotalPages.value
+
+    // Preload 2 more pages backward in parallel
+    const preloadPages: number[] = []
+    for (let p = msgPage.value - 1; p >= 1 && preloadPages.length < 2; p--) {
+      preloadPages.push(p)
+    }
+
+    let older: any[] = []
+    if (preloadPages.length > 0) {
+      const results = await Promise.all(
+        preloadPages.map(p =>
+          fetch(`https://www.luogu.com.cn/api/chat/record?user=${uid}&page=${p}`, {
+            credentials: 'same-origin',
+            headers: { 'X-Requested-With': 'XMLHttpRequest' },
+          }).then(r => r.json())
+        )
+      )
+      // Sort fetched pages by page number (ascending → oldest first)
+      const sorted = results
+        .map((j: any, i) => ({ page: preloadPages[i], msgs: (j?.messages?.result || []).sort((a: any, b: any) => (a.time || 0) - (b.time || 0)) }))
+        .sort((a: any, b: any) => a.page - b.page)
+      for (const s of sorted) {
+        older = [...older, ...s.msgs]
+        if (s.page < msgPage.value) msgPage.value = s.page
+      }
+    }
+
+    messages.value = [...older, ...latest]
 
     // Clear unread
     try {
       const csrf = getCsrfToken()
-      await fetch('https://www.luogu.com.cn/api/chat/clearUnread', {
+      fetch('https://www.luogu.com.cn/api/chat/clearUnread', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrf, 'X-Requested-With': 'XMLHttpRequest' },
         credentials: 'same-origin',
@@ -104,19 +165,44 @@ async function openChat(uid: number, user?: ChatUser) {
     } catch {}
   } catch {}
   chatLoading.value = false
-
-  // Scroll to bottom after messages render
-  await nextTick()
-  requestAnimationFrame(() => {
-    const el = document.querySelector('.msg-list')
-    if (el) el.scrollTop = el.scrollHeight
-  })
+  scrollToBottom()
 }
 
 function closeChat() {
   activeChatUid.value = null
   activeChatUser.value = null
   messages.value = []
+  msgPage.value = 0
+  msgTotalPages.value = 0
+}
+
+// ============================================================
+// Load older messages — triggered when close to top (300px)
+// ============================================================
+async function loadOlderMessages() {
+  if (!activeChatUid.value || loadingOlder.value || msgPage.value <= 1) return
+  loadingOlder.value = true
+  const prevPage = msgPage.value - 1
+  const listEl = msgListRef.value
+  const prevScrollHeight = listEl?.scrollHeight || 0
+
+  try {
+    const res = await fetch(`https://www.luogu.com.cn/api/chat/record?user=${activeChatUid.value}&page=${prevPage}`, {
+      credentials: 'same-origin',
+      headers: { 'X-Requested-With': 'XMLHttpRequest' },
+    })
+    const json = await res.json()
+    const older = (json?.messages?.result || []).sort((a: any, b: any) => (a.time || 0) - (b.time || 0))
+    if (older.length > 0) {
+      messages.value = [...older, ...messages.value]
+      msgPage.value = prevPage
+      await nextTick()
+      if (listEl) {
+        listEl.scrollTop = listEl.scrollHeight - prevScrollHeight
+      }
+    }
+  } catch {}
+  loadingOlder.value = false
 }
 
 // ============================================================
@@ -147,12 +233,10 @@ async function sendMessage() {
       messages.value.push(newMsgObj)
       newMsg.value = ''
 
-      // Update conversation in sidebar
       const idx = conversations.value.findIndex(c => c.user.uid === activeChatUid.value)
       if (idx !== -1) {
         conversations.value[idx] = { ...conversations.value[idx], lastMsg: newMsgObj, unread: 0 }
       } else {
-        // New conversation — insert at top
         conversations.value.unshift({
           user: activeChatUser.value || { uid: activeChatUid.value!, name: '', avatar: '', color: '', badge: null },
           lastMsg: newMsgObj,
@@ -160,18 +244,39 @@ async function sendMessage() {
         })
       }
 
-      nextTick(() => {
-        requestAnimationFrame(() => {
-          const el = document.querySelector('.msg-list')
-          if (el) el.scrollTop = el.scrollHeight
-        })
-      })
+      scrollToBottom(true)
     }
   } catch (e: any) {
     console.error('[GuluGulu] Send message error:', e)
   }
   sending.value = false
 }
+
+// ============================================================
+// Stagger entrance: only animate the last N messages (the "tail" visible on screen).
+// Preloaded older messages appear instantly so the animation doesn't drag.
+// ============================================================
+const MSG_STAGGER_COUNT = 30
+const msgDelays = computed(() => {
+  const n = messages.value.length
+  if (n <= 1) return {} as Record<number, number>
+  const delays: Record<number, number> = {}
+  // Only animate the tail
+  const start = Math.max(0, n - MSG_STAGGER_COUNT)
+  const tail = n - start
+  const mid = (tail - 1) / 2
+  for (let i = 0; i < start; i++) {
+    delays[messages.value[i].id] = 0 // preloaded: instant
+  }
+  let accum = 0
+  for (let i = 0; i < tail; i++) {
+    const dist = i > 0 ? Math.abs(i / (tail - 1) - 0.5) * 2 : 0
+    const increment = 2 + 40 * dist * dist * dist
+    accum += increment
+    delays[messages.value[start + i].id] = Math.round(accum)
+  }
+  return delays
+})
 
 // ============================================================
 // Helpers
@@ -196,11 +301,11 @@ onMounted(fetchConversations)
     <Loading v-if="loading" />
 
     <Transition name="content-reveal">
-      <div v-if="!loading" w-full h-full>
+      <div v-if="!loading" w-full class="msg-page-wrapper">
         <!-- ============================================================ -->
         <!-- Messages Layout: sidebar + chat area -->
         <!-- ============================================================ -->
-        <div class="chat-layout" flex="~" h-full bg="$bew-content" rounded="$bew-radius" shadow="[var(--bew-shadow-1),var(--bew-shadow-edge-glow-1)]" border="1 $bew-border-color" style="backdrop-filter:var(--bew-filter-glass-1)" overflow="hidden">
+        <div class="chat-layout" flex="~" bg="$bew-content" rounded="$bew-radius" shadow="[var(--bew-shadow-1),var(--bew-shadow-edge-glow-1)]" border="1 $bew-border-color" style="backdrop-filter:var(--bew-filter-glass-1)" overflow="hidden">
           <!-- Sidebar: conversation list -->
           <div class="chat-sidebar" w="300px" shrink-0 border="r-1 $bew-border-color" bg="$bew-content" flex="~ col">
             <div p-4 border="b-1 $bew-border-color" bg="$bew-fill-1" flex="~ items-center justify-between">
@@ -215,16 +320,16 @@ onMounted(fetchConversations)
                 {{ notifyEnabled ? '提醒' : '静音' }}
               </button>
             </div>
-            <div flex="1" overflow="y-auto">
+            <div flex="1" overflow="y-auto" class="sidebar-scroll">
               <div v-if="conversations.length === 0" p-8 text="center" style="color:var(--bew-text-3);font-size:var(--bew-base-font-size)">
                 暂无私信
               </div>
               <div
-                v-for="conv in conversations" :key="conv.user.uid"
-                class="conversation-item"
+                v-for="(conv, idx) in conversations" :key="conv.user.uid"
+                class="stagger-row conversation-item"
+                :style="{ '--row-index': idx, background: activeChatUid === conv.user.uid ? 'var(--bew-fill-2)' : 'transparent' }"
                 flex="~ items-center gap-3" p="x-4 y-3" cursor="pointer" duration-150
                 border="b-1 $bew-border-color"
-                :style="{ background: activeChatUid === conv.user.uid ? 'var(--bew-fill-2)' : 'transparent' }"
                 @click="openChat(conv.user.uid, conv.user)"
               >
                 <div pos="relative" shrink-0>
@@ -247,16 +352,17 @@ onMounted(fetchConversations)
           </div>
 
           <!-- Chat area -->
-          <div class="chat-area" flex="~ col 1" bg="$bew-content">
-            <!-- No chat selected -->
-            <div v-if="!activeChatUid" flex="~ col 1 items-center justify-center" style="color:var(--bew-text-3)">
+          <div class="chat-area" flex="1">
+            <!-- No chat selected — always fills the chat area -->
+            <div v-if="!activeChatUid" flex="~ col items-center justify-center" style="flex:1;color:var(--bew-text-3)">
               <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="opacity:.4"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
               <p mt-4 style="font-size:var(--bew-base-font-size)">选择对话开始聊天</p>
             </div>
 
-            <!-- Chat header -->
+            <!-- Active chat: header + messages + input (input pinned to bottom) -->
             <template v-if="activeChatUid">
-              <div flex="~ items-center gap-3" p="x-4 y-3" border="b-1 $bew-border-color" bg="$bew-fill-1">
+              <!-- Chat header -->
+              <div flex="~ items-center gap-3" p="x-4 y-3" border="b-1 $bew-border-color" bg="$bew-fill-1" shrink-0>
                 <button style="background:none;border:none;cursor:pointer;color:var(--bew-text-2);padding:4px" @click="closeChat">
                   <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
                 </button>
@@ -264,28 +370,34 @@ onMounted(fetchConversations)
                 <span fw-bold cursor="pointer" style="font-size:var(--bew-base-font-size);color:var(--bew-text-1)" @click="openUser(activeChatUid)">{{ activeChatUser?.name || 'UID:' + activeChatUid }}</span>
               </div>
 
-              <!-- Messages list -->
-              <Loading v-if="chatLoading" />
-              <div v-else class="msg-list" flex="~ col 1" p="x-4 y-3" gap-2>
-                <div v-if="messages.length === 0" text="center" style="color:var(--bew-text-3);font-size:var(--bew-base-font-size)" py-8>
-                  暂无消息，发送第一条消息吧
-                </div>
-                <TransitionGroup name="msg-fade" tag="div" appear>
-                  <div
-                    v-for="msg in messages" :key="msg.id"
-                    flex="~"
-                    :style="{ justifyContent: Number(msg.sender.uid) === currentUid ? 'flex-end' : 'flex-start' }"
-                  >
-                    <div class="msg-bubble" :class="Number(msg.sender.uid) === currentUid ? 'msg-mine' : 'msg-other'">
-                      {{ msg.content }}
-                      <div class="msg-time">{{ formatTime(msg.time) }}</div>
-                    </div>
+              <!-- Messages list — flex:1 fills remaining space, input at bottom -->
+              <div ref="msgListRef" class="msg-list" flex="1" @scroll="onMsgListScroll">
+                <div v-if="loadingOlder" class="loading-older" p-2 text="center sm $bew-text-3">加载更早的消息...</div>
+                <Loading v-if="chatLoading" />
+                <div v-else p="x-4 y-3">
+                  <div v-if="messages.length === 0" text="center" style="color:var(--bew-text-3);font-size:var(--bew-base-font-size)" py-8>
+                    暂无消息，发送第一条消息吧
                   </div>
-                </TransitionGroup>
+                  <TransitionGroup name="msg-fade" tag="div" appear>
+                    <div
+                      v-for="msg in messages" :key="msg.id"
+                      flex="~"
+                      :style="{ justifyContent: Number(msg.sender.uid) === currentUid ? 'flex-end' : 'flex-start', '--msg-delay': (msgDelays[msg.id] || 0) + 'ms' }"
+                      mb-2
+                    >
+                      <div class="msg-bubble" :class="Number(msg.sender.uid) === currentUid ? 'msg-mine' : 'msg-other'">
+                        {{ msg.content }}
+                        <div class="msg-time">{{ formatTime(msg.time) }}</div>
+                      </div>
+                    </div>
+                  </TransitionGroup>
+                  <!-- Scroll anchor -->
+                  <div ref="msgEndRef" />
+                </div>
               </div>
 
-              <!-- Input area -->
-              <div border="t-1 $bew-border-color" p-3 flex="~ items-end gap-2" bg="$bew-fill-1">
+              <!-- Input area — pinned at bottom, no shrink -->
+              <div border="t-1 $bew-border-color" p-3 flex="~ items-end gap-2" bg="$bew-fill-1" shrink-0>
                 <textarea
                   v-model="newMsg"
                   style="flex:1;background:var(--bew-content);color:var(--bew-text-1);border:1px solid var(--bew-border-color);border-radius:var(--bew-radius);padding:8px 12px;font-size:var(--bew-base-font-size);resize:none;min-height:40px;max-height:120px;font-family:inherit;outline:none"
@@ -311,13 +423,22 @@ onMounted(fetchConversations)
 </template>
 
 <style lang="scss" scoped>
-.chat-layout {
-  height: calc(100vh - var(--bew-top-bar-height) - 60px);
+.msg-page-wrapper {
+  height: calc(100vh - var(--bew-top-bar-height) - 80px);
   min-height: 400px;
 }
+.chat-layout {
+  height: 100%;
+}
 .chat-sidebar {
-  overflow-y: auto;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
   @media (max-width: 768px) { width: 100% !important; border-right: none !important; }
+}
+.sidebar-scroll {
+  &::-webkit-scrollbar { width: 5px; }
+  &::-webkit-scrollbar-thumb { background: var(--bew-border-color); border-radius: 3px; }
 }
 .chat-area {
   min-height: 0;
@@ -326,7 +447,6 @@ onMounted(fetchConversations)
 }
 .msg-list {
   min-height: 0;
-  flex: 1;
   overflow-y: auto;
   &::-webkit-scrollbar { width: 5px; }
   &::-webkit-scrollbar-track { background: transparent; }
@@ -342,7 +462,6 @@ onMounted(fetchConversations)
   line-height: 1.5;
   white-space: pre-wrap;
   word-break: break-word;
-  margin-bottom: 8px;
 }
 .msg-mine {
   background: var(--bew-theme-color);
@@ -363,7 +482,8 @@ onMounted(fetchConversations)
 /* Message fade animation */
 .msg-fade-enter-active,
 .msg-fade-appear-active {
-  transition: opacity 0.3s ease, transform 0.3s ease;
+  transition: opacity 0.35s ease, transform 0.35s ease;
+  transition-delay: var(--msg-delay, 0ms);
 }
 .msg-fade-leave-active {
   transition: opacity 0.2s ease;

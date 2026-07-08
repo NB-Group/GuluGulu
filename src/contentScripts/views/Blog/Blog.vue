@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { renderIcon } from '~/utils/icons'
 import { timeAgo } from '~/utils/main'
+import { friendlyError } from '~/utils/luogu-api'
 import { parseMarkdownContent } from '~/utils/markdown'
 import { AppPage } from '~/enums/appEnums'
 import { useGulyApp } from '~/composables/useAppProvider'
@@ -30,7 +31,7 @@ async function fetchPosts(append = false) {
       posts.value = append ? [...posts.value, ...(r.result || [])] : (r.result || [])
       totalCount.value = r.count || 0
     } else { errorMsg.value = '数据格式不匹配' }
-  } catch (e: any) { errorMsg.value = e.message }
+  } catch (e: any) { errorMsg.value = friendlyError(e) }
   finally { loading.value = false; loadingMore.value = false }
 }
 
@@ -83,7 +84,7 @@ watch(discussId, () => loadContent())
 
 let obs: IntersectionObserver | null = null
 onMounted(() => {
-  obs = new IntersectionObserver((e) => { if (e[0]?.isIntersecting && !loading.value && !loadingMore.value) loadMore() }, { rootMargin: '400px' })
+  obs = new IntersectionObserver((e) => { if (e[0]?.isIntersecting && !loading.value && !loadingMore.value) loadMore() }, { rootMargin: '1200px' })
   nextTick(() => { if (obs && sentinelRef.value) obs.observe(sentinelRef.value) })
 })
 watch(sentinelRef, (el) => { obs?.disconnect(); if (el) obs?.observe(el as Element) })

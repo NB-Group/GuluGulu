@@ -206,6 +206,28 @@ export async function fetchLentilleContext(url: string, opts?: { fetcher?: typeo
     const html = await res.text()
     const m = html.match(/<script\s+id="lentille-context"\s+type="application\/json"[^>]*>([^<]*)<\/script>/)
     if (m?.[1]) return JSON.parse(m[1])
+    // Check if it's a login page — no lentille-context means we're probably not logged in
+    if (html.includes('login-form') || html.includes('请先登录') || html.includes('user-login')) return { __needLogin: true }
     return null
   } catch { return null }
+}
+
+/**
+ * Check if a lentille-context result indicates the user needs to log in.
+ */
+export function needLogin(ctx: any): boolean {
+  return ctx?.__needLogin === true
+}
+
+/**
+ * Format a fetch/parse error into a user-friendly message.
+ * Avoids showing raw `e.message` on the page.
+ */
+export function friendlyError(e: any): string {
+  if (!e) return '未知错误'
+  if (typeof e === 'string') return e
+  const msg = e.message || String(e)
+  if (msg.includes('Failed to fetch') || msg.includes('NetworkError')) return '网络连接失败，请检查网络'
+  if (msg.includes('JSON')) return '数据解析失败，可能需要刷新页面'
+  return '加载失败，请确认已登录洛谷并刷新重试'
 }

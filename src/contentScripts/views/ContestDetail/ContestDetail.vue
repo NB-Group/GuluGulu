@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { renderIcon } from '~/utils/icons'
-import { getCsrfToken, LUOGU_LANGUAGES } from '~/utils/luogu-api'
+import { getCsrfToken, LUOGU_LANGUAGES, friendlyError } from '~/utils/luogu-api'
 import { parseMarkdownContent } from '~/utils/markdown'
 
 // ============================================================
@@ -81,7 +81,7 @@ async function fetchContestData() {
     } else {
       errorMsg.value = '未找到比赛数据'
     }
-  } catch (e: any) { errorMsg.value = e.message }
+  } catch (e: any) { errorMsg.value = friendlyError(e) }
   loading.value = false
 }
 
@@ -313,7 +313,7 @@ watch(activeTab, (t) => { if (t === 'ranking' && scoreboard.value.length === 0) 
         <!-- Tab: Problems -->
         <!-- ============================================================ -->
         <div v-if="activeTab === 'problems'" bg="$bew-content" rounded="$bew-radius" mb-6 shadow="[var(--bew-shadow-1),var(--bew-shadow-edge-glow-1)]" border="1 $bew-border-color" style="backdrop-filter:var(--bew-filter-glass-1)" overflow="hidden">
-          <div v-for="(p, idx) in problems" :key="p.pid" flex="~ items-center" px-6 py-4 border="b-1 $bew-border-color" cursor="pointer" duration-200 class="hover-row" @click="activeTab='submit';selectedPid=p.pid;loadProblem(p.pid)">
+          <div v-for="(p, idx) in problems" :key="p.pid" class="stagger-row hover-row" :style="{ '--row-index': idx }" flex="~ items-center" px-6 py-4 border="b-1 $bew-border-color" cursor="pointer" duration-200 @click="activeTab='submit';selectedPid=p.pid;loadProblem(p.pid)">
             <span style="width:32px;font-size:var(--bew-base-font-size);color:var(--bew-text-2);font-weight:700">{{ problemLabel(idx) }}</span>
             <div flex="1" min-w-0 mx-3>
               <div style="font-size:var(--bew-base-font-size);color:var(--bew-text-1);font-weight:600">{{ p.title }}</div>
@@ -391,7 +391,7 @@ watch(activeTab, (t) => { if (t === 'ranking' && scoreboard.value.length === 0) 
                 </tr>
               </thead>
               <tbody>
-                <tr v-for="row in scoreboard" :key="row.rank" border="b-1 $bew-border-color" duration-150 class="hover:bg-$bew-fill-2" style="cursor:pointer" @click="openUser(row.user.uid)">
+                <tr v-for="(row, idx) in scoreboard" :key="row.rank" class="stagger-row" :style="{ '--row-index': idx }" border="b-1 $bew-border-color" duration-150 cursor="pointer" @click="openUser(row.user.uid)">
                   <td px-4 py-3 fw-bold :style="{ color: row.rank <= 3 ? 'var(--bew-warning-color)' : 'var(--bew-text-1)' }">{{ row.rank }}</td>
                   <td px-4 py-3 flex="~ items-center gap-2">
                     <img :src="row.user.avatar" style="width:24px;height:24px;border-radius:50%;object-fit:cover" @error="(e:any) => e.target.style.display='none'" />

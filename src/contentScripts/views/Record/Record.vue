@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { renderIcon } from '~/utils/icons'
 import { timeAgo } from '~/utils/main'
-import { LUOGU_LANGUAGES } from '~/utils/luogu-api'
+import { LUOGU_LANGUAGES, friendlyError } from '~/utils/luogu-api'
 import { AppPage } from '~/enums/appEnums'
 import { useGulyApp } from '~/composables/useAppProvider'
 
@@ -99,7 +99,7 @@ async function fetchRecords(append = false) {
       records.value = append ? [...records.value, ...items] : items
       totalCount.value = recs.count || items.length
     } else { errorMsg.value = '未登录或数据格式不匹配' }
-  } catch (e: any) { errorMsg.value = e.message }
+  } catch (e: any) { errorMsg.value = friendlyError(e) }
   finally { loading.value = false; loadingMore.value = false }
 }
 
@@ -149,7 +149,7 @@ onMounted(loadContent)
 watch(recordId, () => loadContent())
 let obs: IntersectionObserver | null = null
 onMounted(() => {
-  obs = new IntersectionObserver((e) => { if (e[0]?.isIntersecting && !loading.value && !loadingMore.value) loadMore() }, { rootMargin: '400px' })
+  obs = new IntersectionObserver((e) => { if (e[0]?.isIntersecting && !loading.value && !loadingMore.value) loadMore() }, { rootMargin: '1200px' })
   nextTick(() => { if (obs && sentinelRef.value) obs.observe(sentinelRef.value) })
 })
 watch(sentinelRef, (el) => { obs?.disconnect(); if (el) obs?.observe(el as Element) })

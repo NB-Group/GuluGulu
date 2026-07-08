@@ -38,6 +38,7 @@ function getPageFromUrl(): AppPage {
   if (/\/training\/list/i.test(url)) return AppPage.Training
   if (/\/training\/\d+/i.test(url)) return AppPage.Training
   if (/\/team\//i.test(url)) return AppPage.Team
+  if (/\/problem\/solution\//i.test(url)) return AppPage.Solution
   if (/\/record\//i.test(url)) return AppPage.Record
   if (/\/chat/i.test(url) && !/\/discuss/i.test(url)) return AppPage.Messages
   if (/\/search/i.test(url) || /\/problem\/keyword/i.test(url)) return AppPage.Search
@@ -66,6 +67,7 @@ const pages = {
   [AppPage.Record]: defineAsyncComponent(() => import('./Record/Record.vue')),
   [AppPage.Login]: defineAsyncComponent(() => import('./Login/Login.vue')),
   [AppPage.Messages]: defineAsyncComponent(() => import('./Messages/Messages.vue')),
+  [AppPage.Solution]: defineAsyncComponent(() => import('./Solution/Solution.vue')),
 }
 
 const mainAppRef = ref<HTMLElement>() as Ref<HTMLElement>
@@ -95,12 +97,31 @@ const showTopBar = computed((): boolean => {
 
 watch(
   () => activatedPage.value,
-  () => {
+  (page) => {
     if (scrollbarRef.value?.osInstance) {
       const osInstance = scrollbarRef.value.osInstance()
       if (osInstance?.elements)
         osInstance.elements().viewport.scrollTop = 0
     }
+    // Update document title
+    const titles: Record<string, string> = {
+      [AppPage.Home]: 'GuluGulu',
+      [AppPage.ProblemList]: '题库 - GuluGulu',
+      [AppPage.ProblemDetail]: '题目详情 - GuluGulu',
+      [AppPage.ContestList]: '比赛 - GuluGulu',
+      [AppPage.ContestDetail]: '比赛详情 - GuluGulu',
+      [AppPage.Ranking]: '排名 - GuluGulu',
+      [AppPage.Blog]: '讨论 - GuluGulu',
+      [AppPage.UserProfile]: '用户 - GuluGulu',
+      [AppPage.Search]: '搜索 - GuluGulu',
+      [AppPage.Training]: '题单 - GuluGulu',
+      [AppPage.Team]: '团队 - GuluGulu',
+      [AppPage.Record]: '评测记录 - GuluGulu',
+      [AppPage.Messages]: '私信 - GuluGulu',
+      [AppPage.Solution]: '题解 - GuluGulu',
+      [AppPage.Login]: '登录 - GuluGulu',
+    }
+    document.title = titles[page] || 'GuluGulu'
   },
 )
 
@@ -163,7 +184,7 @@ window.addEventListener('popstate', onPopState)
 onMounted(() => {
   window.dispatchEvent(new CustomEvent(GULY_MOUNTED))
   // Only normalize URL for list pages (not detail pages with IDs)
-  const detailPages = [AppPage.ProblemDetail, AppPage.Blog, AppPage.Record, AppPage.ContestDetail, AppPage.Training, AppPage.UserProfile]
+  const detailPages = [AppPage.ProblemDetail, AppPage.Blog, AppPage.Record, AppPage.ContestDetail, AppPage.Training, AppPage.UserProfile, AppPage.Solution]
   if (!detailPages.includes(activatedPage.value)) {
     const url = mainStore.getLuoguWebPageURLByPage(activatedPage.value)
     if (url && url !== window.location.href) {

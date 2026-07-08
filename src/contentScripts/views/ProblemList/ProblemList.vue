@@ -117,7 +117,7 @@ onMounted(() => {
     if (entries[0]?.isIntersecting && !loading.value && !loadingMore.value) {
       loadMore()
     }
-  }, { rootMargin: '400px' })
+  }, { rootMargin: '1200px' })
 
   // Observe the sentinel after next render tick
   nextTick(() => {

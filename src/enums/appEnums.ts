@@ -13,6 +13,7 @@ export enum AppPage {
   Record = 'Record',
   Login = 'Login',
   Messages = 'Messages',
+  Solution = 'Solution',
 }
 
 export enum HomeSubPage {

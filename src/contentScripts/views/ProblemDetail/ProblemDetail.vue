@@ -2,6 +2,10 @@
 import { renderIcon } from '~/utils/icons'
 import { parseProblemMarkdown } from '~/utils/markdown'
 import { submitCode, extractProblemData, LUOGU_LANGUAGES, isLoggedIn as checkLuoguLogin } from '~/utils/luogu-api'
+import { AppPage } from '~/enums/appEnums'
+import { useGulyApp } from '~/composables/useAppProvider'
+
+const { navigateTo } = useGulyApp()
 
 const props = defineProps<{
   pid?: string
@@ -244,6 +248,59 @@ async function handleSubmit() {
 }
 
 function copyText(text: string) { navigator.clipboard.writeText(text) }
+
+const copiedMarkdown = ref(false)
+const copiedSample = ref<string | null>(null)
+
+function copyWithFeedback(key: string, text: string) {
+  navigator.clipboard.writeText(text)
+  copiedSample.value = key
+  setTimeout(() => { if (copiedSample.value === key) copiedSample.value = null }, 1500)
+}
+
+function buildProblemMarkdown(): string {
+  const p = problem.value
+  const lines: string[] = []
+  lines.push(`# ${p.pid} ${p.title}\n`)
+  if (p.background) lines.push(`${p.background}\n`)
+  lines.push(p.description)
+  if (p.inputFormat) lines.push(`## 输入格式\n\n${p.inputFormat}`)
+  if (p.outputFormat) lines.push(`## 输出格式\n\n${p.outputFormat}`)
+  if (p.samples.length > 0) {
+    lines.push('## 样例\n')
+    p.samples.forEach((s, i) => {
+      lines.push(`### 样例 ${i + 1}\n`)
+      lines.push('```input')
+      lines.push(s.input)
+      lines.push('```\n')
+      lines.push('```output')
+      lines.push(s.output)
+      lines.push('```\n')
+      if (s.explanation) lines.push(`${s.explanation}\n`)
+    })
+  }
+  if (p.hint) lines.push(`## 提示\n\n${p.hint}`)
+  if (p.source) lines.push(`\n来源：${p.source}`)
+  return lines.join('\n\n')
+}
+
+async function copyMarkdown() {
+  try {
+    await navigator.clipboard.writeText(buildProblemMarkdown())
+    copiedMarkdown.value = true
+    setTimeout(() => { copiedMarkdown.value = false }, 2000)
+  } catch {
+    const ta = document.createElement('textarea')
+    ta.value = buildProblemMarkdown()
+    ta.style.position = 'fixed'; ta.style.opacity = '0'
+    document.body.appendChild(ta)
+    ta.select()
+    try { document.execCommand('copy') } catch {}
+    document.body.removeChild(ta)
+    copiedMarkdown.value = true
+    setTimeout(() => { copiedMarkdown.value = false }, 2000)
+  }
+}
 function openLuoguIDE() {
   // Open Luogu's own IDE for code submission (handles Cloudflare/captcha natively)
   window.open(`https://www.luogu.com.cn/problem/${problemId.value}#submit`, '_blank')
@@ -254,7 +311,7 @@ function openOriginalPage() {
 }
 
 function openSolutionsPage() {
-  window.open(`https://www.luogu.com.cn/problem/solution/${problemId.value}`, '_blank')
+  navigateTo(AppPage.Solution, `https://www.luogu.com.cn/problem/solution/${problemId.value}`)
 }
 function openProviderProfile(uid: number) {
   window.open(`https://www.luogu.com.cn/user/${uid}`, '_blank')
@@ -329,6 +386,13 @@ onMounted(() => {
             </div>
 
             <div flex="~ gap-2" shrink-0>
+              <Button
+                :type="copiedMarkdown ? 'success' : 'secondary'"
+                @click="copyMarkdown"
+              >
+                <span v-html="renderIcon(copiedMarkdown ? 'mingcute:check-circle-fill' : 'mingcute:copy-line', 16)" style="display:contents" />
+                {{ copiedMarkdown ? '已复制' : '复制 Markdown' }}
+              </Button>
               <Button type="primary" @click="handleTabChange('submit')">
                 <span v-html="renderIcon('mingcute:code-line', 16)" style="display:contents" />
                 提交代码
@@ -392,13 +456,21 @@ onMounted(() => {
               <div v-for="(sample, idx) in problem.samples" :key="idx" class="sample-io" mb-4>
                 <div class="sample-header" flex="~ items-center justify-between">
                   <span><span v-html="renderIcon('mingcute:arrow-right-line', 14)" style="display:contents" /> 样例 {{ idx + 1 }} — 输入</span>
-                  <button class="copy-btn" @click="copyText(sample.input)" title="复制输入">复制</button>
+                  <button class="sample-copy-btn" :class="{ copied: copiedSample === `in-${idx}` }" @click="copyWithFeedback(`in-${idx}`, sample.input)">
+                    <span v-if="copiedSample === `in-${idx}`" v-html="renderIcon('mingcute:check-circle-fill', 12)" style="display:contents" />
+                    <span v-else v-html="renderIcon('mingcute:copy-line', 12)" style="display:contents" />
+                    {{ copiedSample === `in-${idx}` ? '已复制' : '复制' }}
+                  </button>
                 </div>
                 <pre style="margin:0 0 12px 0"><code>{{ sample.input }}</code></pre>
 
                 <div class="sample-header" style="border-top: 1px solid var(--bew-border-color)" flex="~ items-center justify-between">
                   <span><span v-html="renderIcon('mingcute:arrow-left-line', 14)" style="display:contents" /> 样例 {{ idx + 1 }} — 输出</span>
-                  <button class="copy-btn" @click="copyText(sample.output)" title="复制输出">复制</button>
+                  <button class="sample-copy-btn" :class="{ copied: copiedSample === `out-${idx}` }" @click="copyWithFeedback(`out-${idx}`, sample.output)">
+                    <span v-if="copiedSample === `out-${idx}`" v-html="renderIcon('mingcute:check-circle-fill', 12)" style="display:contents" />
+                    <span v-else v-html="renderIcon('mingcute:copy-line', 12)" style="display:contents" />
+                    {{ copiedSample === `out-${idx}` ? '已复制' : '复制' }}
+                  </button>
                 </div>
                 <pre style="margin:0 0 12px 0"><code>{{ sample.output }}</code></pre>
 
@@ -547,8 +619,8 @@ onMounted(() => {
             <p text="lg" mt-4 mb-2>题解</p>
             <p text="sm $bew-text-3" mb-4>查看本题的题解和讨论</p>
             <Button type="primary" @click="openSolutionsPage">
-              <span v-html="renderIcon('mingcute:external-link-line', 16)" style="display:contents" />
-              前往洛谷查看题解
+              <span v-html="renderIcon('mingcute:document-line', 16)" style="display:contents" />
+              查看题解
             </Button>
           </div>
         </div>
@@ -598,14 +670,24 @@ onMounted(() => {
     color: var(--bew-text-4);
   }
 }
-.copy-btn {
+.sample-copy-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
   background: none;
   border: 1px solid var(--bew-border-color);
-  border-radius: 4px;
+  border-radius: var(--bew-radius-half);
   color: var(--bew-text-3);
   font-size: .75em;
-  padding: 1px 8px;
+  padding: 2px 10px;
   cursor: pointer;
+  transition: all .2s;
   &:hover { background: var(--bew-fill-2); color: var(--bew-text-1); }
+  &.copied {
+    border-color: var(--bew-success-color-30);
+    background: var(--bew-success-color-20);
+    color: var(--bew-success-color);
+    font-weight: 600;
+  }
 }
 </style>

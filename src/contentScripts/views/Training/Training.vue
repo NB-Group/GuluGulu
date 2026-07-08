@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { renderIcon } from '~/utils/icons'
+import { friendlyError } from '~/utils/luogu-api'
 import { AppPage } from '~/enums/appEnums'
 import { useGulyApp } from '~/composables/useAppProvider'
 
@@ -35,7 +36,7 @@ async function fetchTrainings() {
         acCount: data.data.acCounts?.[t.id] || 0,
       }))
     } else { errorMsg.value = '数据格式不匹配' }
-  } catch (e: any) { errorMsg.value = e.message }
+  } catch (e: any) { errorMsg.value = friendlyError(e) }
   finally { loading.value = false }
 }
 
@@ -105,7 +106,7 @@ watch(trainingId, () => loadTrainingContent())
       </div>
       <Transition name="content-reveal">
         <div v-if="!loading && trainings.length>0" grid="~ cols-1 md:cols-2 xl:cols-3" gap-4 mb-6>
-          <div v-for="t in trainings" :key="t.id" class="training-card" bg="$bew-content" rounded="$bew-radius" p-5 shadow="[var(--bew-shadow-1),var(--bew-shadow-edge-glow-1)]" border="1 $bew-border-color" cursor="pointer" style="backdrop-filter:var(--bew-filter-glass-1)" @click="openTraining(t.id)">
+          <div v-for="(t, idx) in trainings" :key="t.id" class="stagger-card training-card" :style="{ '--card-index': idx, backdropFilter: 'var(--bew-filter-glass-1)' }" bg="$bew-content" rounded="$bew-radius" p-5 shadow="[var(--bew-shadow-1),var(--bew-shadow-edge-glow-1)]" border="1 $bew-border-color" cursor="pointer" @click="openTraining(t.id)">
             <h3 style="font-size:var(--bew-base-font-size);color:var(--bew-text-1);font-weight:600" mb-3>{{ t.name }}</h3>
             <div flex="~ items-center gap-4" style="font-size:var(--bew-base-font-size);color:var(--bew-text-2)">
               <span flex="~ items-center gap-1"><span v-html="renderIcon('mingcute:document-line',14)" style="display:contents"/>{{ t.problemCount }} 题</span>

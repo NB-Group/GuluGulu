@@ -1,5 +1,10 @@
 <script setup lang="ts">
 import { renderIcon } from '~/utils/icons'
+import { friendlyError } from '~/utils/luogu-api'
+import { AppPage } from '~/enums/appEnums'
+import { useGulyApp } from '~/composables/useAppProvider'
+
+const { currentUrl, navigateTo } = useGulyApp()
 
 interface TeamInfo {
   id: number; name: string; isPremium: boolean; type: number; memberCount: number
@@ -16,7 +21,7 @@ const loading = ref(true)
 const errorMsg = ref('')
 
 // Detail view
-const teamId = computed(() => { const m = document.URL.match(/\/team\/(\d+)/i); return m ? Number(m[1]) : null })
+const teamId = computed(() => { const m = currentUrl.value.match(/\/team\/(\d+)/i); return m ? Number(m[1]) : null })
 const team = ref<TeamInfo | null>(null)
 const currentMember = ref<any>(null)
 const discussions = ref<Discussion[]>([])
@@ -36,7 +41,7 @@ async function fetchTeamList() {
       memberCount: t.team?.memberCount || 0, createTime: t.team?.createTime || 0,
       master: t.team?.master, description: '', openness: 0,
     }))
-  } catch (e: any) { errorMsg.value = e.message }
+  } catch (e: any) { errorMsg.value = friendlyError(e) }
   loading.value = false
 }
 
@@ -63,10 +68,10 @@ async function fetchTeamDetail(id: number) {
   detailLoading.value = false
 }
 
-function openTeam(id: number) { window.location.href = `https://www.luogu.com.cn/team/${id}` }
+function openTeam(id: number) { navigateTo(AppPage.Team, `https://www.luogu.com.cn/team/${id}`) }
 function openUser(uid: number) { window.open(`https://www.luogu.com.cn/user/${uid}`, '_blank') }
-function openPost(id: number) { window.location.href = `https://www.luogu.com.cn/discuss/${id}` }
-function backToTeams() { window.location.href = 'https://www.luogu.com.cn/user/mine/team' }
+function openPost(id: number) { navigateTo(AppPage.Blog, `https://www.luogu.com.cn/discuss/${id}`) }
+function backToTeams() { navigateTo(AppPage.Team, 'https://www.luogu.com.cn/user/mine/team') }
 function timeAgo(ts: number): string {
   const d = Math.floor(Date.now() / 1000) - ts
   if (d < 3600) return `${Math.floor(d / 60)}分前`
@@ -76,7 +81,12 @@ function timeAgo(ts: number): string {
 function formatDate(ts: number): string { return new Date(ts * 1000).toLocaleDateString('zh-CN') }
 function typeLabel(t: number): string { return t === 2 ? '教学' : t === 1 ? '比赛' : '普通' }
 
-onMounted(() => { teamId.value ? fetchTeamDetail(teamId.value) : fetchTeamList() })
+function loadContent() {
+  if (teamId.value) { team.value = null; fetchTeamDetail(teamId.value) }
+  else { team.value = null; fetchTeamList() }
+}
+onMounted(loadContent)
+watch(teamId, () => loadContent())
 </script>
 
 <template>
@@ -118,7 +128,7 @@ onMounted(() => { teamId.value ? fetchTeamDetail(teamId.value) : fetchTeamList()
         <!-- Discussions -->
         <div v-if="discussions.length > 0" bg="$bew-content" rounded="$bew-radius" p-6 mb-6 shadow="[var(--bew-shadow-1),var(--bew-shadow-edge-glow-1)]" border="1 $bew-border-color" style="backdrop-filter:var(--bew-filter-glass-1)">
           <h2 style="font-size:var(--bew-base-font-size);font-weight:700;color:var(--bew-text-1)" mb-3>最新讨论</h2>
-          <div v-for="d in discussions" :key="d.id" flex="~ items-center gap-3" p-2 rounded="8px" cursor-pointer class="discuss-row" @click="openPost(d.id)">
+          <div v-for="(d, idx) in discussions" :key="d.id" class="stagger-row discuss-row" :style="{ '--row-index': idx }" flex="~ items-center gap-3" p-2 rounded="8px" cursor-pointer @click="openPost(d.id)">
             <img :src="d.author.avatar" style="width:24px;height:24px;border-radius:50%;flex-shrink:0" @error="(e:any) => e.target.style.display='none'" />
             <div flex="1" min-w-0>
               <div style="font-size:var(--bew-base-font-size);color:var(--bew-text-1);font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ d.title }}</div>
@@ -151,7 +161,7 @@ onMounted(() => { teamId.value ? fetchTeamDetail(teamId.value) : fetchTeamList()
         </div>
 
         <div v-if="teams.length > 0" grid="~ cols-1 md:cols-2 xl:cols-3" gap-4>
-          <div v-for="t in teams" :key="t.id" bg="$bew-content" rounded="$bew-radius" p-5 shadow="[var(--bew-shadow-1),var(--bew-shadow-edge-glow-1)]" border="1 $bew-border-color" cursor="pointer" class="team-card" style="backdrop-filter:var(--bew-filter-glass-1)" @click="openTeam(t.id)">
+          <div v-for="(t, idx) in teams" :key="t.id" class="stagger-card team-card" :style="{ '--card-index': idx, backdropFilter: 'var(--bew-filter-glass-1)' }" bg="$bew-content" rounded="$bew-radius" p-5 shadow="[var(--bew-shadow-1),var(--bew-shadow-edge-glow-1)]" border="1 $bew-border-color" cursor="pointer" @click="openTeam(t.id)">
             <div flex="~ items-center gap-3" mb-3>
               <div w="44px" h="44px" rounded="10px" bg="$bew-theme-color-20" flex="~ items-center justify-center" style="font-size:1.2rem;color:var(--bew-theme-color);font-weight:700">
                 {{ t.name.charAt(0) }}

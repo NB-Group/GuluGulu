@@ -68,7 +68,7 @@ let obs: IntersectionObserver | null = null
 onMounted(() => {
   obs = new IntersectionObserver((e) => {
     if (e[0]?.isIntersecting && !loading.value && !loadingMore.value) loadMore()
-  }, { rootMargin: '400px' })
+  }, { rootMargin: '1200px' })
   nextTick(() => { if (obs && sentinelRef.value) obs.observe(sentinelRef.value) })
 })
 watch(sentinelRef, (el) => { obs?.disconnect(); if (el) obs?.observe(el as Element) })
