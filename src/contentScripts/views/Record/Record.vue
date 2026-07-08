@@ -33,16 +33,16 @@ const statusMap: Record<number, { label: string; color: string }> = {
   1: { label: 'Judging', color: '#3498db' },
   2: { label: 'Compiling', color: '#3498db' },
   3: { label: 'Running', color: '#3498db' },
-  4: { label: 'Accepted', color: '#52c41a' },
-  5: { label: 'Unaccepted', color: '#e74c3c' },
-  6: { label: 'Wrong Answer', color: '#e74c3c' },
-  7: { label: 'Time Limit Exceeded', color: '#f39c12' },
-  8: { label: 'Memory Limit Exceeded', color: '#f39c12' },
-  9: { label: 'Runtime Error', color: '#e74c3c' },
-  10: { label: 'Compile Error', color: '#e74c3c' },
-  11: { label: 'Output Limit Exceeded', color: '#f39c12' },
-  12: { label: 'Accepted', color: '#52c41a' },
-  14: { label: 'Unaccepted', color: '#e74c3c' },
+  4: { label: 'AC', color: '#52c41a' },
+  5: { label: 'WA', color: '#e74c3c' },
+  6: { label: 'WA', color: '#e74c3c' },
+  7: { label: 'TLE', color: '#f39c12' },
+  8: { label: 'MLE', color: '#f39c12' },
+  9: { label: 'RE', color: '#e74c3c' },
+  10: { label: 'CE', color: '#e74c3c' },
+  11: { label: 'OLE', color: '#f39c12' },
+  12: { label: 'AC', color: '#52c41a' },
+  14: { label: 'WA', color: '#e74c3c' },
 }
 
 // Test case status codes (different from record-level!)
@@ -248,7 +248,7 @@ onUnmounted(() => obs?.disconnect())
                   <div class="tc-line1">{{ formatTime(tc.time || 0) }} / {{ formatMemory(tc.memory || 0) }}</div>
                   <div class="tc-line2">{{ tc.label }}</div>
                   <div class="tc-line3">#{{ idx + 1 }}</div>
-                  <div class="tc-line4">{{ tc.score ?? 0 }} 分<div v-if="tc.description" class="tc-desc">{{ tc.description }}</div></div>
+                  <div class="tc-line4" :title="tc.description || ''">{{ tc.score ?? 0 }} 分</div>
                 </div>
               </div>
             </div>
@@ -320,8 +320,7 @@ onUnmounted(() => obs?.disconnect())
 .tc-line1 { font-size: .7em; opacity: .85; }
 .tc-line2 { font-size: 1em; font-weight: 700; margin-top: 1px; }
 .tc-line3 { font-size: .75em; font-weight: 600; opacity: .9; margin-top: 1px; }
-.tc-line4 { font-size: .65em; opacity: .8; margin-top: 1px; }
-.tc-desc { font-size: inherit; opacity: .7; word-break: break-word; margin-top: 1px; }
+.tc-line4 { font-size: .65em; opacity: .8; margin-top: 1px; cursor: default; }
 
 :deep(pre code) { font-family:"Cascadia Code","Fira Code","JetBrains Mono",monospace;font-size:.875em; }
 :deep(.hljs-keyword) { color:#c678dd; }
