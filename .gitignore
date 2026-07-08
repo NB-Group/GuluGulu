@@ -11,3 +11,4 @@ key.pem
 .vite/
 .claude/
 gulugulu-*.zip
+*.cpp
