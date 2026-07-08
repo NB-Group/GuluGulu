@@ -140,19 +140,32 @@ if (/https?:\/\/(?:www\.)?luogu\.com(?:\.cn)?/.test(currentUrl)
     }
     // cachedDark === '0' means light mode — do nothing
   } catch {}
+
+  // Give the MAIN document a persistent, opaque background that flips with the
+  // `.dark` class. The visible app background (AppBackground) lives inside the
+  // Shadow DOM, so without this the main document is transparent. During a
+  // View Transition the browser snapshots the whole main document; a
+  // transparent base lets the default white page show through for a frame at
+  // the start/end of the clip-path animation — the "flash" bug. Keeping an
+  // opaque themed base under everything means any snapshot gap reveals the
+  // correct color instead of white. This style is NEVER removed.
+  injectCSS(`
+    html.guly-design {
+      background-color: #f5f5f5;
+    }
+    html.guly-design.dark {
+      background-color: #1a1a1a;
+    }
+  `)
+
   useDark()
 }
 
 if (isSupportedPages() || isSupportedIframePages()) {
   if (!isAuthPage()) {
+    // Hide the body until the app mounts (removed on GULY_MOUNTED). The themed
+    // background above stays behind it permanently.
     beforeLoadedStyleEl = injectCSS(`
-      html.guly-design {
-        background-color: var(--bew-bg, #f5f5f5);
-      }
-      html.guly-design.dark {
-        background-color: var(--bew-bg, #1a1a1a);
-      }
-
       body {
         display: none;
       }

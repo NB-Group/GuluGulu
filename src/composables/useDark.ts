@@ -153,8 +153,13 @@ export function useDark() {
 
       const transition: any = (document as any).startViewTransition(async () => {
         updateThemeSettings()
-        // Wait for Vue to flush DOM updates (dark class) before the browser
-        // captures the "new" snapshot — otherwise it may capture the old theme.
+        // Apply the theme classes to the DOM synchronously here, instead of
+        // relying on the async `watch` → `setAppAppearance` path. This
+        // guarantees `.dark` is on the main document's <html> (and #guly)
+        // BEFORE the browser captures the "new" snapshot — otherwise the
+        // snapshot may capture the old theme, causing a random flash.
+        setAppAppearance()
+        // Then let Vue flush component updates (Shadow DOM content).
         await nextTick()
       })
 
