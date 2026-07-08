@@ -195,36 +195,18 @@ async function onDOMLoaded() {
     const csrfMeta = document.querySelector<HTMLMetaElement>('meta[name="csrf-token"]')
     const csrfToken = csrfMeta?.getAttribute('content') || ''
 
-    // Extract user info BEFORE clearing body — from lentille-context on the page
+    // Fetch user info via frontend API (same-origin cookies, always works when logged in)
     let userIdCookie = ''
     let userName = ''
     try {
-      const lcEl = document.getElementById('lentille-context')
-      if (lcEl?.textContent) {
-        const lc = JSON.parse(lcEl.textContent)
-        const user = lc?.currentUser || lc?.data?.user || lc?.user || null
-        if (user) {
-          userIdCookie = String(user.uid || user.id || '')
-          userName = user.name || user.username || ''
-        }
+      const res = await fetch('https://www.luogu.com.cn/record/list?_contentOnly=1', { credentials: 'same-origin' })
+      const json = await res.json()
+      const user = json?.currentUser
+      if (user?.uid) {
+        userIdCookie = String(user.uid)
+        userName = user.name || ''
       }
     } catch {}
-
-    // Fallback: ask background to read HttpOnly _uid cookie
-    if (!userIdCookie) {
-      try {
-        const resp = await browser.runtime.sendMessage({ contentScriptQuery: 'HOME.getLoginState' })
-        if (resp?.uid) {
-          userIdCookie = resp.uid
-          userName = userName || resp.name || ''
-        }
-      } catch {}
-    }
-
-    // Last-resort fallback: document.cookie (won't read HttpOnly but worth trying)
-    if (!userIdCookie) {
-      userIdCookie = document.cookie.match(/(?:^|;\s*)_uid=(\d+)/)?.[1] || ''
-    }
 
     // Try to find and preserve the Luogu top bar
     originalTopBar = document.querySelector<HTMLElement>(

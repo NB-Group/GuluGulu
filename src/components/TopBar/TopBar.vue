@@ -46,15 +46,28 @@ const hideTopBar = ref<boolean>(false)
 const headerTarget = ref(null)
 const { isOutside: isOutsideTopBar } = useMouseInElement(headerTarget)
 
-// Check login state from lentille-context (extracted by content script before body clear)
+// Check login state via frontend API fetch
 const isLogin = ref(false)
-onMounted(() => {
+onMounted(async () => {
   const stored = (window as any).__guly_user
   if (stored?.uid && stored.uid !== '0') {
     isLogin.value = true
     userUid.value = Number(stored.uid)
     if (stored.name) userName.value = stored.name
+    return
   }
+  // Fallback: fetch directly from frontend
+  try {
+    const res = await fetch('https://www.luogu.com.cn/record/list?_contentOnly=1', { credentials: 'same-origin' })
+    const json = await res.json()
+    const user = json?.currentUser
+    if (user?.uid) {
+      isLogin.value = true
+      userUid.value = Number(user.uid)
+      if (user.name) userName.value = user.name
+      ;(window as any).__guly_user = { uid: String(user.uid), name: user.name || '', csrfToken: '' }
+    }
+  } catch {}
 })
 
 // === Message notification polling ===
