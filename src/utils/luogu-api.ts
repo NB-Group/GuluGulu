@@ -228,6 +228,7 @@ export function friendlyError(e: any): string {
   if (typeof e === 'string') return e
   const msg = e.message || String(e)
   if (msg.includes('Failed to fetch') || msg.includes('NetworkError')) return '网络连接失败，请检查网络'
-  if (msg.includes('JSON')) return '数据解析失败，可能需要刷新页面'
-  return '加载失败，请确认已登录洛谷并刷新重试'
+  if (msg.includes('JSON') || msg.includes('Unexpected token') || msg.includes('is not valid JSON'))
+    return '请先登录洛谷后再使用 GuluGuly'
+  return '加载失败，请先登录洛谷后刷新重试'
 }
