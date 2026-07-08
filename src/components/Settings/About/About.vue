@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { version } from '~/../package.json'
 import SettingsItem from '../components/SettingsItem.vue'
 import SettingsItemGroup from '../components/SettingsItemGroup.vue'
 </script>
@@ -7,11 +8,11 @@ import SettingsItemGroup from '../components/SettingsItemGroup.vue'
   <div flex="~ col gap-4">
     <SettingsItemGroup title="关于 GulyGuly">
       <SettingsItem title="版本" desc="当前扩展版本">
-        <span style="color:var(--bew-text-2);font-size:var(--bew-base-font-size)">0.1.0</span>
+        <span style="color:var(--bew-text-2);font-size:var(--bew-base-font-size)">{{ version }}</span>
       </SettingsItem>
       <SettingsItem title="项目地址">
         <a
-          href="https://github.com/nbgroup/GuluGuly"
+          href="https://github.com/NB-Group/GuluGuly"
           target="_blank"
           style="color:var(--bew-theme-color);font-size:var(--bew-base-font-size);text-decoration:none"
         >
