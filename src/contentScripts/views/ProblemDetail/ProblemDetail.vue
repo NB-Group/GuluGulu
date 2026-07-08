@@ -368,9 +368,11 @@ onMounted(() => {
         <!-- ============================================================ -->
         <!-- Statement Tab -->
         <!-- ============================================================ -->
-        <div
-          v-if="activeTab === 'statement'"
-          bg="$bew-content" rounded="$bew-radius" p="6 md:p-8"
+        <Transition name="content-reveal" mode="out-in">
+          <div
+            v-if="activeTab === 'statement'"
+            :key="'statement'"
+            bg="$bew-content" rounded="$bew-radius" p="6 md:p-8"
           shadow="[var(--bew-shadow-1),var(--bew-shadow-edge-glow-1)]"
           border="1 $bew-border-color"
           style="backdrop-filter: var(--bew-filter-glass-1)"
@@ -427,7 +429,8 @@ onMounted(() => {
         <!-- Submit Tab (Code Editor) -->
         <!-- ============================================================ -->
         <div
-          v-if="activeTab === 'submit'"
+          v-else-if="activeTab === 'submit'"
+          :key="'submit'"
           bg="$bew-content" rounded="$bew-radius" p="6 md:p-8"
           shadow="[var(--bew-shadow-1),var(--bew-shadow-edge-glow-1)]"
           border="1 $bew-border-color"
@@ -532,7 +535,8 @@ onMounted(() => {
         <!-- Solutions Tab -->
         <!-- ============================================================ -->
         <div
-          v-if="activeTab === 'solutions'"
+          v-else-if="activeTab === 'solutions'"
+          :key="'solutions'"
           bg="$bew-content" rounded="$bew-radius" p-6
           shadow="[var(--bew-shadow-1),var(--bew-shadow-edge-glow-1)]"
           border="1 $bew-border-color"
@@ -548,6 +552,7 @@ onMounted(() => {
             </Button>
           </div>
         </div>
+        </Transition>
       </div>
     </Transition>
   </div>

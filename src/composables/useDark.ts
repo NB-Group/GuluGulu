@@ -4,83 +4,58 @@ import { settings } from '~/logic'
 import { runWhenIdle } from '~/utils/lazyLoad'
 import { executeTimes } from '~/utils/timer'
 
-/**
- * Inject the persistent View Transition control styles into the MAIN document
- * (once). These target `::view-transition-*` pseudo-elements, which live in the
- * main document's top-layer — NOT inside our Shadow DOM. The copy that ships in
- * main.scss is injected into the Shadow DOM and therefore never applies.
- *
- * We suppress the browser's DEFAULT cross-fade animation on the root snapshots
- * (that cross-fade, running alongside our clip reveal, was one cause of the
- * flash). The actual clip-path reveal animation is added per-toggle by
- * `runClipReveal` below, as a plain CSS animation — which Firefox supports
- * reliably, unlike JS `Element.animate({ pseudoElement })`.
- */
 let viewTransitionStyleInjected = false
-function ensureViewTransitionStyles() {
-  if (viewTransitionStyleInjected || typeof document === 'undefined')
-    return
-  viewTransitionStyleInjected = true
+function ensureViewTransitionStyles(toDark: boolean) {
+  if (typeof document === 'undefined') return
 
-  const style = document.createElement('style')
-  style.id = 'gulugulu-view-transition'
-  style.textContent = `
-    ::view-transition-old(root),
-    ::view-transition-new(root) {
-      animation: none;
-      mix-blend-mode: normal;
-    }
-  `
-  document.head.appendChild(style)
-}
+  // Remove previous dynamic VT style (direction changes each toggle)
+  const prev = document.getElementById('gulugulu-vt-dynamic')
+  if (prev) prev.remove()
 
-/**
- * Drive the circular clip-path reveal purely via CSS on the view-transition
- * pseudo-elements. Returns a promise that resolves when the animation ends.
- *
- * Why CSS instead of `document.documentElement.animate(..., { pseudoElement })`:
- *  - Firefox's support for JS-driven view-transition pseudo-element animation
- *    is fragile/late (see bug 1921112), so it silently did nothing there.
- *  - `animation-fill-mode: both` applies the 0% keyframe (`circle(0)`) at the
- *    moment the pseudo-elements are created, so the browser never paints a
- *    single unclipped "full-screen new theme" frame before the reveal starts —
- *    which was the residual first-frame flash in Chrome.
- */
-function runClipReveal(x: number, y: number, endRadius: number): Promise<void> {
-  const clipStart = `circle(0px at ${x}px ${y}px)`
-  const clipEnd = `circle(${endRadius}px at ${x}px ${y}px)`
+  if (!viewTransitionStyleInjected) {
+    viewTransitionStyleInjected = true
+    const base = document.createElement('style')
+    base.id = 'gulugulu-view-transition'
+    base.textContent = `
+      @keyframes guly-clip-expand {
+        from { clip-path: circle(0px at var(--guly-clip-x, 50%) var(--guly-clip-y, 50%)); }
+        to   { clip-path: circle(var(--guly-clip-r, 100vmax) at var(--guly-clip-x, 50%) var(--guly-clip-y, 50%)); }
+      }
+      @keyframes guly-clip-shrink {
+        from { clip-path: circle(var(--guly-clip-r, 100vmax) at var(--guly-clip-x, 50%) var(--guly-clip-y, 50%)); }
+        to   { clip-path: circle(0px at var(--guly-clip-x, 50%) var(--guly-clip-y, 50%)); }
+      }
+      ::view-transition-old(root), ::view-transition-new(root) {
+        animation: none !important;
+        mix-blend-mode: normal;
+      }
+    `
+    document.head.appendChild(base)
+  }
 
-  // ALWAYS grow the NEW snapshot from a 0-radius circle to full screen, kept on
-  // top. This is direction-independent (looks the same for dark→light and
-  // light→dark) and, crucially, the END state is the new theme covering the
-  // whole viewport at the top layer. So even if a browser (Firefox) tears the
-  // pseudo-elements down a frame late, whatever shows through is the NEW theme —
-  // never the old one flashing back. (Shrinking the OLD snapshot instead left a
-  // window where Firefox re-revealed the old theme full-screen → the flash.)
-  const animName = `guly-clip-${Date.now()}`
-  const style = document.createElement('style')
-  style.textContent = `
-    ::view-transition-old(root) { z-index: 1; }
-    ::view-transition-new(root) { z-index: 2147483646; }
-    ::view-transition-new(root) {
-      animation: ${animName} 300ms ease-in-out both;
-    }
-    @keyframes ${animName} {
-      from { clip-path: ${clipStart}; }
-      to { clip-path: ${clipEnd}; }
-    }
-  `
-  document.head.appendChild(style)
-
-  return new Promise<void>((resolve) => {
-    // Resolve slightly after the animation duration; the pseudo-elements are
-    // torn down by the browser when the transition finishes, so we just need to
-    // clean up our injected style afterwards.
-    setTimeout(() => {
-      style.remove()
-      resolve()
-    }, 350)
-  })
+  // Direction-specific: inject per-toggle so selectors apply correctly
+  const dyn = document.createElement('style')
+  dyn.id = 'gulugulu-vt-dynamic'
+  if (toDark) {
+    // Light→Dark: old-light-snapshot SHRINKS toward click, revealing dark underneath
+    dyn.textContent = `
+      ::view-transition-old(root) {
+        animation: guly-clip-shrink 300ms ease-in-out both !important;
+        z-index: 2147483646;
+      }
+      ::view-transition-new(root) { z-index: 1; }
+    `
+  } else {
+    // Dark→Light: new-light-snapshot EXPANDS from click, covering dark
+    dyn.textContent = `
+      ::view-transition-new(root) {
+        animation: guly-clip-expand 300ms ease-in-out both !important;
+        z-index: 2147483646;
+      }
+      ::view-transition-old(root) { z-index: 1; }
+    `
+  }
+  document.head.appendChild(dyn)
 }
 
 export function useDark() {
@@ -167,7 +142,8 @@ export function useDark() {
       updateThemeSettings()
     }
     else {
-      ensureViewTransitionStyles()
+      const toDark = currentAppColorScheme.value === 'light'
+      ensureViewTransitionStyles(toDark)
 
       const x = e.clientX
       const y = e.clientY
@@ -183,6 +159,14 @@ export function useDark() {
       style.appendChild(document.createTextNode(styleString))
       document.head.appendChild(style)
 
+      // Set the click-position variables BEFORE starting the transition, so they
+      // are already in place when the pseudo-elements (and their animation) are
+      // created — otherwise the reveal falls back to a centred circle.
+      const root = document.documentElement
+      root.style.setProperty('--guly-clip-x', `${x}px`)
+      root.style.setProperty('--guly-clip-y', `${y}px`)
+      root.style.setProperty('--guly-clip-r', `${endRadius}px`)
+
       const transition: any = (document as any).startViewTransition(async () => {
         updateThemeSettings()
         // Apply the theme classes to the DOM synchronously here, instead of
@@ -196,10 +180,10 @@ export function useDark() {
       })
 
       transition.ready
-        .then(() => runClipReveal(x, y, endRadius))
         .catch(() => {})
         .finally(() => {
-          style.remove()
+          // Keep the transition-suppression style alive for the reveal duration.
+          setTimeout(() => style.remove(), 350)
         })
     }
   }
