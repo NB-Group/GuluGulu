@@ -4,6 +4,38 @@ import { settings } from '~/logic'
 import { runWhenIdle } from '~/utils/lazyLoad'
 import { executeTimes } from '~/utils/timer'
 
+/**
+ * Inject the View Transition control styles into the MAIN document (once).
+ *
+ * These rules target `::view-transition-*` pseudo-elements, which live in the
+ * main document's top-layer — NOT inside our Shadow DOM. The copy that ships in
+ * main.scss is injected into the Shadow DOM and therefore never applies, which
+ * left the browser's default cross-fade running alongside our clip-path
+ * animation and produced a one-frame "flash" at the end of the transition.
+ */
+let viewTransitionStyleInjected = false
+function ensureViewTransitionStyles() {
+  if (viewTransitionStyleInjected || typeof document === 'undefined')
+    return
+  viewTransitionStyleInjected = true
+
+  const style = document.createElement('style')
+  style.id = 'gulugulu-view-transition'
+  style.textContent = `
+    ::view-transition-old(root),
+    ::view-transition-new(root) {
+      animation: none !important;
+      mix-blend-mode: normal;
+      transition: none !important;
+    }
+    ::view-transition-old(root) { z-index: 1; }
+    ::view-transition-new(root) { z-index: 2147483646; }
+    .dark::view-transition-old(root) { z-index: 2147483646; }
+    .dark::view-transition-new(root) { z-index: 1; }
+  `
+  document.head.appendChild(style)
+}
+
 export function useDark() {
   const isPreferredDark = usePreferredDark()
   const currentSystemColorScheme = computed(() => isPreferredDark.value ? 'dark' : 'light')
@@ -88,6 +120,8 @@ export function useDark() {
       updateThemeSettings()
     }
     else {
+      ensureViewTransitionStyles()
+
       const x = e.clientX
       const y = e.clientY
       const endRadius = Math.hypot(
@@ -117,8 +151,7 @@ export function useDark() {
 
       gulyWrapper.appendChild(shadowDomStyle)
 
-      // @ts-expect-error: Transition API
-      const transition = document.startViewTransition(async () => {
+      const transition: any = (document as any).startViewTransition(async () => {
         updateThemeSettings()
         // Wait for Vue to flush DOM updates (dark class) before the browser
         // captures the "new" snapshot — otherwise it may capture the old theme.

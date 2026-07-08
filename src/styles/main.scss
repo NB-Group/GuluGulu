@@ -153,28 +153,11 @@ img {
   --os-handle-bg-active: rgba(120, 120, 140, 0.66);
 }
 
-/* Color Mode transition */
-::view-transition-old(root),
-::view-transition-new(root) {
-  animation: none !important;
-  mix-blend-mode: normal;
-  transition: none !important;
-}
-::view-transition-old(*),
-::view-transition-new(*),
-::view-transition-old(*::after),
-::view-transition-new(*::before) {
-  transition: none !important;
-}
-::view-transition-old(root) {
-  z-index: 1;
-}
-::view-transition-new(root) {
-  z-index: 2147483646;
-}
-.dark::view-transition-old(root) {
-  z-index: 2147483646;
-}
-.dark::view-transition-new(root) {
-  z-index: 1;
-}
+/* Color Mode transition
+ *
+ * NOTE: The `::view-transition-*` control rules are NOT defined here. This
+ * stylesheet is injected into the Shadow DOM, but those pseudo-elements live in
+ * the main document's top-layer, so rules here would never apply. They are
+ * injected into the main document by `ensureViewTransitionStyles()` in
+ * composables/useDark.ts instead.
+ */
