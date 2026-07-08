@@ -130,6 +130,7 @@ function loadRealData() {
       }))
     }
 
+    document.title = `${problem.value.pid} ${problem.value.title} - GuluGulu`
     loading.value = false
   }
   catch (e) {
