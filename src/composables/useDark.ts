@@ -2,7 +2,6 @@ import { usePreferredDark } from '@vueuse/core'
 
 import { settings } from '~/logic'
 import { runWhenIdle } from '~/utils/lazyLoad'
-import { executeTimes } from '~/utils/timer'
 
 let viewTransitionStyleInjected = false
 function ensureViewTransitionStyles(toDark: boolean) {
@@ -68,7 +67,6 @@ export function useDark() {
       return currentSystemColorScheme.value
   })
   const isDark = computed(() => currentAppColorScheme.value === 'dark')
-  let themeChangeTimer: NodeJS.Timeout | null = null
 
   // Watch for changes in the settings.value.themeMode variable and add the 'dark' class to the 'mainApp' element
   // to prevent some Unocss dark-specific styles from failing to take effect
@@ -80,21 +78,10 @@ export function useDark() {
     { immediate: true },
   )
 
-  // use watchEffect instead of onMounted because onMounted is only available in setup function
-  watchEffect(() => {
-    // Because some shadow dom may not be loaded when the page has already loaded, we need to wait until the page is idle
-    runWhenIdle(() => {
-      if (isDark.value) {
-        themeChangeTimer = executeTimes(() => {
-          window.dispatchEvent(new CustomEvent('global.themeChange', { detail: 'dark' }))
-        }, 10, 500)
-      }
-      else {
-        themeChangeTimer = executeTimes(() => {
-          window.dispatchEvent(new CustomEvent('global.themeChange', { detail: 'light' }))
-        }, 10, 500)
-      }
-    })
+  // Dispatch theme change once after idle to ensure shadow DOM is ready.
+  // Was using watchEffect + executeTimes (10x500ms) which caused render loops.
+  runWhenIdle(() => {
+    window.dispatchEvent(new CustomEvent('global.themeChange', { detail: isDark.value ? 'dark' : 'light' }))
   })
 
   /**
@@ -102,9 +89,6 @@ export function useDark() {
    * to prevent some Unocss dark-specific styles from failing to take effect
    */
   function setAppAppearance() {
-    if (themeChangeTimer)
-      clearInterval(themeChangeTimer)
-
     if (isDark.value) {
       document.querySelector('#guly')?.classList.add('dark')
       document.documentElement.classList.add('dark')
