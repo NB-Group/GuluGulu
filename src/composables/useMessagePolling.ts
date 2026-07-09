@@ -23,6 +23,13 @@ function toggleNotify() {
 async function poll() {
   const uid = (window as any).__guly_user?.uid
   if (!uid || uid === '0') return
+  // Prevent duplicate polling across tabs: only one tab polls per 15s window
+  const lastPollKey = 'gulugulu-last-poll'
+  const lastPoll = Number(localStorage.getItem(lastPollKey) || '0')
+  const now = Date.now()
+  if (now - lastPoll < 10000) return // another tab polled within 10s
+  localStorage.setItem(lastPollKey, String(now))
+
   try {
     const res = await fetch('https://www.luogu.com.cn/chat?_contentOnly=1', { credentials: 'same-origin' })
     const json = await res.json()
