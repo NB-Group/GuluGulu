@@ -98,10 +98,6 @@ const isTopBarFixed = computed((): boolean => {
   return true
 })
 
-const showTopBar = computed((): boolean => {
-  return settings.value.showTopBar
-})
-
 // #region Popups visibility control
 const popupVisible = reactive({
   userPanel: false,
@@ -207,7 +203,6 @@ defineExpose({
 <template>
   <Transition name="top-bar">
     <header
-      v-if="showTopBar"
       ref="headerTarget"
       w="full" transition="all 300 ease-in-out"
       :class="{ 'hide': hideTopBar }"
