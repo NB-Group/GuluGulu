@@ -41,6 +41,7 @@ const { isDark } = useDark()
 
 const userName = ref('')
 const userUid = ref(0)
+const userColor = ref('')
 
 const hideTopBar = ref<boolean>(false)
 const headerTarget = ref(null)
@@ -54,6 +55,7 @@ onMounted(async () => {
     isLogin.value = true
     userUid.value = Number(stored.uid)
     if (stored.name) userName.value = stored.name
+    if (stored.color) userColor.value = stored.color
     return
   }
   // Fallback: fetch directly from frontend
@@ -65,7 +67,8 @@ onMounted(async () => {
       isLogin.value = true
       userUid.value = Number(user.uid)
       if (user.name) userName.value = user.name
-      ;(window as any).__guly_user = { uid: String(user.uid), name: user.name || '', csrfToken: '' }
+      if (user.color) userColor.value = user.color
+      ;(window as any).__guly_user = { uid: String(user.uid), name: user.name || '', color: user.color || '', csrfToken: '' }
     }
   } catch {}
 })
@@ -319,7 +322,7 @@ defineExpose({
                 >
                 <span v-html="renderIcon('mingcute:user-4-line', 18)" style="position:absolute;top:8px;left:8px;" hidden />
               </div>
-              <span v-if="userName" style="font-size:var(--bew-base-font-size);color:var(--bew-text-1);font-weight:600;white-space:nowrap;line-height:var(--bew-top-bar-height)">{{ userName }}</span>
+              <span v-if="userName" :style="{fontSize:'var(--bew-base-font-size)',color:userColor?`var(--bew-${userColor})`:'var(--bew-text-1)',fontWeight:600,whiteSpace:'nowrap',lineHeight:'var(--bew-top-bar-height)'}">{{ userName }}</span>
               <!-- User panel popup -->
               <Transition name="dropdown">
                 <div v-if="popupVisible.userPanel" class="user-panel-dropdown" @click.stop>

@@ -375,6 +375,11 @@ onMounted(() => {
                 </span>
               </div>
 
+              <!-- Tags -->
+              <div v-if="problem.tags.length > 0" flex="~ gap-1.5 wrap" mt-1>
+                <span v-for="tag in problem.tags" :key="tag.id" text="xs" px-2 py-0.5 rounded-full bg="$bew-fill-2" style="color:var(--bew-text-3)">{{ tag.name }}</span>
+              </div>
+
               <div flex="~ gap-4 wrap" text="sm $bew-text-2">
                 <span flex="~ items-center gap-1">
                   <span v-html="renderIcon('mingcute:time-line', 16)" style="display:contents" />
