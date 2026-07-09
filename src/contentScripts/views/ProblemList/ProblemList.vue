@@ -25,6 +25,7 @@ const problems = ref<ProblemItem[]>([])
 const totalCount = ref(0)
 const errorMsg = ref('')
 const selectedDifficulty = ref<number | null>(null)
+const selectedType = ref('')
 const sentinelRef = ref<HTMLDivElement>()
 
 const difficultyMap: Record<number, { label: string; color: string }> = {
@@ -38,6 +39,14 @@ const difficultyMap: Record<number, { label: string; color: string }> = {
   7: { label: 'NOI/NOI+/CTSC', color: '#e91e63' },
 }
 
+const typeOptions = [
+  { label: '全部题库', value: '' },
+  { label: '洛谷', value: 'P' },
+  { label: 'Codeforces', value: 'CF' },
+  { label: 'SPOJ', value: 'SP' },
+  { label: 'UVA', value: 'UVA' },
+  { label: 'AtCoder', value: 'AT' },
+]
 const difficultyOptions = [
   { label: '全部难度', value: null },
   { label: '入门', value: 1 }, { label: '普及−', value: 2 }, { label: '普及/提高−', value: 3 },
@@ -64,6 +73,7 @@ async function fetchProblems(append = false) {
       page: currentPage.value,
       difficulty: selectedDifficulty.value || '',
       keyword: searchKeyword.value,
+      type: selectedType.value,
     })
 
     if (data?.error) {
@@ -153,9 +163,10 @@ function difficultyColor(d: number) { return difficultyMap[d]?.color || '#909399
       <h1 style="font-size:1.5rem;color:var(--bew-text-1);font-weight:700;" mb-4>题库</h1>
       <div mb-4><SearchBar @search="handleSearch" /></div>
       <div flex="~ col md:row gap-3" items="center" justify="between">
-        <select v-model="selectedDifficulty" class="difficulty-select">
-          <option v-for="opt in difficultyOptions" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
-        </select>
+        <div flex="~ gap-2 wrap">
+          <Select v-model="selectedType" :options="typeOptions" placeholder="题目来源" />
+          <Select v-model="selectedDifficulty" :options="difficultyOptions" placeholder="题目难度" />
+        </div>
         <div flex="~ gap-1" items="center" bg="$bew-fill-1" rounded="$bew-radius-half" p-1>
           <button v-for="m in [{k:'adaptive',i:'layout-6-line'},{k:'twoColumns',i:'layout-5-line'},{k:'singleColumn',i:'layout-line'}]" :key="m.k" p="x-2 y-1" rounded="$bew-radius-half" border="none" cursor="pointer"
             :style="{background:localGridLayout===m.k?'var(--bew-theme-color)':'',color:localGridLayout===m.k?'white':'var(--bew-text-2)'}" @click="localGridLayout=m.k as any">

@@ -72,7 +72,7 @@ async function fetchTeamDetail(id: number) {
 function openTeam(id: number) { navigateTo(AppPage.Team, `https://www.luogu.com.cn/team/${id}`) }
 function backToTeams() { navigateTo(AppPage.Team, 'https://www.luogu.com.cn/user/mine/team') }
 function openUser(uid: number) { window.open(`https://www.luogu.com.cn/user/${uid}`, '_blank') }
-function openPost(id: number) { navigateTo(AppPage.Blog, `https://www.luogu.com.cn/discuss/${id}`) }
+function openPost(id: number) { window.open(`https://www.luogu.com.cn/discuss/${id}`, '_blank') }
 function formatDate(ts: number): string { return ts ? new Date(ts * 1000).toLocaleDateString('zh-CN') : '' }
 
 function loadContent() {
@@ -116,6 +116,33 @@ watch(teamId, () => loadContent())
       <Loading v-if="detailLoading" />
 
       <div v-if="!detailLoading && detail">
+        <!-- Notice -->
+        <div v-if="detail.notice" bg="$bew-content" rounded="$bew-radius" p-6 mb-6 shadow="[var(--bew-shadow-1)]" border="1 $bew-border-color" style="backdrop-filter:var(--bew-filter-glass-1)">
+          <h2 style="font-size:var(--bew-base-font-size);font-weight:700;color:var(--bew-text-1)" mb-2>团队公告</h2>
+          <div style="font-size:var(--bew-base-font-size);color:var(--bew-text-2);white-space:pre-wrap;line-height:1.6">{{ detail.notice }}</div>
+        </div>
+        <!-- Usage dashboard -->
+        <div v-if="detail.usages" bg="$bew-content" rounded="$bew-radius" p-6 mb-6 shadow="[var(--bew-shadow-1)]" border="1 $bew-border-color" style="backdrop-filter:var(--bew-filter-glass-1)">
+          <h2 style="font-size:var(--bew-base-font-size);font-weight:700;color:var(--bew-text-1)" mb-3>团队内容</h2>
+          <div grid="~ cols-2 md:cols-4" gap-3>
+            <div v-for="item in [
+              {k:'problem',l:'题目',icon:'mingcute:code-line'},
+              {k:'training',l:'题单',icon:'mingcute:book-4-line'},
+              {k:'contest',l:'比赛',icon:'mingcute:trophy-line'},
+              {k:'file',l:'文件',icon:'mingcute:folder-line'},
+            ]" :key="item.k" bg="$bew-fill-1" rounded="$bew-radius" p-4 cursor="pointer" class="usage-card"
+              @click="window.open('https://www.luogu.com.cn/team/'+teamId+'/'+item.k, '_blank')">
+              <div flex="~ items-center gap-2" mb-1>
+                <span v-html="renderIcon(item.icon,18)" :style="{color:'var(--bew-theme-color)',display:'contents'}" />
+                <span style="font-size:var(--bew-base-font-size);color:var(--bew-text-1);font-weight:600">{{ item.l }}</span>
+              </div>
+              <div style="font-size:.85em;color:var(--bew-text-3)">
+                <span v-if="detail.usages[item.k]?.[0]">{{ detail.usages[item.k][0] }} 可用</span>
+                <span v-else>—</span>
+              </div>
+            </div>
+          </div>
+        </div>
         <!-- Member groups -->
         <div v-if="detail.groups.length > 0" bg="$bew-content" rounded="$bew-radius" p-6 mb-6 shadow="[var(--bew-shadow-1)]" border="1 $bew-border-color" style="backdrop-filter:var(--bew-filter-glass-1)">
           <h2 style="font-size:var(--bew-base-font-size);font-weight:700;color:var(--bew-text-1)" mb-3>成员组</h2>
@@ -177,4 +204,6 @@ watch(teamId, () => loadContent())
 .team-card { transition: box-shadow .2s, transform .2s; }
 .team-card:hover { box-shadow: var(--bew-shadow-2)!important; transform: translateY(-2px); }
 .discuss-row:hover { background: var(--bew-fill-2); }
+.usage-card { transition: box-shadow .2s, transform .2s; }
+.usage-card:hover { box-shadow: var(--bew-shadow-2)!important; transform: translateY(-2px); }
 </style>
