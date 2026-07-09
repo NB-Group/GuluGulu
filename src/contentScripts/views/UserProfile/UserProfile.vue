@@ -47,8 +47,12 @@ async function fetchFollowList(type: 'following' | 'followers') {
   followLoading.value = false
 }
 
-function navigateToFollow(type: 'following' | 'followers') {
-  window.location.href = `https://www.luogu.com.cn/user/${uid.value}/${type}`
+function navigateToFollow(type: 'following' | 'followers' | 'back') {
+  if (type === 'back') window.location.href = `https://www.luogu.com.cn/user/${uid.value}`
+  else window.location.href = `https://www.luogu.com.cn/user/${uid.value}/${type}`
+}
+function openFollowUser(uid2: number) {
+  window.location.href = `https://www.luogu.com.cn/user/${uid2}`
 }
 
 const relationshipLabel = computed(() => {
@@ -181,13 +185,13 @@ watch(subView, (v) => { if (v) fetchFollowList(v) })
   <!-- ============================================================ -->
   <div v-if="subView" class="page-container" w-full h-full p="x-4 md:x-8 lg:x-16" pos="relative">
       <div bg="$bew-content" rounded="$bew-radius" p-6 mb-6 shadow="[var(--bew-shadow-1),var(--bew-shadow-edge-glow-1)]" border="1 $bew-border-color" style="backdrop-filter:var(--bew-filter-glass-1)">
-        <button @click="window.location.href='https://www.luogu.com.cn/user/'+uid" style="background:none;border:none;cursor:pointer;color:var(--bew-theme-color);font-size:var(--bew-base-font-size)" mb-2>← 返回用户主页</button>
+        <button @click="navigateToFollow('back')" style="background:none;border:none;cursor:pointer;color:var(--bew-theme-color);font-size:var(--bew-base-font-size)" mb-2>← 返回用户主页</button>
         <h1 style="font-size:1.25rem;color:var(--bew-text-1);font-weight:700">{{ subView === 'following' ? '关注' : '粉丝' }}</h1>
       </div>
       <Loading v-if="followLoading" />
       <Transition name="content-reveal">
         <div v-if="!followLoading && followList.length > 0" bg="$bew-content" rounded="$bew-radius" shadow="[var(--bew-shadow-1),var(--bew-shadow-edge-glow-1)]" border="1 $bew-border-color" style="backdrop-filter:var(--bew-filter-glass-1)" overflow="hidden">
-          <div v-for="(fu, idx) in followList" :key="fu.uid" class="stagger-row hover:bg-$bew-fill-2" :style="{'--row-index':idx}" flex="~ items-center gap-4" p="x-6 y-3.5" border="b-1 $bew-border-color" cursor="pointer" duration-200 @click="window.location.href='https://www.luogu.com.cn/user/'+fu.uid">
+          <div v-for="(fu, idx) in followList" :key="fu.uid" class="stagger-row hover:bg-$bew-fill-2" :style="{'--row-index':idx}" flex="~ items-center gap-4" p="x-6 y-3.5" border="b-1 $bew-border-color" cursor="pointer" duration-200 @click="openFollowUser(fu.uid)">
             <img :src="fu.avatar" style="width:36px;height:36px;border-radius:50%;object-fit:cover;flex-shrink:0" @error="(e:any)=>{e.target.style.display='none'}" />
             <div flex="~ items-center gap-2" flex-1 min-w-0>
               <span :style="{color:fu.color?`var(--bew-${fu.color})`:'var(--bew-text-1)',fontWeight:600,fontSize:'var(--bew-base-font-size)'}">{{ fu.name }}</span>
