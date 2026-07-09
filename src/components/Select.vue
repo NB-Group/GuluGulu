@@ -15,17 +15,19 @@ const dropdownRef = ref<HTMLDivElement>()
 const triggerRef = ref<HTMLButtonElement>()
 const dropdownStyle = ref<Record<string, string>>({})
 
+function updatePosition() {
+  if (!triggerRef.value) return
+  const rect = triggerRef.value.getBoundingClientRect()
+  dropdownStyle.value = {
+    position: 'fixed',
+    top: rect.bottom + 4 + 'px',
+    left: rect.left + 'px',
+    width: rect.width + 'px',
+  }
+}
 function toggleOpen() {
   open.value = !open.value
-  if (open.value && triggerRef.value) {
-    const rect = triggerRef.value.getBoundingClientRect()
-    dropdownStyle.value = {
-      position: 'fixed',
-      top: rect.bottom + 4 + 'px',
-      left: rect.left + 'px',
-      width: rect.width + 'px',
-    }
-  }
+  if (open.value) updatePosition()
 }
 
 function select(value: string | number | null) {
@@ -36,10 +38,11 @@ function select(value: string | number | null) {
 // Close on outside click
 onMounted(() => {
   document.addEventListener('click', (e) => {
-    // e.target is retargeted to shadow host by the browser — use composedPath instead
     const path = e.composedPath()
     if (dropdownRef.value && !path.includes(dropdownRef.value)) open.value = false
   })
+  window.addEventListener('scroll', () => { if (open.value) updatePosition() }, true)
+  window.addEventListener('resize', () => { if (open.value) updatePosition() })
 })
 </script>
 
