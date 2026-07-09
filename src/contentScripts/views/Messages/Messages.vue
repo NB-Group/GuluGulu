@@ -163,8 +163,8 @@ async function openChat(uid: number, user?: ChatUser) {
         credentials: 'same-origin',
         body: JSON.stringify({ user: uid }),
       })
-      const conv = conversations.value.find(c => c.user.uid === uid)
-      if (conv) conv.unread = 0
+      const idx = conversations.value.findIndex(c => c.user.uid === uid)
+      if (idx !== -1) conversations.value[idx] = { ...conversations.value[idx], unread: 0 }
     } catch {}
     resetUnread()
   } catch {}
