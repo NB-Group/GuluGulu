@@ -317,8 +317,8 @@ onMessagePoll((json: any) => {
       conversations.value.push({ user: other, lastMsg: msg, unread: unread[String(other.uid)] || 0 })
     }
   }
-  // Sort by most recent first
-  conversations.value.sort((a, b) => (b.lastMsg?.time || 0) - (a.lastMsg?.time || 0))
+  // Sort by most recent first (force new array reference for Vue reactivity)
+  conversations.value = [...conversations.value].sort((a, b) => (b.lastMsg?.time || 0) - (a.lastMsg?.time || 0))
 
   // Also update active chat messages if new ones arrived from this person
   if (activeChatUid.value) {
