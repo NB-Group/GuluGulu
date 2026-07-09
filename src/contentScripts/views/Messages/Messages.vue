@@ -3,7 +3,7 @@ import { renderIcon } from '~/utils/icons'
 import { getCsrfToken, friendlyError } from '~/utils/luogu-api'
 import { useMessagePolling } from '~/composables/useMessagePolling'
 
-const { notifyEnabled, toggleNotify, resetUnread } = useMessagePolling()
+const { notifyEnabled, toggleNotify, resetUnread, latestChatData, chatVersion } = useMessagePolling()
 
 interface ChatUser {
   uid: number; name: string; avatar: string; color: string; badge: string | null
@@ -298,6 +298,25 @@ function handleKeydown(e: KeyboardEvent) {
 }
 
 onMounted(() => { fetchConversations(); resetUnread() })
+
+// When polling detects new messages, refresh the conversation list
+watch(chatVersion, () => {
+  if (!latestChatData.value) return
+  const msgs: Message[] = latestChatData.value?.currentData?.latestMessages?.result || []
+  const rawUnread = latestChatData.value?.currentData?.unreadMessageCount
+  const unread: Record<string, number> = {}
+  if (rawUnread && typeof rawUnread === 'object' && !Array.isArray(rawUnread)) {
+    for (const [k, v] of Object.entries(rawUnread)) unread[String(k)] = Number(v) || 0
+  }
+  const map = new Map<number, Conversation>()
+  for (const msg of msgs) {
+    const other = Number(msg.sender.uid) !== currentUid.value ? msg.sender : msg.receiver
+    if (!map.has(other.uid)) {
+      map.set(other.uid, { user: other, lastMsg: msg, unread: unread[String(other.uid)] || 0 })
+    }
+  }
+  conversations.value = [...map.values()]
+})
 </script>
 
 <template>

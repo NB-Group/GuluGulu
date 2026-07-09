@@ -7,6 +7,8 @@ import { ref, onMounted, onUnmounted } from 'vue'
 // Module-level singleton state (shared across all component instances)
 const unreadMsgCount = ref(0)
 const notifyEnabled = ref(localStorage.getItem('gulugulu-msg-notify') === 'true')
+const latestChatData = ref<any>(null)
+const chatVersion = ref(0) // increments on each poll to trigger watchers
 let timer: ReturnType<typeof setInterval> | null = null
 let pollCount = 0
 
@@ -37,7 +39,6 @@ async function poll() {
       for (const [k, v] of Object.entries(raw)) currentUnread[Number(k)] = Number(v) || 0
     }
     const total = Object.values(currentUnread).reduce((a: number, b) => a + b, 0)
-    const newUsers = Object.keys(currentUnread).map(Number).filter(uid => !lastUnreadUsers.value.has(uid))
 
     if (notifyEnabled.value && total > 0
       && 'Notification' in window && Notification.permission === 'granted') {
@@ -51,6 +52,8 @@ async function poll() {
       } catch {}
     }
     unreadMsgCount.value = total
+    latestChatData.value = json
+    chatVersion.value++
   } catch {}
 }
 
@@ -78,5 +81,5 @@ export function useMessagePolling() {
   })
   onUnmounted(() => stop())
 
-  return { unreadMsgCount, notifyEnabled, toggleNotify, resetUnread }
+  return { unreadMsgCount, notifyEnabled, toggleNotify, resetUnread, latestChatData, chatVersion }
 }
