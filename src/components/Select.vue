@@ -12,13 +12,26 @@ const emit = defineEmits<{
 
 const open = ref(false)
 const dropdownRef = ref<HTMLDivElement>()
+const triggerRef = ref<HTMLButtonElement>()
+const dropdownStyle = ref<Record<string, string>>({})
+
+function toggleOpen() {
+  open.value = !open.value
+  if (open.value && triggerRef.value) {
+    const rect = triggerRef.value.getBoundingClientRect()
+    dropdownStyle.value = {
+      position: 'fixed',
+      top: rect.bottom + 4 + 'px',
+      left: rect.left + 'px',
+      width: rect.width + 'px',
+    }
+  }
+}
 
 function select(value: string | number) {
   emit('update:modelValue', value)
   open.value = false
 }
-
-function toggleOpen() { open.value = !open.value }
 
 // Close on outside click
 onMounted(() => {
@@ -33,6 +46,7 @@ onMounted(() => {
 <template>
   <div ref="dropdownRef" class="g-select-wrapper" relative>
     <button
+      ref="triggerRef"
       class="g-select-trigger"
       :class="{ open, disabled }"
       :disabled="disabled"
@@ -45,7 +59,7 @@ onMounted(() => {
       <span class="arrow" v-html="'▾'" />
     </button>
     <Transition name="dropdown">
-      <div v-if="open && !disabled" class="g-select-dropdown">
+      <div v-if="open && !disabled" class="g-select-dropdown" :style="dropdownStyle">
         <div
           v-for="option in options"
           :key="option.value"
@@ -89,10 +103,6 @@ onMounted(() => {
 }
 
 .g-select-dropdown {
-  position: absolute;
-  top: calc(100% + 4px);
-  left: 0;
-  width: 100%;
   max-height: 240px;
   overflow-y: auto;
   background: var(--bew-content);

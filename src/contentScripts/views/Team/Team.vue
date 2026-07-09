@@ -76,6 +76,12 @@ function openUser(uid: number) { window.open(`https://www.luogu.com.cn/user/${ui
 function openPost(id: number) { window.open(`https://www.luogu.com.cn/discuss/${id}`, '_blank') }
 function openTeamPage(section: string) { window.open(`https://www.luogu.com.cn/team/${teamId.value}/${section}`, '_blank') }
 function formatDate(ts: number): string { return ts ? new Date(ts * 1000).toLocaleDateString('zh-CN') : '' }
+function formatFileSize(bytes: number): string {
+  if (bytes >= 1073741824) return (bytes / 1073741824).toFixed(1) + ' GB'
+  if (bytes >= 1048576) return (bytes / 1048576).toFixed(1) + ' MB'
+  if (bytes >= 1024) return (bytes / 1024).toFixed(0) + ' KB'
+  return bytes + ' B'
+}
 
 function loadContent() {
   if (teamId.value) { detail.value = null; fetchTeamDetail(teamId.value) }
@@ -139,7 +145,7 @@ watch(teamId, () => loadContent())
                 <span style="font-size:var(--bew-base-font-size);color:var(--bew-text-1);font-weight:600">{{ item.l }}</span>
               </div>
               <div style="font-size:.85em;color:var(--bew-text-3)">
-                <span v-if="detail.usages[item.k]?.[0]">{{ detail.usages[item.k][0] }} 可用</span>
+                <span v-if="detail.usages[item.k]?.[0]">{{ item.k === 'file' ? formatFileSize(detail.usages[item.k][0]) : (detail.usages[item.k][0] + ' 个') }}</span>
                 <span v-else>—</span>
               </div>
             </div>
