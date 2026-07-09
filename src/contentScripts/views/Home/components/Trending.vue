@@ -22,7 +22,9 @@ async function fetchData() {
       const ctx = JSON.parse(cm[1])
       const contests: any[] = ctx?.data?.contests?.result || []
       for (const c of contests.slice(0, 5)) {
-        list.push({ id: `c-${c.id}`, type: 'contest', title: c.name || c.title || '', time: c.startTime || 0, detail: (c.rated === 1 || c.rated === true) ? 'Rated' : '', url: `https://www.luogu.com.cn/contest/${c.id}` })
+        const now = Math.floor(Date.now() / 1000)
+        const isEnded = c.endTime && now >= c.endTime
+        list.push({ id: `c-${c.id}`, type: 'contest', title: c.name || c.title || '', time: c.startTime || 0, detail: (c.rated && c.rated > 0 ? 'Rated' : '') + (isEnded ? ' 已结束' : ''), url: `https://www.luogu.com.cn/contest/${c.id}` })
       }
     }
   } catch {}
