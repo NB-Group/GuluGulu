@@ -9,33 +9,30 @@ import {
 } from '@vueuse/core'
 import { storage } from 'webextension-polyfill'
 
-// Track the last value we wrote so we can ignore re-reads of our own writes
-const writeCache = new Map<string, string>()
+// Track the last value we wrote so we can return it directly on re-read.
+const writeCache = new Map<string, { value: string; time: number }>()
 
 const storageLocal: StorageLikeAsync = {
   removeItem(key: string) {
-    try { localStorage.removeItem(key) } catch {}
     writeCache.delete(key)
     return storage.local.remove(key)
   },
 
   setItem(key: string, value: string) {
-    writeCache.set(key, value)
-    try { localStorage.setItem(key, value) } catch {}
+    writeCache.set(key, { value, time: Date.now() })
+    // NOTE: do NOT write to localStorage. With all_frames:true every frame runs
+    // its own useStorageAsync instance. Writing to localStorage would fire the
+    // 'storage' event in every other frame, each would read→merge→assign a new
+    // object to data.value (triggering the watcher)→write again→infinite
+    // cross-frame feedback loop → slider value oscillation.
     return storage.local.set({ [key]: value })
   },
 
   async getItem(key: string) {
-    // If we just wrote this exact value, return it directly (avoid re-parse loop)
     const cached = writeCache.get(key)
-    if (cached !== undefined) {
-      writeCache.delete(key)
-      return cached
-    }
-    try {
-      const local = localStorage.getItem(key)
-      if (local !== null) return local
-    } catch {}
+    if (cached !== undefined && Date.now() - cached.time < 1000)
+      return cached.value
+    writeCache.delete(key)
     return (await storage.local.get(key))[key]
   },
 }

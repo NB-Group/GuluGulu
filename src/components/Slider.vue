@@ -1,4 +1,6 @@
 <script lang="ts" setup>
+import type { Ref } from 'vue'
+
 interface Props {
   min?: number
   max?: number
@@ -8,53 +10,39 @@ interface Props {
 const props = withDefaults(defineProps<Props>(), { min: 0, max: 100 })
 const emit = defineEmits(['update:modelValue'])
 
-const sliderRef = ref<HTMLInputElement>()
-let dragging = false
+const modelValue = ref<number>(props.modelValue)
+const rangeRef = ref<HTMLInputElement>() as Ref<HTMLInputElement>
 
-function pct(v: number) {
-  return ((v - props.min) / (props.max - props.min)) * 100
+function paint(el: HTMLInputElement, v: number) {
+  const progress = (v - props.min) / (props.max - props.min) * 100
+  el.style.background = `linear-gradient(to right, var(--bew-theme-color) ${progress}%, var(--bew-fill-1) ${progress}%) no-repeat`
 }
 
-function applyFill(v: number) {
-  const el = sliderRef.value
-  if (!el) return
-  el.style.setProperty('--s-pct', `${pct(v)}%`)
-}
-
-function onInput(e: Event) {
-  dragging = true
-  const v = Number((e.target as HTMLInputElement).value)
+function onInput() {
+  const el = rangeRef.value!
+  const v = Number(el.value)
+  paint(el, v)
   emit('update:modelValue', v)
-  applyFill(v)
 }
 
-function onMouseDown() { dragging = true }
-function onMouseUp() { dragging = false; applyFill(props.modelValue) }
-
-let lastApplied = props.modelValue
-onMounted(() => nextTick(() => { lastApplied = props.modelValue; applyFill(props.modelValue) }))
-watch(() => props.modelValue, (v) => {
-  if (!dragging && Math.abs(v - lastApplied) > 0.5) {
-    lastApplied = v
-    applyFill(v)
-  }
+onMounted(() => {
+  const el = rangeRef.value
+  if (!el) return
+  modelValue.value = props.modelValue
+  paint(el, props.modelValue)
 })
 </script>
 
 <template>
   <label cursor-pointer flex items-center gap-3 w="100%">
     <input
-      ref="sliderRef"
+      ref="rangeRef"
+      v-model="modelValue"
       type="range"
       :min="min"
       :max="max"
-      :value="modelValue"
       class="slider"
       @input="onInput"
-      @mousedown="onMouseDown"
-      @mouseup="onMouseUp"
-      @touchstart="onMouseDown"
-      @touchend="onMouseUp"
     >
     <span text="sm $bew-text-2" shrink-0>{{ label }}</span>
   </label>
@@ -64,20 +52,14 @@ watch(() => props.modelValue, (v) => {
 .slider {
   --s-track-h: 6px;
   --s-thumb-w: 18px;
-  --s-pct: 0%;
 
   appearance: none;
   width: 100%;
   height: var(--s-thumb-w);
   margin: 0;
   padding: 0;
-  background: linear-gradient(
-    to right,
-    var(--bew-theme-color) 0%,
-    var(--bew-theme-color) var(--s-pct),
-    var(--bew-fill-1) var(--s-pct),
-    var(--bew-fill-1) 100%
-  );
+  // background is set entirely inline by JS — no CSS variable, no cascade fight
+  background: var(--bew-fill-1);
   border-radius: 999px;
   outline: none;
   cursor: pointer;
