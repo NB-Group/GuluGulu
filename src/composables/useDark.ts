@@ -110,7 +110,14 @@ export function useDark() {
     }
   }
 
+  let transitioning = false
+
   function toggleDark(e: MouseEvent) {
+    // Prevent double-click during View Transition animation (avoids theme oscillation)
+    if (transitioning) return
+    transitioning = true
+    setTimeout(() => { transitioning = false }, 500)
+
     const updateThemeSettings = () => {
       if (currentAppColorScheme.value !== currentSystemColorScheme.value)
         settings.value.themeMode = 'auto'
