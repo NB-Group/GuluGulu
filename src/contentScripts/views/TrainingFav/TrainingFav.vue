@@ -11,8 +11,8 @@ onMounted(async () => {
     const html = await res.text()
     const m = html.match(/<script\s+id="lentille-context"\s+type="application\/json"[^>]*>([^<]+)<\/script>/)
     if (m?.[1]) {
-      const r = JSON.parse(m[1])?.data?.trainings
-      items.value = r?.result || []
+      const raw = JSON.parse(m[1])?.data?.trainings
+      items.value = Array.isArray(raw) ? raw : (raw?.result || [])
     } else errorMsg.value = '请先登录洛谷'
   } catch (e: any) { errorMsg.value = friendlyError(e) }
   loading.value = false

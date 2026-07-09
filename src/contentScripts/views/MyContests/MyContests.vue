@@ -10,7 +10,10 @@ onMounted(async () => {
     const res = await fetch('https://www.luogu.com.cn/user/mine/contestJoined', { credentials: 'same-origin' })
     const html = await res.text()
     const m = html.match(/<script\s+id="lentille-context"\s+type="application\/json"[^>]*>([^<]+)<\/script>/)
-    if (m?.[1]) contests.value = JSON.parse(m[1])?.data?.contests || []
+    if (m?.[1]) {
+      const raw = JSON.parse(m[1])?.data?.contests || []
+      contests.value = Array.isArray(raw) ? raw : (raw.result || [])
+    }
     else errorMsg.value = '请先登录洛谷'
   } catch (e: any) { errorMsg.value = friendlyError(e) }
   loading.value = false

@@ -10,7 +10,10 @@ onMounted(async () => {
     const res = await fetch('https://www.luogu.com.cn/user/notification', { credentials: 'same-origin' })
     const html = await res.text()
     const m = html.match(/<script\s+id="lentille-context"[^>]*>([^<]+)<\/script>/)
-    if (m?.[1]) items.value = JSON.parse(m[1])?.data?.notifications?.result || []
+    if (m?.[1]) {
+      const raw = JSON.parse(m[1])?.data?.notifications
+      items.value = Array.isArray(raw) ? raw : (raw?.result || [])
+    }
   } catch {}
   loading.value = false
 })

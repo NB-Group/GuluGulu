@@ -49,7 +49,8 @@ async function fetchTeamList() {
     if (m?.[1]) {
       const ctx = JSON.parse(m[1])
       const cd = ctx?.data || ctx?.currentData || {}
-      teams.value = (cd.teams?.result || []).map((t: any) => ({
+      const raw = Array.isArray(cd.teams) ? cd.teams : (cd.teams?.result || [])
+      teams.value = raw.map((t: any) => ({
         id: t.team?.id || t.id, name: t.team?.name || t.name || '',
         isPremium: t.team?.isPremium || false, type: t.type || t.team?.type || 1,
         memberCount: t.team?.memberCount || 0, createTime: t.team?.createTime || 0,
@@ -173,14 +174,14 @@ watch(teamId, () => loadContent())
       <div bg="$bew-content" rounded="$bew-radius" p-6 mb-6 shadow="[var(--bew-shadow-1)]" border="1 $bew-border-color" style="backdrop-filter:var(--bew-filter-glass-1)">
         <h1 style="font-size:1.5rem;color:var(--bew-text-1);font-weight:700" mb-4>我的团队</h1>
 
-        <!-- Tab bar -->
-        <div flex="~ gap-1" bg="$bew-fill-1" rounded="$bew-radius" p-1 mb-4>
-          <button v-for="tab in [{k:'joined',l:'已加入'},{k:'created',l:'已创建'}]" :key="tab.k"
-            flex-1 px-4 py-2 rounded="$bew-radius-half" border="none" cursor="pointer"
-            style="font-size:var(--bew-base-font-size);transition:all .15s"
-            :style="activeTab === tab.k ? { background: 'var(--bew-theme-color)', color: 'white', fontWeight: 600 } : { background: 'transparent', color: 'var(--bew-text-2)' }"
-            @click="activeTab = tab.k as any"
-          >{{ tab.l }} {{ activeTab === tab.k ? `(${teams.length})` : '' }}</button>
+        <!-- Tab bar (Home-style) -->
+        <div class="tab-bar" mb-4>
+          <div class="tab-scroll">
+            <button v-for="tab in [{k:'joined',l:'已加入'},{k:'created',l:'已创建'}]" :key="tab.k"
+              :class="['tab-btn', { 'tab-btn--active': activeTab === tab.k }]"
+              @click="activeTab = tab.k as any"
+            >{{ tab.l }}</button>
+          </div>
         </div>
 
         <!-- Join requests badge -->
@@ -220,4 +221,32 @@ watch(teamId, () => loadContent())
 .team-card { transition: box-shadow .2s, transform .2s; }
 .team-card:hover { box-shadow: var(--bew-shadow-2)!important; transform: translateY(-2px); }
 .discuss-row:hover { background: var(--bew-fill-2); }
+
+.tab-bar {
+  background: var(--bew-elevated);
+  backdrop-filter: var(--bew-filter-glass-1);
+  border-radius: 9999px;
+  border: 1px solid var(--bew-border-color);
+  box-shadow: var(--bew-shadow-1), var(--bew-shadow-edge-glow-1);
+  padding: 4px;
+  width: fit-content;
+  box-sizing: border-box;
+}
+.tab-scroll { display: flex; align-items: center; gap: 4px; }
+.tab-btn {
+  padding: 4px 16px;
+  background: transparent;
+  color: var(--bew-text-2);
+  font-weight: 600;
+  font-size: var(--bew-base-font-size);
+  border: none;
+  border-radius: 9999px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all .2s;
+}
+.tab-btn--active {
+  background: var(--bew-theme-color);
+  color: #fff;
+}
 </style>
