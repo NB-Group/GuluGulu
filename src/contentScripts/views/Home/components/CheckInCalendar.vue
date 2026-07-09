@@ -38,7 +38,7 @@ const cspRound2Days = daysUntil(CSP_ROUND_2_DATE)
 
 // === Persist check-in state across page switches ===
 // Module-level cache survives component mount/unmount cycles
-const todayStr = () => `${now.getFullYear()}-${now.getMonth()}-${now.getDate()}`
+const todayStr = () => { const d = new Date(); return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}` }
 const checkInState = (window as any).__guly_checkin || ((window as any).__guly_checkin = { date: '', done: false, fortune: null as any })
 const checkInDone = ref(checkInState.date === todayStr() && checkInState.done)
 const checkInMsg = ref('')

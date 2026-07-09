@@ -50,11 +50,20 @@ async function fetchFollowList(type: 'following' | 'followers') {
 
 function navigateToFollow(type: 'following' | 'followers' | 'back') {
   if (type === 'back') window.location.href = `https://www.luogu.com.cn/user/${uid.value}`
-  else window.location.href = `https://www.luogu.com.cn/user/${uid.value}/${type}`
+  else if (type === 'followers') window.open(`https://www.luogu.com.cn/user/${uid.value}/following`, '_blank')
+  else window.location.href = `https://www.luogu.com.cn/user/${uid.value}/following`
 }
 function openFollowUser(uid2: number) {
   window.location.href = `https://www.luogu.com.cn/user/${uid2}`
 }
+function goToMyPage(page: string) {
+  window.location.href = `https://www.luogu.com.cn/user/mine/${page}`
+}
+const quickEntries = computed(() => [
+  { label: '题库', icon: 'mingcute:code-line', color: '#3498db', onClick: () => goToMyPage('problem') },
+  { label: '比赛', icon: 'mingcute:trophy-line', color: '#f39c12', onClick: () => goToMyPage('contestJoined') },
+  { label: '收藏', icon: 'mingcute:bookmark-line', color: '#e74c3c', onClick: () => goToMyPage('trainingFav') },
+])
 
 const relationshipLabel = computed(() => {
   const r = user.value?.userRelationship || 0
@@ -285,6 +294,20 @@ watch(subView, (v) => { if (v) fetchFollowList(v) })
           </div>
         </div>
 
+        <!-- Quick entry cards: MyProblems / MyContests / TrainingFav -->
+        <div grid="~ cols-3" gap-3 mb-6>
+          <div v-for="item in quickEntries" :key="item.label"
+            class="quick-entry" bg="$bew-content" rounded="$bew-radius" p-3
+            shadow="[var(--bew-shadow-1)]" border="1 $bew-border-color" cursor="pointer"
+            style="backdrop-filter:var(--bew-filter-glass-1);transition:all .2s"
+            flex="~ col items-center gap-1.5"
+            @click="item.onClick"
+          >
+            <span v-html="renderIcon(item.icon, 22)" :style="{ color: item.color, display:'contents' }" />
+            <span style="font-size:.8em;color:var(--bew-text-2);font-weight:500">{{ item.label }}</span>
+          </div>
+        </div>
+
         <!-- Heatmap -->
         <div v-if="Object.keys(dailyCounts).length > 0" bg="$bew-content" rounded="$bew-radius" p-6 mb-6 shadow="[var(--bew-shadow-1),var(--bew-shadow-edge-glow-1)]" border="1 $bew-border-color" style="backdrop-filter:var(--bew-filter-glass-1)" overflow="auto">
           <h2 style="font-size:var(--bew-base-font-size);color:var(--bew-text-1);font-weight:700" mb-3>练习记录</h2>
@@ -360,6 +383,7 @@ watch(subView, (v) => { if (v) fetchFollowList(v) })
   z-index: 10;
   transition: opacity 0.15s ease, transform 0.15s ease;
 }
+.quick-entry:hover { box-shadow: var(--bew-shadow-2)!important; transform: translateY(-2px); }
 .profile-intro {
   font-size: var(--bew-base-font-size);
   color: var(--bew-text-2);
