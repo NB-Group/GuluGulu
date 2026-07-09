@@ -18,8 +18,10 @@ onMounted(async () => {
     const m = html.match(/<script\s+id="lentille-context"[^>]*>([^<]+)<\/script>/)
     if (m?.[1]) {
       const ctx = JSON.parse(m[1])
-      passed.value = ctx?.data?.passed?.result || []
-      submitted.value = ctx?.data?.submitted?.result || []
+      const p = ctx?.data?.passed
+      passed.value = Array.isArray(p) ? p : (p?.result || [])
+      const s = ctx?.data?.submitted
+      submitted.value = Array.isArray(s) ? s : (s?.result || [])
     }
   } catch {}
   loading.value = false
