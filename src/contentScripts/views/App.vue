@@ -36,6 +36,7 @@ function getPageFromUrl(): AppPage {
   if (/\/blog\//i.test(url) || /\/discuss\//i.test(url)) return AppPage.Blog
   if (/\/user\/mine\/problem/i.test(url)) return AppPage.MyProblems
   if (/\/user\/mine\/contestJoined/i.test(url)) return AppPage.MyContests
+  if (/\/user\/mine\/team/i.test(url)) return AppPage.Team
   if (/\/user\/mine\/trainingFav/i.test(url)) return AppPage.TrainingFav
   if (/\/user\/mine\/contest/i.test(url)) return AppPage.CreatedContests
   if (/\/user\/mine\/training/i.test(url)) return AppPage.CreatedTrainings
