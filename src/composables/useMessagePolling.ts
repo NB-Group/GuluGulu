@@ -27,7 +27,7 @@ async function poll() {
   const lastPollKey = 'gulugulu-last-poll'
   const lastPoll = Number(localStorage.getItem(lastPollKey) || '0')
   const now = Date.now()
-  if (now - lastPoll < 10000) return // another tab polled within 10s
+  if (now - lastPoll < 3000) return // another tab polled within 3s
   localStorage.setItem(lastPollKey, String(now))
 
   try {
@@ -67,7 +67,7 @@ function start() {
   pollCount++
   if (timer) return // already running
   poll()
-  timer = setInterval(poll, 15000)
+  timer = setInterval(poll, 8000)
 }
 
 function stop() {

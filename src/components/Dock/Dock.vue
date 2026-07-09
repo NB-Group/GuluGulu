@@ -5,6 +5,7 @@ import { computed, reactive, ref } from 'vue'
 import { renderIcon } from '~/utils/icons'
 import { useGulyApp } from '~/composables/useAppProvider'
 import { useDark } from '~/composables/useDark'
+import { useMessagePolling } from '~/composables/useMessagePolling'
 import { useDelayedHover } from '~/composables/useDelayedHover'
 import { AppPage } from '~/enums/appEnums'
 import { settings } from '~/logic'
@@ -27,6 +28,7 @@ const emit = defineEmits<{
 
 const mainStore = useMainStore()
 const { isDark, toggleDark } = useDark()
+const { unreadMsgCount } = useMessagePolling()
 const { reachTop } = useGulyApp()
 
 const hideDock = ref<boolean>(false)
@@ -236,6 +238,11 @@ const dockTransformStyle = computed((): { transform: string, transformOrigin: st
               v-html="renderIcon(isDockItemActivated(dockItem) ? dockItem.iconActivated : dockItem.icon, 22)"
               style="display:contents"
             />
+            <!-- Unread badge for messages -->
+            <span v-if="dockItem.page === AppPage.Messages && unreadMsgCount > 0"
+              class="dock-badge"
+              :style="{ background: isDockItemActivated(dockItem) ? 'var(--bew-error-color)' : '#e74c3c' }"
+            >{{ unreadMsgCount > 99 ? '99+' : unreadMsgCount }}</span>
           </button>
         </template>
 
@@ -510,6 +517,24 @@ const dockTransformStyle = computed((): { transform: string, transformOrigin: st
 
   &.inactive {
     --uno: "opacity-80 !shadow-none";
+  }
+
+  .dock-badge {
+    position: absolute;
+    top: -2px;
+    right: -2px;
+    min-width: 18px;
+    height: 18px;
+    padding: 0 5px;
+    border-radius: 9px;
+    color: #fff;
+    font-size: 10px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+    box-shadow: 0 1px 3px rgba(0,0,0,.3);
   }
 
   svg {
