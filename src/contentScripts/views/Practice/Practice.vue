@@ -41,7 +41,7 @@ onMounted(async () => {
         <div p="x-6 y-3" bg="$bew-fill-1" style="font-size:var(--bew-base-font-size);color:var(--bew-text-1);font-weight:700">已通过 {{ passed.length }} 题</div>
         <div v-for="(p, idx) in passed" :key="p.pid" class="stagger-row hover:bg-$bew-fill-2" :style="{'--row-index':idx}" flex="~ items-center" p="x-6 y-3" border="b-1 $bew-border-color" cursor="pointer" @click="openProblem(p.pid)">
           <span style="width:80px;font-family:monospace;font-size:.85em;color:var(--bew-text-3);flex-shrink:0">{{ p.pid }}</span>
-          <span flex-1 style="font-size:var(--bew-base-font-size);color:var(--bew-text-1)">{{ p.title }}</span>
+          <span flex-1 style="font-size:var(--bew-base-font-size);color:var(--bew-text-1)">{{ p.name }}</span>
           <span text="xs" px-2 py-0.5 rounded-full :style="{background:diffColor(p.difficulty||0)+'20',color:diffColor(p.difficulty||0)}">{{ diffLabel(p.difficulty||0) }}</span>
         </div>
       </div>
