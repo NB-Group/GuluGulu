@@ -7,6 +7,11 @@ const uid = computed(() => {
   const m = document.URL.match(/\/user\/(\d+)/)
   return m ? Number(m[1]) : null
 })
+const subView = computed(() => {
+  if (/\/user\/\d+\/following/i.test(document.URL)) return 'following'
+  if (/\/user\/\d+\/followers/i.test(document.URL)) return 'followers'
+  return null
+})
 
 interface UserData {
   uid: number; name: string; avatar: string; color: string; ccfLevel: number
@@ -24,6 +29,27 @@ const gu = ref<any>(null)
 const dailyCounts = ref<Record<string, [number, number]>>({})
 const loading = ref(true)
 const errorMsg = ref('')
+const followList = ref<any[]>([])
+const followLoading = ref(false)
+
+async function fetchFollowList(type: 'following' | 'followers') {
+  followLoading.value = true
+  try {
+    const res = await fetch(`https://www.luogu.com.cn/user/${uid.value}/${type}`, { credentials: 'same-origin' })
+    const html = await res.text()
+    const m = html.match(/<script\s+id="lentille-context"\s+type="application\/json"[^>]*>([^<]+)<\/script>/)
+    if (m?.[1]) {
+      const ctx = JSON.parse(m[1])
+      const users = ctx?.data?.users?.result || ctx?.currentData?.users?.result || []
+      followList.value = users
+    }
+  } catch {}
+  followLoading.value = false
+}
+
+function navigateToFollow(type: 'following' | 'followers') {
+  window.location.href = `https://www.luogu.com.cn/user/${uid.value}/${type}`
+}
 
 const relationshipLabel = computed(() => {
   const r = user.value?.userRelationship || 0
@@ -141,12 +167,48 @@ function cellTooltip(cell: HeatCell): string {
   return `${cell.date} — ${cell.count} 题`
 }
 
-onMounted(fetchUser)
-watch(uid, () => { if (uid.value) fetchUser() })
+onMounted(() => {
+  if (subView.value) fetchFollowList(subView.value)
+  else fetchUser()
+})
+watch(uid, () => { if (uid.value && !subView.value) fetchUser() })
+watch(subView, (v) => { if (v) fetchFollowList(v) })
 </script>
 
 <template>
-  <div class="page-container" w-full h-full p="x-4 md:x-8 lg:x-16" pos="relative">
+  <!-- ============================================================ -->
+  <!-- Following / Followers Sub-View -->
+  <!-- ============================================================ -->
+  <div v-if="subView" class="page-container" w-full h-full p="x-4 md:x-8 lg:x-16" pos="relative">
+      <div bg="$bew-content" rounded="$bew-radius" p-6 mb-6 shadow="[var(--bew-shadow-1),var(--bew-shadow-edge-glow-1)]" border="1 $bew-border-color" style="backdrop-filter:var(--bew-filter-glass-1)">
+        <button @click="window.location.href='https://www.luogu.com.cn/user/'+uid" style="background:none;border:none;cursor:pointer;color:var(--bew-theme-color);font-size:var(--bew-base-font-size)" mb-2>← 返回用户主页</button>
+        <h1 style="font-size:1.25rem;color:var(--bew-text-1);font-weight:700">{{ subView === 'following' ? '关注' : '粉丝' }}</h1>
+      </div>
+      <Loading v-if="followLoading" />
+      <Transition name="content-reveal">
+        <div v-if="!followLoading && followList.length > 0" bg="$bew-content" rounded="$bew-radius" shadow="[var(--bew-shadow-1),var(--bew-shadow-edge-glow-1)]" border="1 $bew-border-color" style="backdrop-filter:var(--bew-filter-glass-1)" overflow="hidden">
+          <div v-for="(fu, idx) in followList" :key="fu.uid" class="stagger-row hover:bg-$bew-fill-2" :style="{'--row-index':idx}" flex="~ items-center gap-4" p="x-6 y-3.5" border="b-1 $bew-border-color" cursor="pointer" duration-200 @click="window.location.href='https://www.luogu.com.cn/user/'+fu.uid">
+            <img :src="fu.avatar" style="width:36px;height:36px;border-radius:50%;object-fit:cover;flex-shrink:0" @error="(e:any)=>{e.target.style.display='none'}" />
+            <div flex="~ items-center gap-2" flex-1 min-w-0>
+              <span :style="{color:fu.color?`var(--bew-${fu.color})`:'var(--bew-text-1)',fontWeight:600,fontSize:'var(--bew-base-font-size)'}">{{ fu.name }}</span>
+              <span v-if="fu.badge" text="xs" px-1.5 py-0.5 rounded-full bg="$bew-fill-2" style="color:var(--bew-text-3)">{{ fu.badge }}</span>
+            </div>
+            <div flex="~ gap-3" shrink-0 style="font-size:.85em;color:var(--bew-text-3)">
+              <span>{{ fu.followerCount || 0 }} 粉丝</span>
+              <span>{{ fu.passedProblemCount || 0 }} 题通过</span>
+            </div>
+          </div>
+        </div>
+      </Transition>
+      <div v-if="!followLoading && followList.length === 0" bg="$bew-content" rounded="$bew-radius" p-8 border="1 $bew-border-color" text="center $bew-text-3" style="backdrop-filter:var(--bew-filter-glass-1)">
+        <span v-html="renderIcon('mingcute:user-4-line', 48)" style="display:contents" /><p mt-2>暂无{{ subView === 'following' ? '关注' : '粉丝' }}</p>
+  </div>
+  </div>
+
+  <!-- ============================================================ -->
+  <!-- Profile View -->
+  <!-- ============================================================ -->
+  <div v-else class="page-container" w-full h-full p="x-4 md:x-8 lg:x-16" pos="relative">
     <Loading v-if="loading" />
     <div v-if="!loading && errorMsg" bg="$bew-content" rounded="$bew-radius" p-8 border="1 $bew-border-color" text="center $bew-text-2" style="backdrop-filter:var(--bew-filter-glass-1)">
       <span v-html="renderIcon('mingcute:warning-line', 32)" style="display:contents" /><p mt-2>{{ errorMsg }}</p>
@@ -176,9 +238,9 @@ watch(uid, () => { if (uid.value) fetchUser() })
               </div>
               <p v-if="user.slogan" style="font-size:var(--bew-base-font-size);color:var(--bew-text-2)">{{ user.slogan }}</p>
               <div flex="~ gap-1 wrap" style="font-size:var(--bew-base-font-size);color:var(--bew-text-3)">
-                <span style="cursor:pointer;hover:underline" @click="window.open('https://www.luogu.com.cn/user/'+user.uid+'/following','_blank')">关注 <strong style="color:var(--bew-text-1)">{{ user.followingCount }}</strong></span>
+                <span style="cursor:pointer;text-decoration:none;color:var(--bew-text-3)" @click="navigateToFollow('following')">关注 <strong style="color:var(--bew-text-1)">{{ user.followingCount }}</strong></span>
                 <span mx-1>|</span>
-                <span style="cursor:pointer;hover:underline" @click="window.open('https://www.luogu.com.cn/user/'+user.uid+'/followers','_blank')">粉丝 <strong style="color:var(--bew-text-1)">{{ user.followerCount }}</strong></span>
+                <span style="cursor:pointer;text-decoration:none;color:var(--bew-text-3)" @click="navigateToFollow('followers')">粉丝 <strong style="color:var(--bew-text-1)">{{ user.followerCount }}</strong></span>
                 <span mx-1>|</span>
                 <span>排名 <strong style="color:var(--bew-text-1)">#{{ user.ranking.toLocaleString() }}</strong></span>
                 <span mx-1>|</span>
