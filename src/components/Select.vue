@@ -23,7 +23,9 @@ function toggleOpen() { open.value = !open.value }
 // Close on outside click
 onMounted(() => {
   document.addEventListener('click', (e) => {
-    if (dropdownRef.value && !dropdownRef.value.contains(e.target as Node)) open.value = false
+    // e.target is retargeted to shadow host by the browser — use composedPath instead
+    const path = e.composedPath()
+    if (dropdownRef.value && !path.includes(dropdownRef.value)) open.value = false
   })
 })
 </script>
