@@ -54,14 +54,11 @@ async function fetchFollowList(type: 'following' | 'followers') {
 }
 
 function navigateToFollow(type: 'following' | 'followers' | 'back') {
-  if (type === 'back') window.location.href = `https://www.luogu.com.cn/user/${uid.value}`
-  else window.location.href = `https://www.luogu.com.cn/user/${uid.value}/${type === 'followers' ? 'follower' : 'following'}`
+  if (type === 'back') navigateTo(AppPage.UserProfile, `https://www.luogu.com.cn/user/${uid.value}`)
+  else navigateTo(AppPage.UserProfile, `https://www.luogu.com.cn/user/${uid.value}/${type === 'followers' ? 'follower' : 'following'}`)
 }
 function openFollowUser(uid2: number) {
-  window.location.href = `https://www.luogu.com.cn/user/${uid2}`
-}
-function goToMyPage(page: string) {
-  window.location.href = `https://www.luogu.com.cn/user/mine/${page}`
+  navigateTo(AppPage.UserProfile, `https://www.luogu.com.cn/user/${uid2}`)
 }
 const quickEntries = computed(() => {
   const id = uid.value
