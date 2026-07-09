@@ -14,6 +14,10 @@ export enum AppPage {
   Login = 'Login',
   Messages = 'Messages',
   Solution = 'Solution',
+  Article = 'Article',
+  MyProblems = 'MyProblems',
+  MyContests = 'MyContests',
+  TrainingFav = 'TrainingFav',
 }
 
 export enum HomeSubPage {

@@ -2,6 +2,7 @@
 import { renderIcon } from '~/utils/icons'
 import { getCsrfToken } from '~/utils/luogu-api'
 import { ccfLabel, ccfColor } from '~/utils/difficulty'
+import { parseMarkdownContent } from '~/utils/markdown'
 
 const uid = computed(() => {
   const m = document.URL.match(/\/user\/(\d+)/)
@@ -262,9 +263,7 @@ watch(subView, (v) => { if (v) fetchFollowList(v) })
           </div>
 
           <!-- Introduction -->
-          <div v-if="user.introduction" mt-4 p-4 rounded="$bew-radius" bg="$bew-fill-1" style="font-size:var(--bew-base-font-size);color:var(--bew-text-2);line-height:1.7;white-space:pre-wrap">
-            {{ user.introduction.replace(/^>\s*/gm, '').replace(/\*\*/g, '').replace(/\*/g, '').replace(/~~/g, '') }}
-          </div>
+          <div v-if="user.introduction" mt-4 p-4 rounded="$bew-radius" bg="$bew-fill-1" class="profile-intro" v-html="parseMarkdownContent(user.introduction)" />
         </div>
 
         <!-- Stats -->
@@ -360,5 +359,17 @@ watch(subView, (v) => { if (v) fetchFollowList(v) })
   pointer-events: none;
   z-index: 10;
   transition: opacity 0.15s ease, transform 0.15s ease;
+}
+.profile-intro {
+  font-size: var(--bew-base-font-size);
+  color: var(--bew-text-2);
+  line-height: 1.7;
+  :deep(h1), :deep(h2), :deep(h3) { font-weight: 700; color: var(--bew-text-1); margin: .5em 0 .3em; }
+  :deep(p) { margin: .3em 0; }
+  :deep(a) { color: var(--bew-theme-color); }
+  :deep(ul), :deep(ol) { padding-left: 1.5em; }
+  :deep(code) { background: var(--bew-fill-2); padding: 1px 5px; border-radius: 3px; font-size: .9em; }
+  :deep(blockquote) { border-left: 3px solid var(--bew-theme-color); padding: 2px 10px; margin: .4em 0; color: var(--bew-text-3); }
+  :deep(img) { max-width: 100%; border-radius: var(--bew-radius); }
 }
 </style>

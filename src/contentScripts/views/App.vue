@@ -37,8 +37,12 @@ function getPageFromUrl(): AppPage {
   if (/\/user\//i.test(url)) return AppPage.UserProfile
   if (/\/training\/list/i.test(url)) return AppPage.Training
   if (/\/training\/\d+/i.test(url)) return AppPage.Training
+  if (/\/article/i.test(url)) return AppPage.Article
   if (/\/team\//i.test(url)) return AppPage.Team
   if (/\/problem\/solution/i.test(url)) return AppPage.Solution
+  if (/\/user\/mine\/problem/i.test(url)) return AppPage.MyProblems
+  if (/\/user\/mine\/contestJoined/i.test(url)) return AppPage.MyContests
+  if (/\/user\/mine\/trainingFav/i.test(url)) return AppPage.TrainingFav
   if (/\/record\//i.test(url)) return AppPage.Record
   if (/\/chat/i.test(url) && !/\/discuss/i.test(url)) return AppPage.Messages
   if (/\/search/i.test(url) || /\/problem\/keyword/i.test(url)) return AppPage.Search
@@ -68,6 +72,10 @@ const pages = {
   [AppPage.Login]: defineAsyncComponent(() => import('./Login/Login.vue')),
   [AppPage.Messages]: defineAsyncComponent(() => import('./Messages/Messages.vue')),
   [AppPage.Solution]: defineAsyncComponent(() => import('./Solution/Solution.vue')),
+  [AppPage.Article]: defineAsyncComponent(() => import('./Article/Article.vue')),
+  [AppPage.MyProblems]: defineAsyncComponent(() => import('./MyProblems/MyProblems.vue')),
+  [AppPage.MyContests]: defineAsyncComponent(() => import('./MyContests/MyContests.vue')),
+  [AppPage.TrainingFav]: defineAsyncComponent(() => import('./TrainingFav/TrainingFav.vue')),
 }
 
 const mainAppRef = ref<HTMLElement>() as Ref<HTMLElement>
@@ -184,7 +192,7 @@ window.addEventListener('popstate', onPopState)
 onMounted(() => {
   window.dispatchEvent(new CustomEvent(GULY_MOUNTED))
   // Only normalize URL for list pages (not detail pages with IDs)
-  const detailPages = [AppPage.ProblemDetail, AppPage.Blog, AppPage.Record, AppPage.ContestDetail, AppPage.Training, AppPage.UserProfile, AppPage.Solution]
+  const detailPages = [AppPage.ProblemDetail, AppPage.Blog, AppPage.Record, AppPage.ContestDetail, AppPage.Training, AppPage.UserProfile, AppPage.Solution, AppPage.Article, AppPage.MyProblems, AppPage.MyContests, AppPage.TrainingFav]
   if (!detailPages.includes(activatedPage.value)) {
     const url = mainStore.getLuoguWebPageURLByPage(activatedPage.value)
     if (url && url !== window.location.href) {
