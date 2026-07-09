@@ -28,7 +28,7 @@ function toggleOpen() {
   }
 }
 
-function select(value: string | number) {
+function select(value: string | number | null) {
   emit('update:modelValue', value)
   open.value = false
 }
