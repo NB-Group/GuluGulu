@@ -95,17 +95,17 @@ async function handleCheckIn() {
       credentials: 'same-origin',
     })
     const data = await res.json()
-    if (data?.html) {
+    if (data?.code === 200 && data?.html) {
       fortuneResult.value = parsePunchHtml(data.html)
       checkInDone.value = true
       saveCheckInState()
       checkInMsg.value = ''
-    } else if (data?.status === 400) {
+    } else if (data?.code === 201 || data?.message?.includes('已经打过')) {
       checkInDone.value = true
       saveCheckInState()
       checkInMsg.value = '今日已打卡'
     } else {
-      checkInMsg.value = data?.data || '打卡失败，请重试'
+      checkInMsg.value = data?.message || data?.data || '打卡失败，请重试'
     }
   } catch (e: any) {
     checkInMsg.value = '打卡失败：' + (e.message || '网络错误')
