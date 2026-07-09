@@ -319,6 +319,17 @@ onMessagePoll((json: any) => {
   }
   // Sort by most recent first
   conversations.value.sort((a, b) => (b.lastMsg?.time || 0) - (a.lastMsg?.time || 0))
+
+  // Also update active chat messages if new ones arrived from this person
+  if (activeChatUid.value) {
+    const newMsgs = msgs.filter((m: Message) =>
+      Number(m.sender.uid) === activeChatUid.value || Number(m.receiver.uid) === activeChatUid.value
+    ).filter((m: Message) => !messages.value.find(x => x.id === m.id))
+    if (newMsgs.length > 0) {
+      messages.value = [...messages.value, ...newMsgs].sort((a, b) => (a.time || 0) - (b.time || 0))
+      scrollToBottom(true)
+    }
+  }
 })
 </script>
 
