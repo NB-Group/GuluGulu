@@ -176,9 +176,9 @@ watch(uid, () => { if (uid.value) fetchUser() })
               </div>
               <p v-if="user.slogan" style="font-size:var(--bew-base-font-size);color:var(--bew-text-2)">{{ user.slogan }}</p>
               <div flex="~ gap-1 wrap" style="font-size:var(--bew-base-font-size);color:var(--bew-text-3)">
-                <span>关注 <strong style="color:var(--bew-text-1)">{{ user.followingCount }}</strong></span>
+                <span style="cursor:pointer;hover:underline" @click="window.open('https://www.luogu.com.cn/user/'+user.uid+'/following','_blank')">关注 <strong style="color:var(--bew-text-1)">{{ user.followingCount }}</strong></span>
                 <span mx-1>|</span>
-                <span>粉丝 <strong style="color:var(--bew-text-1)">{{ user.followerCount }}</strong></span>
+                <span style="cursor:pointer;hover:underline" @click="window.open('https://www.luogu.com.cn/user/'+user.uid+'/followers','_blank')">粉丝 <strong style="color:var(--bew-text-1)">{{ user.followerCount }}</strong></span>
                 <span mx-1>|</span>
                 <span>排名 <strong style="color:var(--bew-text-1)">#{{ user.ranking.toLocaleString() }}</strong></span>
                 <span mx-1>|</span>

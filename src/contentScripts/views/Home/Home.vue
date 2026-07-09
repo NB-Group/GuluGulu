@@ -11,6 +11,17 @@ const mainStore = useMainStore()
 const { handleBackToTop, scrollbarRef } = useGulyApp()
 const handleThrottledBackToTop = useThrottleFn((targetScrollTop: number = 0) => handleBackToTop(targetScrollTop), 1000)
 
+// Fetch Luogu homepage banner image
+const bannerUrl = ref('')
+onMounted(async () => {
+  try {
+    const res = await fetch('https://www.luogu.com.cn/', { credentials: 'same-origin' })
+    const html = await res.text()
+    const m = html.match(/<img[^>]+src="(https:\/\/ipic\.luogu\.com\.cn\/[^"]*(?:banner|Banner|hero)[^"]*)"/)
+    if (m) bannerUrl.value = m[1]
+  } catch {}
+})
+
 const activatedPage = ref<HomeSubPage>(HomeSubPage.Trending)
 const pages = {
   [HomeSubPage.Trending]: defineAsyncComponent(() => import('./components/Trending.vue')),
@@ -73,6 +84,11 @@ function toggleTabContentLoading(loading: boolean) {
 <template>
   <div>
     <main>
+      <!-- Banner -->
+      <div v-if="bannerUrl" mb-4 rounded="$bew-radius" overflow-hidden shadow="[var(--bew-shadow-1)]">
+        <img :src="bannerUrl" w-full style="max-height:200px;object-fit:cover;display:block" alt="banner" />
+      </div>
+
       <header class="home-header">
         <section v-if="currentTabs.length > 1" class="tab-bar">
           <div class="tab-scroll">
