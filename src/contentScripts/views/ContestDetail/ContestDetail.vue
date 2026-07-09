@@ -76,7 +76,7 @@ async function fetchContestData() {
           submitted: p.submittedCount || p.submitted,
           accepted: p.acceptedCount || p.accepted,
         }))
-        userRegistration.value = contest.value.userRegistration || contest.value.registration || null
+        userRegistration.value = cd.joined ? { registered: true } : (contest.value.userRegistration || contest.value.registration || null)
       }
     } else {
       errorMsg.value = '未找到比赛数据'

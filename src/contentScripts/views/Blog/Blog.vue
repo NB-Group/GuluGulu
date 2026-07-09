@@ -17,6 +17,8 @@ interface Post {
 const posts = ref<Post[]>([])
 const loading = ref(true); const loadingMore = ref(false); const errorMsg = ref('')
 const currentPage = ref(1); const totalCount = ref(0); const pageSize = 30
+const forums = ref<Array<{name:string;slug:string;color:string}>>([])
+const selectedForum = ref('')
 const sentinelRef = ref<HTMLDivElement>()
 const totalPages = computed(() => Math.max(1, Math.ceil(totalCount.value / pageSize)))
 
@@ -24,7 +26,10 @@ async function fetchPosts(append = false) {
   if (append) loadingMore.value = true; else loading.value = true
   errorMsg.value = ''
   try {
-    const qs = currentPage.value > 1 ? `?page=${currentPage.value}` : ''
+    const params = new URLSearchParams()
+    if (currentPage.value > 1) params.set('page', String(currentPage.value))
+    if (selectedForum.value) params.set('forum', selectedForum.value)
+    const qs = params.toString() ? '?' + params.toString() : ''
     const res = await fetch(`https://www.luogu.com.cn/discuss${qs}`, { credentials: 'same-origin' })
     const html = await res.text()
     const m = html.match(/<script\s+id="lentille-context"\s+type="application\/json"[^>]*>([^<]*)<\/script>/)
@@ -35,11 +40,19 @@ async function fetchPosts(append = false) {
         posts.value = append ? [...posts.value, ...(r.result || [])] : (r.result || [])
         totalCount.value = r.count || 0
       } else { errorMsg.value = '数据格式不匹配' }
+      // Extract forum categories
+      if (!append) forums.value = ctx?.data?.publicForums || []
     } else { errorMsg.value = '请先登录洛谷' }
   } catch (e: any) { errorMsg.value = friendlyError(e) }
   finally { loading.value = false; loadingMore.value = false }
 }
 
+function changeForum(slug: string) {
+  if (selectedForum.value === slug) return
+  selectedForum.value = slug
+  currentPage.value = 1; posts.value = []
+  fetchPosts()
+}
 function loadMore() {
   if (loadingMore.value || currentPage.value >= totalPages.value) return
   currentPage.value++; fetchPosts(true)
@@ -188,6 +201,13 @@ onUnmounted(() => obs?.disconnect())
     <div bg="$bew-content" rounded="$bew-radius" p-6 mb-6 shadow="[var(--bew-shadow-1),var(--bew-shadow-edge-glow-1)]" border="1 $bew-border-color" style="backdrop-filter:var(--bew-filter-glass-1)">
       <h1 style="font-size:1.5rem;color:var(--bew-text-1);font-weight:700" mb-2>讨论</h1>
       <p text="$bew-text-2">共 {{ totalCount }} 篇帖子</p>
+      <div v-if="forums.length > 0" flex="~ gap-1.5 wrap" mt-3 mb-2>
+        <span v-for="f in [{name:'全部',slug:'',color:''},...forums]" :key="f.slug"
+          text="xs" px-3 py-1 rounded-full cursor="pointer" fw-bold
+          :style="selectedForum === f.slug ? {background:'var(--bew-theme-color)',color:'#fff'} : {background:'var(--bew-fill-2)',color:'var(--bew-text-2)'}"
+          @click="changeForum(f.slug)"
+        >{{ f.name }}</span>
+      </div>
     </div>
 
     <Loading v-if="loading" />
