@@ -111,7 +111,7 @@ const showGulyPage = computed((): boolean => {
 const showTopBar = computed((): boolean => {
   if (isInIframe() && isHomePage())
     return false
-  return settings.value.showTopBar
+  return settings.value?.showTopBar !== false
 })
 
 watch(
