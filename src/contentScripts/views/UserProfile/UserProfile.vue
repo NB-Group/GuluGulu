@@ -10,7 +10,7 @@ const uid = computed(() => {
 })
 const subView = computed(() => {
   if (/\/user\/\d+\/following/i.test(document.URL)) return 'following'
-  if (/\/user\/\d+\/followers/i.test(document.URL)) return 'followers'
+  if (/\/user\/\d+\/follower/i.test(document.URL)) return 'followers'
   return null
 })
 
@@ -36,7 +36,8 @@ const followLoading = ref(false)
 async function fetchFollowList(type: 'following' | 'followers') {
   followLoading.value = true
   try {
-    const res = await fetch(`https://www.luogu.com.cn/user/${uid.value}/${type}`, { credentials: 'same-origin' })
+    const urlType = type === 'followers' ? 'follower' : 'following'
+    const res = await fetch(`https://www.luogu.com.cn/user/${uid.value}/${urlType}`, { credentials: 'same-origin' })
     const html = await res.text()
     const m = html.match(/<script\s+id="lentille-context"\s+type="application\/json"[^>]*>([^<]+)<\/script>/)
     if (m?.[1]) {
@@ -50,7 +51,7 @@ async function fetchFollowList(type: 'following' | 'followers') {
 
 function navigateToFollow(type: 'following' | 'followers' | 'back') {
   if (type === 'back') window.location.href = `https://www.luogu.com.cn/user/${uid.value}`
-  else window.location.href = `https://www.luogu.com.cn/user/${uid.value}/following`
+  else window.location.href = `https://www.luogu.com.cn/user/${uid.value}/${type === 'followers' ? 'follower' : 'following'}`
 }
 function openFollowUser(uid2: number) {
   window.location.href = `https://www.luogu.com.cn/user/${uid2}`
@@ -59,9 +60,12 @@ function goToMyPage(page: string) {
   window.location.href = `https://www.luogu.com.cn/user/mine/${page}`
 }
 const quickEntries = computed(() => [
+  { label: '通知', icon: 'mingcute:notification-line', color: '#e74c3c', onClick: () => { window.location.href = 'https://www.luogu.com.cn/user/notification' } },
+  { label: '练习', icon: 'mingcute:chart-bar-line', color: '#52c41a', onClick: () => { window.location.href = `https://www.luogu.com.cn/user/${uid}/practice` } },
   { label: '题库', icon: 'mingcute:code-line', color: '#3498db', onClick: () => goToMyPage('problem') },
   { label: '比赛', icon: 'mingcute:trophy-line', color: '#f39c12', onClick: () => goToMyPage('contestJoined') },
-  { label: '收藏', icon: 'mingcute:bookmark-line', color: '#e74c3c', onClick: () => goToMyPage('trainingFav') },
+  { label: '收藏', icon: 'mingcute:bookmark-line', color: '#722ed1', onClick: () => goToMyPage('trainingFav') },
+  { label: '团队', icon: 'mingcute:team-line', color: '#13c2c2', onClick: () => goToMyPage('team') },
 ])
 
 const relationshipLabel = computed(() => {

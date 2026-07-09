@@ -18,6 +18,10 @@ export enum AppPage {
   MyProblems = 'MyProblems',
   MyContests = 'MyContests',
   TrainingFav = 'TrainingFav',
+  Notification = 'Notification',
+  Practice = 'Practice',
+  CreatedContests = 'CreatedContests',
+  CreatedTrainings = 'CreatedTrainings',
 }
 
 export enum HomeSubPage {

@@ -37,6 +37,12 @@ function getPageFromUrl(): AppPage {
   if (/\/user\/mine\/problem/i.test(url)) return AppPage.MyProblems
   if (/\/user\/mine\/contestJoined/i.test(url)) return AppPage.MyContests
   if (/\/user\/mine\/trainingFav/i.test(url)) return AppPage.TrainingFav
+  if (/\/user\/mine\/contest/i.test(url)) return AppPage.CreatedContests
+  if (/\/user\/mine\/training/i.test(url)) return AppPage.CreatedTrainings
+  if (/\/user\/notification/i.test(url)) return AppPage.Notification
+  if (/\/user\/\d+\/practice/i.test(url)) return AppPage.Practice
+  if (/\/user\/\d+\/follower/i.test(url)) return AppPage.UserProfile
+  if (/\/user\/\d+\/following/i.test(url)) return AppPage.UserProfile
   if (/\/user\//i.test(url)) return AppPage.UserProfile
   if (/\/training\/list/i.test(url)) return AppPage.Training
   if (/\/training\/\d+/i.test(url)) return AppPage.Training
@@ -76,6 +82,10 @@ const pages = {
   [AppPage.MyProblems]: defineAsyncComponent(() => import('./MyProblems/MyProblems.vue')),
   [AppPage.MyContests]: defineAsyncComponent(() => import('./MyContests/MyContests.vue')),
   [AppPage.TrainingFav]: defineAsyncComponent(() => import('./TrainingFav/TrainingFav.vue')),
+  [AppPage.Notification]: defineAsyncComponent(() => import('./Notification/Notification.vue')),
+  [AppPage.Practice]: defineAsyncComponent(() => import('./Practice/Practice.vue')),
+  [AppPage.CreatedContests]: defineAsyncComponent(() => import('./MyContests/MyContests.vue')),
+  [AppPage.CreatedTrainings]: defineAsyncComponent(() => import('./TrainingFav/TrainingFav.vue')),
 }
 
 const mainAppRef = ref<HTMLElement>() as Ref<HTMLElement>
@@ -192,7 +202,7 @@ window.addEventListener('popstate', onPopState)
 onMounted(() => {
   window.dispatchEvent(new CustomEvent(GULY_MOUNTED))
   // Only normalize URL for list pages (not detail pages with IDs)
-  const detailPages = [AppPage.ProblemDetail, AppPage.Blog, AppPage.Record, AppPage.ContestDetail, AppPage.Training, AppPage.UserProfile, AppPage.Solution, AppPage.Article, AppPage.MyProblems, AppPage.MyContests, AppPage.TrainingFav]
+  const detailPages = [AppPage.ProblemDetail, AppPage.Blog, AppPage.Record, AppPage.ContestDetail, AppPage.Training, AppPage.UserProfile, AppPage.Solution, AppPage.Article, AppPage.Practice]
   if (!detailPages.includes(activatedPage.value)) {
     const url = mainStore.getLuoguWebPageURLByPage(activatedPage.value)
     if (url && url !== window.location.href) {
@@ -367,7 +377,7 @@ provide<GulyAppProvider>('GULY_APP', {
                 p="t-[calc(var(--bew-top-bar-height)+10px)]" m-auto
                 w="lg:[calc(100%-200px)] [calc(100%-150px)]"
               >
-                <Transition name="page-fade">
+                <Transition name="page-fade" mode="out-in">
                   <Component :is="pages[activatedPage]" :key="activatedPage" />
                 </Transition>
               </div>
