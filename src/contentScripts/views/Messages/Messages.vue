@@ -320,6 +320,8 @@ onMessagePoll((json: any) => {
       conversations.value.push({ user: other, lastMsg: msg, unread: unread[String(other.uid)] || 0 })
     }
   }
+  // Sort by most recent first
+  conversations.value.sort((a, b) => (b.lastMsg?.time || 0) - (a.lastMsg?.time || 0))
   console.log('[Messages] done, convos now:', conversations.value.length)
 })
 </script>
