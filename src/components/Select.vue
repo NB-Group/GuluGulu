@@ -16,18 +16,20 @@ const triggerRef = ref<HTMLButtonElement>()
 const dropdownStyle = ref<Record<string, string>>({})
 
 function updatePosition() {
-  if (!triggerRef.value) return
+  if (!triggerRef.value)
+    return
   const rect = triggerRef.value.getBoundingClientRect()
   dropdownStyle.value = {
     position: 'fixed',
-    top: rect.bottom + 4 + 'px',
-    left: rect.left + 'px',
-    width: rect.width + 'px',
+    // top: rect.bottom + 4 + 'px',
+    // left: rect.left + 'px',
+    width: `${rect.width}px`,
   }
 }
 function toggleOpen() {
   open.value = !open.value
-  if (open.value) updatePosition()
+  if (open.value)
+    updatePosition()
 }
 
 function select(value: string | number | null) {
@@ -39,10 +41,17 @@ function select(value: string | number | null) {
 onMounted(() => {
   document.addEventListener('click', (e) => {
     const path = e.composedPath()
-    if (dropdownRef.value && !path.includes(dropdownRef.value)) open.value = false
+    if (dropdownRef.value && !path.includes(dropdownRef.value))
+      open.value = false
   })
-  window.addEventListener('scroll', () => { if (open.value) updatePosition() }, true)
-  window.addEventListener('resize', () => { if (open.value) updatePosition() })
+  window.addEventListener('scroll', () => {
+    if (open.value)
+      updatePosition()
+  }, true)
+  window.addEventListener('resize', () => {
+    if (open.value)
+      updatePosition()
+  })
 })
 </script>
 
@@ -69,7 +78,9 @@ onMounted(() => {
           class="g-select-option"
           :class="{ active: modelValue === option.value }"
           @click="select(option.value)"
-        >{{ option.label }}</div>
+        >
+          {{ option.label }}
+        </div>
         <slot />
       </div>
     </Transition>
@@ -77,7 +88,9 @@ onMounted(() => {
 </template>
 
 <style lang="scss" scoped>
-.g-select-wrapper { width: 100%; }
+.g-select-wrapper {
+  width: 100%;
+}
 
 .g-select-trigger {
   width: 100%;
@@ -92,17 +105,33 @@ onMounted(() => {
   color: var(--bew-text-1);
   font-size: var(--bew-base-font-size);
   cursor: pointer;
-  transition: all .2s ease;
+  transition: all 0.2s ease;
   backdrop-filter: var(--bew-filter-glass-1);
   box-shadow: var(--bew-shadow-edge-glow-1), var(--bew-shadow-1);
 
-  &:hover:not(.disabled) { border-color: var(--bew-theme-color-40); }
-  &.open { border-color: var(--bew-theme-color); box-shadow: 0 0 0 2px var(--bew-theme-color-30); }
-  &.disabled { opacity: .5; cursor: not-allowed; }
+  &:hover:not(.disabled) {
+    border-color: var(--bew-theme-color-40);
+  }
+  &.open {
+    border-color: var(--bew-theme-color);
+    box-shadow: 0 0 0 2px var(--bew-theme-color-30);
+  }
+  &.disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
 
-  .placeholder { color: var(--bew-text-4); }
-  .arrow { font-size: .7em; color: var(--bew-text-3); transition: transform .2s ease; }
-  &.open .arrow { transform: rotate(180deg); }
+  .placeholder {
+    color: var(--bew-text-4);
+  }
+  .arrow {
+    font-size: 0.7em;
+    color: var(--bew-text-3);
+    transition: transform 0.2s ease;
+  }
+  &.open .arrow {
+    transform: rotate(180deg);
+  }
 }
 
 .g-select-dropdown {
@@ -121,13 +150,31 @@ onMounted(() => {
   font-size: var(--bew-base-font-size);
   color: var(--bew-text-1);
   cursor: pointer;
-  transition: background .1s ease;
+  transition: background 0.1s ease;
 
-  &:hover { background: var(--bew-fill-2); }
-  &.active { background: var(--bew-theme-color-20); color: var(--bew-theme-color); font-weight: 600; }
+  &:hover {
+    background: var(--bew-fill-2);
+  }
+  &.active {
+    background: var(--bew-theme-color-20);
+    color: var(--bew-theme-color);
+    font-weight: 600;
+  }
 }
 
-.dropdown-enter-active { transition: opacity .15s ease, transform .15s ease; }
-.dropdown-leave-active { transition: opacity .1s ease, transform .1s ease; }
-.dropdown-enter-from, .dropdown-leave-to { opacity: 0; transform: translateY(-4px); }
+.dropdown-enter-active {
+  transition:
+    opacity 0.15s ease,
+    transform 0.15s ease;
+}
+.dropdown-leave-active {
+  transition:
+    opacity 0.1s ease,
+    transform 0.1s ease;
+}
+.dropdown-enter-from,
+.dropdown-leave-to {
+  opacity: 0;
+  transform: translateY(-4px);
+}
 </style>
