@@ -19,13 +19,12 @@ function toggleNotify() {
 
 async function poll() {
   const uid = (window as any).__guly_user?.uid
-  if (!uid || uid === '0') { console.log('[Poll] no uid'); return }
+  if (!uid || uid === '0') return
   const lastPollKey = 'gulugulu-last-poll'
   const lastPoll = Number(localStorage.getItem(lastPollKey) || '0')
   const now = Date.now()
   if (now - lastPoll < 3000) return
   localStorage.setItem(lastPollKey, String(now))
-  console.log('[Poll] fetching...')
 
   try {
     const res = await fetch('https://www.luogu.com.cn/chat?_contentOnly=1', { credentials: 'same-origin' })
@@ -36,7 +35,6 @@ async function poll() {
       for (const [k, v] of Object.entries(raw)) currentUnread[Number(k)] = Number(v) || 0
     }
     const total = Object.values(currentUnread).reduce((a: number, b) => a + b, 0)
-    console.log('[Poll] total:', total, 'prev:', prevUnreadCount.value, 'onNewData:', !!onNewData, 'viewing:', !!(window as any).__guly_viewing_messages)
 
     if (notifyEnabled.value && total > prevUnreadCount.value
       && 'Notification' in window && Notification.permission === 'granted') {
@@ -59,14 +57,13 @@ async function poll() {
 
     prevUnreadCount.value = total
     if (!(window as any).__guly_viewing_messages) unreadMsgCount.value = total
-    if (onNewData) { console.log('[Poll] calling onNewData'); onNewData(json) }
-  } catch(e) { console.log('[Poll] error:', e) }
+    if (onNewData) onNewData(json)
+  } catch {}
 }
 
 function start() {
   pollCount++
   if (timer) return
-  console.log('[Poll] starting, interval=8s')
   poll()
   timer = setInterval(poll, 8000)
 }
@@ -74,11 +71,9 @@ function start() {
 function stop() {
   pollCount = Math.max(0, pollCount - 1)
   if (pollCount > 0) return
-  if (timer) { clearInterval(timer); timer = null; console.log('[Poll] stopped') }
 }
 
 function resetUnread() {
-  console.log('[Poll] resetUnread')
   unreadMsgCount.value = 0
   prevUnreadCount.value = 0
 }
