@@ -2,7 +2,7 @@
   "name": "gulu-gulu",
   "displayName": "GuluGulu",
   "type": "module",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "private": true,
   "packageManager": "pnpm@9.5.0",
   "description": "Just make a few small changes to your Luogu homepage. Inspired by BewlyBewly.",
