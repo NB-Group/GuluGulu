@@ -297,25 +297,32 @@ function handleKeydown(e: KeyboardEvent) {
   if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage() }
 }
 
-onMounted(() => { fetchConversations(); resetUnread() })
+let isOnMessagesPage = false
+onMounted(() => { isOnMessagesPage = true; (window as any).__guly_viewing_messages = true; fetchConversations(); resetUnread() })
+onUnmounted(() => { isOnMessagesPage = false; (window as any).__guly_viewing_messages = false })
 
-// When polling detects new messages, refresh the conversation list
+// When polling detects new messages, refresh if on this page
 watch(chatVersion, () => {
-  if (!latestChatData.value) return
+  if (!isOnMessagesPage || !latestChatData.value) return
+  // Merge new data without replacing existing conversations
   const msgs: Message[] = latestChatData.value?.currentData?.latestMessages?.result || []
   const rawUnread = latestChatData.value?.currentData?.unreadMessageCount
   const unread: Record<string, number> = {}
   if (rawUnread && typeof rawUnread === 'object' && !Array.isArray(rawUnread)) {
     for (const [k, v] of Object.entries(rawUnread)) unread[String(k)] = Number(v) || 0
   }
-  const map = new Map<number, Conversation>()
+  // Update existing conversations' unread counts + add new ones
+  const existingIds = new Set(conversations.value.map(c => c.user.uid))
   for (const msg of msgs) {
     const other = Number(msg.sender.uid) !== currentUid.value ? msg.sender : msg.receiver
-    if (!map.has(other.uid)) {
-      map.set(other.uid, { user: other, lastMsg: msg, unread: unread[String(other.uid)] || 0 })
+    const existing = conversations.value.find(c => c.user.uid === other.uid)
+    if (existing) {
+      existing.lastMsg = msg
+      existing.unread = unread[String(other.uid)] || 0
+    } else if (!existingIds.has(other.uid)) {
+      conversations.value.push({ user: other, lastMsg: msg, unread: unread[String(other.uid)] || 0 })
     }
   }
-  conversations.value = [...map.values()]
 })
 </script>
 

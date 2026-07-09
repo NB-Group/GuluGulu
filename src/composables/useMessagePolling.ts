@@ -65,7 +65,8 @@ async function poll() {
     }
 
     prevUnreadCount.value = total
-    unreadMsgCount.value = total
+    // Only update badge if user is not actively viewing messages
+    if (!(window as any).__guly_viewing_messages) unreadMsgCount.value = total
     latestChatData.value = json
     chatVersion.value++
   } catch {}
