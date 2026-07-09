@@ -1,16 +1,20 @@
 <script lang="ts" setup>
-defineProps<{
+const props = defineProps<{
   modelValue: boolean
   label?: string
 }>()
 
-const model = defineModel()
+const emit = defineEmits<{ (e: 'update:modelValue', v: boolean): void }>()
+
+function onChange(e: Event) {
+  emit('update:modelValue', (e.target as HTMLInputElement).checked)
+}
 </script>
 
 <template>
   <label cursor="pointer" pointer="auto" flex items-center gap-3>
     <span>{{ label }}</span>
-    <input v-model="model" type="checkbox" hidden>
+    <input :checked="modelValue" type="checkbox" hidden @change="onChange">
     <span
       inline-block w="$b-button-width" h="$b-button-height" bg="$bew-fill-1" rounded="[calc(var(--b-button-height)/2)]"
       relative border="size-$b-border-width color-$bew-border-color"
