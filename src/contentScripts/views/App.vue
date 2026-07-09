@@ -33,7 +33,7 @@ function getPageFromUrl(): AppPage {
   if (/\/contest\/list/i.test(url)) return AppPage.ContestList
   if (/\/contest\/\d+/i.test(url)) return AppPage.ContestDetail
   if (/\/ranking/i.test(url)) return AppPage.Ranking
-  if (/\/blog\//i.test(url) || /\/discuss\//i.test(url)) return AppPage.Blog
+  if (/\/blog\//i.test(url) || /\/discuss/i.test(url)) return AppPage.Blog
   if (/\/user\/mine\/problem/i.test(url)) return AppPage.MyProblems
   if (/\/user\/mine\/contestJoined/i.test(url)) return AppPage.MyContests
   if (/\/user\/mine\/team/i.test(url)) return AppPage.Team
