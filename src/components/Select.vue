@@ -1,13 +1,13 @@
 <script setup lang="ts">
 defineProps<{
-  modelValue?: string | number
+  modelValue?: string | number | null
   placeholder?: string
   disabled?: boolean
-  options?: { label: string, value: string | number }[]
+  options?: { label: string, value: string | number | null }[]
 }>()
 
 const emit = defineEmits<{
-  (e: 'update:modelValue', value: string | number): void
+  (e: 'update:modelValue', value: string | number | null): void
 }>()
 
 const open = ref(false)

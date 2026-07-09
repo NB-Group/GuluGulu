@@ -216,6 +216,7 @@ async function sendMessage() {
   const text = newMsg.value.trim()
   if (!text || !activeChatUid.value || sending.value) return
   sending.value = true
+  newMsg.value = '' // clear immediately to prevent double-send
   try {
     const csrf = getCsrfToken()
     const res = await fetch('https://www.luogu.com.cn/api/chat/new', {
