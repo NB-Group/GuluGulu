@@ -41,6 +41,10 @@ const dockPositionOptions = computed(() => [
       <SettingsItem title="分离返回顶部和刷新按钮">
         <Radio v-model="settings.backToTopAndRefreshButtonsAreSeparated" />
       </SettingsItem>
+
+      <SettingsItem title="私信未读角标" desc="在导航坞的私信图标上显示未读消息数">
+        <Radio v-model="settings.dockMessageBadge" />
+      </SettingsItem>
     </SettingsItemGroup>
   </div>
 </template>

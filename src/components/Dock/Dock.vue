@@ -239,7 +239,7 @@ const dockTransformStyle = computed((): { transform: string, transformOrigin: st
               style="display:contents"
             />
             <!-- Unread badge for messages -->
-            <span v-if="dockItem.page === AppPage.Messages && unreadMsgCount > 0"
+            <span v-if="dockItem.page === AppPage.Messages && settings.dockMessageBadge && unreadMsgCount > 0"
               class="dock-badge"
               :style="{ background: isDockItemActivated(dockItem) ? 'var(--bew-error-color)' : '#e74c3c' }"
             >{{ unreadMsgCount > 99 ? '99+' : unreadMsgCount }}</span>

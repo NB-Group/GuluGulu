@@ -3,7 +3,7 @@ import { renderIcon } from '~/utils/icons'
 import { getCsrfToken, friendlyError } from '~/utils/luogu-api'
 import { useMessagePolling } from '~/composables/useMessagePolling'
 
-const { notifyEnabled, toggleNotify } = useMessagePolling()
+const { notifyEnabled, toggleNotify, resetUnread } = useMessagePolling()
 
 interface ChatUser {
   uid: number; name: string; avatar: string; color: string; badge: string | null
@@ -163,6 +163,7 @@ async function openChat(uid: number, user?: ChatUser) {
       const conv = conversations.value.find(c => c.user.uid === uid)
       if (conv) conv.unread = 0
     } catch {}
+    resetUnread()
   } catch {}
   chatLoading.value = false
   scrollToBottom()
@@ -293,7 +294,7 @@ function handleKeydown(e: KeyboardEvent) {
   if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage() }
 }
 
-onMounted(fetchConversations)
+onMounted(() => { fetchConversations(); resetUnread() })
 </script>
 
 <template>

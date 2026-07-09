@@ -76,6 +76,11 @@ function stop() {
   if (timer) { clearInterval(timer); timer = null }
 }
 
+function resetUnread() {
+  unreadMsgCount.value = 0
+  lastUnreadUsers.value = new Set()
+}
+
 export function useMessagePolling() {
   onMounted(() => {
     const uid = (window as any).__guly_user?.uid
@@ -83,5 +88,5 @@ export function useMessagePolling() {
   })
   onUnmounted(() => stop())
 
-  return { unreadMsgCount, notifyEnabled, toggleNotify }
+  return { unreadMsgCount, notifyEnabled, toggleNotify, resetUnread }
 }

@@ -23,6 +23,7 @@ export interface Settings {
   showTopBar: boolean
   topBarAutoHide: boolean
   searchBarMode: 'currentTab' | 'newTab'
+	  dockMessageBadge: boolean
 
   // Wallpaper / background
   wallpaper: string
@@ -67,6 +68,7 @@ export const originalSettings: Settings = {
   showTopBar: true,
   topBarAutoHide: false,
   searchBarMode: 'currentTab',
+  dockMessageBadge: true,
 
   wallpaper: '',
   wallpaperMaskOpacity: 50,
