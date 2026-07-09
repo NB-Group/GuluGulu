@@ -17,8 +17,11 @@ interface Solution {
 
 const solutions = ref<Solution[]>([])
 const loading = ref(true)
+const loadingMore = ref(false)
 const errorMsg = ref('')
 const problemTitle = ref('')
+const solPage = ref(1)
+const solTotal = ref(0)
 
 const expandedLid = ref<string | null>(null)
 
@@ -30,12 +33,16 @@ const pid = computed(() => {
 // ============================================================
 // Fetch solution list
 // ============================================================
-async function fetchSolutions() {
+async function fetchSolutions(page = 1) {
   if (!pid.value) { errorMsg.value = '无效的题目ID'; loading.value = false; return }
-  loading.value = true; errorMsg.value = ''
+  if (page === 1) loading.value = true; else loadingMore.value = true
+  errorMsg.value = ''
 
   try {
-    const ctx = await fetchLentilleContext(`https://www.luogu.com.cn/problem/solution/${pid.value}`)
+    const url = page > 1
+      ? `https://www.luogu.com.cn/problem/solution/${pid.value}?page=${page}`
+      : `https://www.luogu.com.cn/problem/solution/${pid.value}`
+    const ctx = await fetchLentilleContext(url)
     if (!ctx || ctx.__needLogin) {
       errorMsg.value = '请先登录洛谷后查看题解'
       loading.value = false; return
@@ -43,9 +50,10 @@ async function fetchSolutions() {
 
     const cd = ctx?.currentData || ctx?.data || {}
     problemTitle.value = cd.problem?.title || cd.problem?.name || pid.value
+    solTotal.value = cd.solutions?.count || 0
 
     const raw = cd.solutions?.result || cd.solutions || []
-    solutions.value = raw.map((s: any) => ({
+    const items = raw.map((s: any) => ({
       lid: s.lid || '',
       title: s.title || '',
       time: s.time || 0,
@@ -56,8 +64,15 @@ async function fetchSolutions() {
       verified: s.status === 2 || s.promoteStatus === 2 || false,
       status: s.status || 0,
     }))
+    solutions.value = page === 1 ? items : [...solutions.value, ...items]
+    solPage.value = page
   } catch (e: any) { errorMsg.value = friendlyError(e) }
-  loading.value = false
+  loading.value = false; loadingMore.value = false
+}
+
+function loadMoreSolutions() {
+  if (loadingMore.value) return
+  fetchSolutions(solPage.value + 1)
 }
 
 // ============================================================
@@ -128,6 +143,11 @@ watch(pid, () => fetchSolutions())
         </div>
       </div>
     </Transition>
+
+    <Loading v-if="loadingMore" />
+    <div v-if="!loading && solutions.length > 0 && solutions.length < solTotal" text="center" mt-4 mb-4>
+      <button style="background:var(--bew-fill-2);color:var(--bew-text-2);border:1px solid var(--bew-border-color);border-radius:var(--bew-radius);padding:6px 24px;cursor:pointer;font-size:var(--bew-base-font-size)" @click="loadMoreSolutions">加载更多 ({{ solutions.length }}/{{ solTotal }})</button>
+    </div>
 
     <div v-if="!loading && !errorMsg && solutions.length === 0" bg="$bew-content" rounded="$bew-radius" p-8 border="1 $bew-border-color" style="text-align:center;color:var(--bew-text-3);font-size:var(--bew-base-font-size);backdrop-filter:var(--bew-filter-glass-1)">
       <span v-html="renderIcon('mingcute:bulb-line', 48)" style="display:contents" /><p mt-2>暂无题解</p>
