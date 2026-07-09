@@ -99,7 +99,7 @@ onMounted(() => {
   border: 1px solid var(--bew-border-color);
   border-radius: var(--bew-radius);
   box-shadow: var(--bew-shadow-2);
-  z-index: 1000;
+  z-index: 99999;
   backdrop-filter: var(--bew-filter-glass-2);
 }
 
