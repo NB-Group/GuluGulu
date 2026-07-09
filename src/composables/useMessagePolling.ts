@@ -6,6 +6,7 @@ import { ref, onMounted, onUnmounted } from 'vue'
 
 // Module-level singleton state (shared across all component instances)
 const unreadMsgCount = ref(0)
+const prevUnreadCount = ref(0)
 const notifyEnabled = ref(localStorage.getItem('gulugulu-msg-notify') === 'true')
 const latestChatData = ref<any>(null)
 const chatVersion = ref(0) // increments on each poll to trigger watchers
@@ -23,11 +24,11 @@ function toggleNotify() {
 async function poll() {
   const uid = (window as any).__guly_user?.uid
   if (!uid || uid === '0') return
-  // Prevent duplicate polling across tabs: only one tab polls per 15s window
+  // Prevent duplicate polling across tabs
   const lastPollKey = 'gulugulu-last-poll'
   const lastPoll = Number(localStorage.getItem(lastPollKey) || '0')
   const now = Date.now()
-  if (now - lastPoll < 3000) return // another tab polled within 3s
+  if (now - lastPoll < 3000) return
   localStorage.setItem(lastPollKey, String(now))
 
   try {
@@ -40,17 +41,30 @@ async function poll() {
     }
     const total = Object.values(currentUnread).reduce((a: number, b) => a + b, 0)
 
-    if (notifyEnabled.value && total > 0
+    // Only notify when unread count INCREASED (not just > 0)
+    if (notifyEnabled.value && total > prevUnreadCount.value
       && 'Notification' in window && Notification.permission === 'granted') {
-      try {
-        const n = new Notification('洛谷私信', {
-          body: `您有 ${total} 条未读消息`,
-          icon: 'https://www.luogu.com.cn/favicon.ico',
-          tag: 'gulugulu-msg',
-        })
-        n.onclick = () => { window.location.href = 'https://www.luogu.com.cn/chat'; n.close() }
-      } catch {}
+      const msgs: any[] = json?.currentData?.latestMessages?.result || []
+      // Find the sender with the most recent unread message
+      for (const [uidStr, count] of Object.entries(currentUnread)) {
+        if (count === 0) continue
+        const nuid = Number(uidStr)
+        const msg = msgs.find((m: any) => Number(m.sender.uid) === nuid)
+        if (msg) {
+          try {
+            const name = msg.sender.name || '有人'
+            const n = new Notification(`${name} 发来新消息`, {
+              body: msg.content?.slice(0, 100) || '',
+              icon: `https://cdn.luogu.com.cn/upload/usericon/${nuid}.png`,
+              tag: `gulugulu-msg-${nuid}`,
+            })
+            n.onclick = () => { window.location.href = 'https://www.luogu.com.cn/chat'; n.close() }
+          } catch {}
+        }
+      }
     }
+
+    prevUnreadCount.value = total
     unreadMsgCount.value = total
     latestChatData.value = json
     chatVersion.value++
@@ -59,19 +73,20 @@ async function poll() {
 
 function start() {
   pollCount++
-  if (timer) return // already running
+  if (timer) return
   poll()
   timer = setInterval(poll, 8000)
 }
 
 function stop() {
   pollCount = Math.max(0, pollCount - 1)
-  if (pollCount > 0) return // another component still needs polling
+  if (pollCount > 0) return
   if (timer) { clearInterval(timer); timer = null }
 }
 
 function resetUnread() {
   unreadMsgCount.value = 0
+  prevUnreadCount.value = 0
 }
 
 export function useMessagePolling() {
