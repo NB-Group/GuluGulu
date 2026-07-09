@@ -6,9 +6,7 @@ import { ref, onMounted, onUnmounted } from 'vue'
 
 // Module-level singleton state (shared across all component instances)
 const unreadMsgCount = ref(0)
-const notifyEnabled = ref(localStorage.getItem('gulugulu-msg-notify') !== 'false')
-const lastUnreadUsers = ref<Set<number>>(new Set())
-const notifiedOnce = ref(false)
+const notifyEnabled = ref(localStorage.getItem('gulugulu-msg-notify') === 'true')
 let timer: ReturnType<typeof setInterval> | null = null
 let pollCount = 0
 
@@ -41,24 +39,17 @@ async function poll() {
     const total = Object.values(currentUnread).reduce((a: number, b) => a + b, 0)
     const newUsers = Object.keys(currentUnread).map(Number).filter(uid => !lastUnreadUsers.value.has(uid))
 
-    if (notifyEnabled.value && notifiedOnce.value && newUsers.length > 0
+    if (notifyEnabled.value && total > 0
       && 'Notification' in window && Notification.permission === 'granted') {
-      const msgs: any[] = json?.currentData?.latestMessages?.result || []
-      for (const nuid of newUsers) {
-        const msg = msgs.find((m: any) => Number(m.sender.uid) === nuid || Number(m.receiver.uid) === nuid)
-        const name = msg ? (Number(msg.sender.uid) === nuid ? msg.sender.name : msg.receiver.name) : '有人'
-        try {
-          const n = new Notification(`${name} 发来新消息`, {
-            body: msg?.content?.slice(0, 80) || '',
-            icon: `https://cdn.luogu.com.cn/upload/usericon/${nuid}.png`,
-            tag: 'gulugulu-msg',
-          })
-          n.onclick = () => { window.location.href = 'https://www.luogu.com.cn/chat'; n.close() }
-        } catch {}
-      }
+      try {
+        const n = new Notification('洛谷私信', {
+          body: `您有 ${total} 条未读消息`,
+          icon: 'https://www.luogu.com.cn/favicon.ico',
+          tag: 'gulugulu-msg',
+        })
+        n.onclick = () => { window.location.href = 'https://www.luogu.com.cn/chat'; n.close() }
+      } catch {}
     }
-    notifiedOnce.value = true
-    lastUnreadUsers.value = new Set(Object.keys(currentUnread).map(Number))
     unreadMsgCount.value = total
   } catch {}
 }
@@ -78,7 +69,6 @@ function stop() {
 
 function resetUnread() {
   unreadMsgCount.value = 0
-  lastUnreadUsers.value = new Set()
 }
 
 export function useMessagePolling() {

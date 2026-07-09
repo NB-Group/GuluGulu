@@ -107,6 +107,7 @@ async function openChat(uid: number, user?: ChatUser) {
   activeChatUser.value = user || null
   messages.value = []
   chatLoading.value = true
+  const targetUid = uid // capture target to prevent race condition
 
   try {
     // First request: get the latest (default → last page) to learn total/pagination
@@ -115,6 +116,8 @@ async function openChat(uid: number, user?: ChatUser) {
       headers: { 'X-Requested-With': 'XMLHttpRequest' },
     })
     const json = await res.json()
+    // Abort if user switched to another conversation while fetching
+    if (activeChatUid.value !== targetUid) return
     const latest = (json?.messages?.result || []).sort((a: any, b: any) => (a.time || 0) - (b.time || 0))
 
     const total = json?.messages?.count || latest.length
