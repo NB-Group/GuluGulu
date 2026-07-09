@@ -297,29 +297,25 @@ function handleKeydown(e: KeyboardEvent) {
   if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage() }
 }
 
-let isOnMessagesPage = false
-onMounted(() => { isOnMessagesPage = true; (window as any).__guly_viewing_messages = true; fetchConversations(); resetUnread() })
-onUnmounted(() => { isOnMessagesPage = false; (window as any).__guly_viewing_messages = false })
+onMounted(() => { (window as any).__guly_viewing_messages = true; fetchConversations(); resetUnread() })
+onUnmounted(() => { (window as any).__guly_viewing_messages = false })
 
-// When polling detects new messages, refresh if on this page
+// When polling detects new messages, merge into conversation list
 watch(chatVersion, () => {
-  if (!isOnMessagesPage || !latestChatData.value) return
-  // Merge new data without replacing existing conversations
+  if (!latestChatData.value) return
   const msgs: Message[] = latestChatData.value?.currentData?.latestMessages?.result || []
   const rawUnread = latestChatData.value?.currentData?.unreadMessageCount
   const unread: Record<string, number> = {}
   if (rawUnread && typeof rawUnread === 'object' && !Array.isArray(rawUnread)) {
     for (const [k, v] of Object.entries(rawUnread)) unread[String(k)] = Number(v) || 0
   }
-  // Update existing conversations' unread counts + add new ones
-  const existingIds = new Set(conversations.value.map(c => c.user.uid))
+  // Merge: update existing + add new
   for (const msg of msgs) {
     const other = Number(msg.sender.uid) !== currentUid.value ? msg.sender : msg.receiver
-    const existing = conversations.value.find(c => c.user.uid === other.uid)
-    if (existing) {
-      existing.lastMsg = msg
-      existing.unread = unread[String(other.uid)] || 0
-    } else if (!existingIds.has(other.uid)) {
+    const idx = conversations.value.findIndex(c => c.user.uid === other.uid)
+    if (idx !== -1) {
+      conversations.value[idx] = { ...conversations.value[idx], lastMsg: msg, unread: unread[String(other.uid)] || 0 }
+    } else {
       conversations.value.push({ user: other, lastMsg: msg, unread: unread[String(other.uid)] || 0 })
     }
   }
