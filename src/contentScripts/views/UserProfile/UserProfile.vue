@@ -59,14 +59,16 @@ function openFollowUser(uid2: number) {
 function goToMyPage(page: string) {
   window.location.href = `https://www.luogu.com.cn/user/mine/${page}`
 }
-const quickEntries = computed(() => [
+const quickEntries = computed(() => {
+  const id = uid.value
+  return [
   { label: '通知', icon: 'mingcute:notification-line', color: '#e74c3c', onClick: () => { window.location.href = 'https://www.luogu.com.cn/user/notification' } },
-  { label: '练习', icon: 'mingcute:chart-bar-line', color: '#52c41a', onClick: () => { window.location.href = `https://www.luogu.com.cn/user/${uid}/practice` } },
+  { label: '练习', icon: 'mingcute:chart-bar-line', color: '#52c41a', onClick: () => { window.location.href = `https://www.luogu.com.cn/user/${id}/practice` } },
   { label: '题库', icon: 'mingcute:code-line', color: '#3498db', onClick: () => goToMyPage('problem') },
   { label: '比赛', icon: 'mingcute:trophy-line', color: '#f39c12', onClick: () => goToMyPage('contestJoined') },
   { label: '收藏', icon: 'mingcute:bookmark-line', color: '#722ed1', onClick: () => goToMyPage('trainingFav') },
   { label: '团队', icon: 'mingcute:team-line', color: '#13c2c2', onClick: () => goToMyPage('team') },
-])
+]})
 
 const relationshipLabel = computed(() => {
   const r = user.value?.userRelationship || 0
