@@ -3,7 +3,8 @@ import { renderIcon } from '~/utils/icons'
 import { getCsrfToken, friendlyError } from '~/utils/luogu-api'
 import { useMessagePolling } from '~/composables/useMessagePolling'
 
-const { notifyEnabled, toggleNotify, resetUnread, latestChatData, chatVersion } = useMessagePolling()
+import { onMessagePoll } from '~/composables/useMessagePolling'
+const { notifyEnabled, toggleNotify, resetUnread } = useMessagePolling()
 
 interface ChatUser {
   uid: number; name: string; avatar: string; color: string; badge: string | null
@@ -301,15 +302,15 @@ onMounted(() => { (window as any).__guly_viewing_messages = true; fetchConversat
 onUnmounted(() => { (window as any).__guly_viewing_messages = false })
 
 // When polling detects new messages, merge into conversation list
-watch(chatVersion, () => {
-  if (!latestChatData.value) return
-  const msgs: Message[] = latestChatData.value?.currentData?.latestMessages?.result || []
-  const rawUnread = latestChatData.value?.currentData?.unreadMessageCount
+onMessagePoll((json: any) => {
+  console.log('[Messages] onMessagePoll triggered')
+  const msgs: Message[] = json?.currentData?.latestMessages?.result || []
+  const rawUnread = json?.currentData?.unreadMessageCount
   const unread: Record<string, number> = {}
   if (rawUnread && typeof rawUnread === 'object' && !Array.isArray(rawUnread)) {
     for (const [k, v] of Object.entries(rawUnread)) unread[String(k)] = Number(v) || 0
   }
-  // Merge: update existing + add new
+  console.log('[Messages] merging', msgs.length, 'msgs, current convos:', conversations.value.length)
   for (const msg of msgs) {
     const other = Number(msg.sender.uid) !== currentUid.value ? msg.sender : msg.receiver
     const idx = conversations.value.findIndex(c => c.user.uid === other.uid)
@@ -319,6 +320,7 @@ watch(chatVersion, () => {
       conversations.value.push({ user: other, lastMsg: msg, unread: unread[String(other.uid)] || 0 })
     }
   }
+  console.log('[Messages] done, convos now:', conversations.value.length)
 })
 </script>
 

@@ -35,6 +35,10 @@ const dailyCounts = ref<Record<string, [number, number]>>({})
 const loading = ref(true)
 const errorMsg = ref('')
 const followList = ref<any[]>([])
+const isOwnProfile = computed(() => {
+  const myUid = (window as any).__guly_user?.uid
+  return myUid && String(uid.value) === String(myUid)
+})
 const followLoading = ref(false)
 
 async function fetchFollowList(type: 'following' | 'followers') {
@@ -300,8 +304,8 @@ watch(subView, (v) => { if (v) fetchFollowList(v) })
           </div>
         </div>
 
-        <!-- Quick entry buttons -->
-        <div flex="~ gap-2" mb-6>
+        <!-- Quick entry buttons (own profile only) -->
+        <div v-if="isOwnProfile" flex="~ gap-2" mb-6>
           <div v-for="item in quickEntries" :key="item.label"
             class="quick-entry-btn" cursor="pointer"
             flex="~ items-center gap-1.5"
