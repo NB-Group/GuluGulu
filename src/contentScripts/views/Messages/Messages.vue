@@ -311,10 +311,12 @@ onMessagePoll((json: any) => {
   for (const msg of msgs) {
     const other = Number(msg.sender.uid) !== currentUid.value ? msg.sender : msg.receiver
     const idx = conversations.value.findIndex(c => c.user.uid === other.uid)
+    // Don't show unread for the active chat (user is looking at it)
+    const isActive = activeChatUid.value != null && other.uid === activeChatUid.value
     if (idx !== -1) {
-      conversations.value[idx] = { ...conversations.value[idx], lastMsg: msg, unread: unread[String(other.uid)] || 0 }
+      conversations.value[idx] = { ...conversations.value[idx], lastMsg: msg, unread: isActive ? 0 : (unread[String(other.uid)] || 0) }
     } else {
-      conversations.value.push({ user: other, lastMsg: msg, unread: unread[String(other.uid)] || 0 })
+      conversations.value.push({ user: other, lastMsg: msg, unread: isActive ? 0 : (unread[String(other.uid)] || 0) })
     }
   }
   // Sort by most recent first (force new array reference for Vue reactivity)
