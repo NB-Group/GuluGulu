@@ -227,7 +227,7 @@ const dockTransformStyle = computed((): { transform: string, transformOrigin: st
               'inactive': hoveringDockItem.themeMode && isDark,
               'disable-glowing-effect': settings.disableDockGlowingEffect,
             }"
-            :title="dockItem.i18nKey"
+            :title="$t(dockItem.i18nKey)"
             pointer-events-auto
             @click="handleDockItemClick($event, dockItem)"
             @click.middle="openDockItemInNewTab(dockItem)"
