@@ -31,9 +31,13 @@ function onInput(e: Event) {
 function onMouseDown() { dragging = true }
 function onMouseUp() { dragging = false; applyFill(props.modelValue) }
 
-onMounted(() => nextTick(() => applyFill(props.modelValue)))
+let lastApplied = props.modelValue
+onMounted(() => nextTick(() => { lastApplied = props.modelValue; applyFill(props.modelValue) }))
 watch(() => props.modelValue, (v) => {
-  if (!dragging) applyFill(v)
+  if (!dragging && Math.abs(v - lastApplied) > 0.5) {
+    lastApplied = v
+    applyFill(v)
+  }
 })
 </script>
 
