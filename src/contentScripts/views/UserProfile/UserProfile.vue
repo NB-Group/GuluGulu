@@ -50,7 +50,6 @@ async function fetchFollowList(type: 'following' | 'followers') {
 
 function navigateToFollow(type: 'following' | 'followers' | 'back') {
   if (type === 'back') window.location.href = `https://www.luogu.com.cn/user/${uid.value}`
-  else if (type === 'followers') window.open(`https://www.luogu.com.cn/user/${uid.value}/following`, '_blank')
   else window.location.href = `https://www.luogu.com.cn/user/${uid.value}/following`
 }
 function openFollowUser(uid2: number) {
@@ -294,17 +293,18 @@ watch(subView, (v) => { if (v) fetchFollowList(v) })
           </div>
         </div>
 
-        <!-- Quick entry cards: MyProblems / MyContests / TrainingFav -->
-        <div grid="~ cols-3" gap-3 mb-6>
+        <!-- Quick entry buttons -->
+        <div flex="~ gap-2" mb-6>
           <div v-for="item in quickEntries" :key="item.label"
-            class="quick-entry" bg="$bew-content" rounded="$bew-radius" p-3
-            shadow="[var(--bew-shadow-1)]" border="1 $bew-border-color" cursor="pointer"
-            style="backdrop-filter:var(--bew-filter-glass-1);transition:all .2s"
-            flex="~ col items-center gap-1.5"
+            class="quick-entry-btn" cursor="pointer"
+            flex="~ items-center gap-1.5"
+            px-4 py-2 rounded-full
+            :style="{ background: item.color + '18', border: '1px solid ' + item.color + '40' }"
             @click="item.onClick"
           >
-            <span v-html="renderIcon(item.icon, 22)" :style="{ color: item.color, display:'contents' }" />
-            <span style="font-size:.8em;color:var(--bew-text-2);font-weight:500">{{ item.label }}</span>
+            <span v-html="renderIcon(item.icon, 16)" :style="{ color: item.color, display:'contents' }" />
+            <span style="font-size:.85em;font-weight:600" :style="{ color: item.color }">{{ item.label }}</span>
+            <span v-html="renderIcon('mingcute:arrow-right-line', 14)" style="display:contents;color:var(--bew-text-4)" />
           </div>
         </div>
 
@@ -383,7 +383,8 @@ watch(subView, (v) => { if (v) fetchFollowList(v) })
   z-index: 10;
   transition: opacity 0.15s ease, transform 0.15s ease;
 }
-.quick-entry:hover { box-shadow: var(--bew-shadow-2)!important; transform: translateY(-2px); }
+.quick-entry-btn { transition: all .2s; }
+.quick-entry-btn:hover { filter: brightness(1.1); transform: translateY(-1px); }
 .profile-intro {
   font-size: var(--bew-base-font-size);
   color: var(--bew-text-2);

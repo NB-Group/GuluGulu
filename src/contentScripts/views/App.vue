@@ -34,15 +34,15 @@ function getPageFromUrl(): AppPage {
   if (/\/contest\/\d+/i.test(url)) return AppPage.ContestDetail
   if (/\/ranking/i.test(url)) return AppPage.Ranking
   if (/\/blog\//i.test(url) || /\/discuss\//i.test(url)) return AppPage.Blog
+  if (/\/user\/mine\/problem/i.test(url)) return AppPage.MyProblems
+  if (/\/user\/mine\/contestJoined/i.test(url)) return AppPage.MyContests
+  if (/\/user\/mine\/trainingFav/i.test(url)) return AppPage.TrainingFav
   if (/\/user\//i.test(url)) return AppPage.UserProfile
   if (/\/training\/list/i.test(url)) return AppPage.Training
   if (/\/training\/\d+/i.test(url)) return AppPage.Training
   if (/\/article/i.test(url)) return AppPage.Article
   if (/\/team\//i.test(url)) return AppPage.Team
   if (/\/problem\/solution/i.test(url)) return AppPage.Solution
-  if (/\/user\/mine\/problem/i.test(url)) return AppPage.MyProblems
-  if (/\/user\/mine\/contestJoined/i.test(url)) return AppPage.MyContests
-  if (/\/user\/mine\/trainingFav/i.test(url)) return AppPage.TrainingFav
   if (/\/record\//i.test(url)) return AppPage.Record
   if (/\/chat/i.test(url) && !/\/discuss/i.test(url)) return AppPage.Messages
   if (/\/search/i.test(url) || /\/problem\/keyword/i.test(url)) return AppPage.Search
@@ -367,7 +367,7 @@ provide<GulyAppProvider>('GULY_APP', {
                 p="t-[calc(var(--bew-top-bar-height)+10px)]" m-auto
                 w="lg:[calc(100%-200px)] [calc(100%-150px)]"
               >
-                <Transition name="page-fade" mode="out-in">
+                <Transition name="page-fade">
                   <Component :is="pages[activatedPage]" :key="activatedPage" />
                 </Transition>
               </div>
