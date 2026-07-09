@@ -2,6 +2,7 @@
 import { renderIcon } from '~/utils/icons'
 import { timeAgo } from '~/utils/main'
 import { friendlyError } from '~/utils/luogu-api'
+import { parseMarkdownContent } from '~/utils/markdown'
 import { AppPage } from '~/enums/appEnums'
 import { useGulyApp } from '~/composables/useAppProvider'
 
@@ -73,6 +74,7 @@ function openTeam(id: number) { navigateTo(AppPage.Team, `https://www.luogu.com.
 function backToTeams() { navigateTo(AppPage.Team, 'https://www.luogu.com.cn/user/mine/team') }
 function openUser(uid: number) { window.open(`https://www.luogu.com.cn/user/${uid}`, '_blank') }
 function openPost(id: number) { window.open(`https://www.luogu.com.cn/discuss/${id}`, '_blank') }
+function openTeamPage(section: string) { window.open(`https://www.luogu.com.cn/team/${teamId.value}/${section}`, '_blank') }
 function formatDate(ts: number): string { return ts ? new Date(ts * 1000).toLocaleDateString('zh-CN') : '' }
 
 function loadContent() {
@@ -119,7 +121,7 @@ watch(teamId, () => loadContent())
         <!-- Notice -->
         <div v-if="detail.notice" bg="$bew-content" rounded="$bew-radius" p-6 mb-6 shadow="[var(--bew-shadow-1)]" border="1 $bew-border-color" style="backdrop-filter:var(--bew-filter-glass-1)">
           <h2 style="font-size:var(--bew-base-font-size);font-weight:700;color:var(--bew-text-1)" mb-2>团队公告</h2>
-          <div style="font-size:var(--bew-base-font-size);color:var(--bew-text-2);white-space:pre-wrap;line-height:1.6">{{ detail.notice }}</div>
+          <div class="markdown-body" style="font-size:var(--bew-base-font-size);color:var(--bew-text-1);line-height:1.6" v-html="parseMarkdownContent(detail.notice)" />
         </div>
         <!-- Usage dashboard -->
         <div v-if="detail.usages" bg="$bew-content" rounded="$bew-radius" p-6 mb-6 shadow="[var(--bew-shadow-1)]" border="1 $bew-border-color" style="backdrop-filter:var(--bew-filter-glass-1)">
@@ -131,7 +133,7 @@ watch(teamId, () => loadContent())
               {k:'contest',l:'比赛',icon:'mingcute:trophy-line'},
               {k:'file',l:'文件',icon:'mingcute:folder-line'},
             ]" :key="item.k" bg="$bew-fill-1" rounded="$bew-radius" p-4 cursor="pointer" class="usage-card"
-              @click="window.open('https://www.luogu.com.cn/team/'+teamId+'/'+item.k, '_blank')">
+              @click="openTeamPage(item.k)">
               <div flex="~ items-center gap-2" mb-1>
                 <span v-html="renderIcon(item.icon,18)" :style="{color:'var(--bew-theme-color)',display:'contents'}" />
                 <span style="font-size:var(--bew-base-font-size);color:var(--bew-text-1);font-weight:600">{{ item.l }}</span>
