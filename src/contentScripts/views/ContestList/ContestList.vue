@@ -30,15 +30,11 @@ async function fetchContests() {
 }
 
 function openContest(id: number) { window.open(`https://www.luogu.com.cn/contest/${id}`, '_blank') }
-function statusLabel(s: number): string {
-  if (s === 1 || s === 'ongoing') return '进行中'
-  if (s === 2 || s === 'ended') return '已结束'
-  return '即将开始'
-}
-function statusColor(s: number): string {
-  if (s === 1 || s === 'ongoing') return 'var(--bew-error-color)'
-  if (s === 2 || s === 'ended') return 'var(--bew-text-4)'
-  return 'var(--bew-success-color)'
+function getContestStatus(c: any): { label: string; color: string } {
+  const now = Math.floor(Date.now() / 1000)
+  if (c.startTime && now < c.startTime) return { label: '即将开始', color: 'var(--bew-success-color)' }
+  if (c.endTime && now < c.endTime) return { label: '进行中', color: 'var(--bew-error-color)' }
+  return { label: '已结束', color: 'var(--bew-text-4)' }
 }
 function timeStr(ts: number) { return new Date(ts * 1000).toLocaleDateString('zh-CN') }
 
@@ -61,7 +57,7 @@ onMounted(fetchContests)
       <div v-if="!loading && contests.length>0" grid="~ cols-1 md:cols-2 xl:cols-3" gap-4 mb-6>
         <div v-for="(c, idx) in contests" :key="c.id" class="stagger-card contest-card" :style="{ '--card-index': idx, backdropFilter: 'var(--bew-filter-glass-1)' }" bg="$bew-content" rounded="$bew-radius" p-5 shadow="[var(--bew-shadow-1),var(--bew-shadow-edge-glow-1)]" border="1 $bew-border-color" cursor="pointer" @click="openContest(c.id)">
           <div flex="~ items-center justify-between" mb-3>
-            <span :style="{background:`${statusColor(c.status as any)}20`,color:statusColor(c.status as any),fontSize:'var(--bew-base-font-size)',fontWeight:600,padding:'2px 10px',borderRadius:'9999px'}">{{ statusLabel(c.status as any) }}</span>
+            <span :style="{background:`${getContestStatus(c).color}20`,color:getContestStatus(c).color,fontSize:'var(--bew-base-font-size)',fontWeight:600,padding:'2px 10px',borderRadius:'9999px'}">{{ getContestStatus(c).label }}</span>
             <span v-if="c.rated" style="font-size:var(--bew-base-font-size);color:var(--bew-success-color);font-weight:600">Rated</span>
           </div>
           <h3 style="font-size:var(--bew-base-font-size);color:var(--bew-text-1);font-weight:600" mb-3>{{ c.name }}</h3>
