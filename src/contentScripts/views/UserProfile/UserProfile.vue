@@ -3,6 +3,10 @@ import { renderIcon } from '~/utils/icons'
 import { getCsrfToken } from '~/utils/luogu-api'
 import { ccfLabel, ccfColor } from '~/utils/difficulty'
 import { parseMarkdownContent } from '~/utils/markdown'
+import { AppPage } from '~/enums/appEnums'
+import { useGulyApp } from '~/composables/useAppProvider'
+
+const { navigateTo } = useGulyApp()
 
 const uid = computed(() => {
   const m = document.URL.match(/\/user\/(\d+)/)
@@ -62,12 +66,12 @@ function goToMyPage(page: string) {
 const quickEntries = computed(() => {
   const id = uid.value
   return [
-  { label: '通知', icon: 'mingcute:notification-line', color: '#e74c3c', onClick: () => { window.location.href = 'https://www.luogu.com.cn/user/notification' } },
-  { label: '练习', icon: 'mingcute:chart-bar-line', color: '#52c41a', onClick: () => { window.location.href = `https://www.luogu.com.cn/user/${id}/practice` } },
-  { label: '题库', icon: 'mingcute:code-line', color: '#3498db', onClick: () => goToMyPage('problem') },
-  { label: '比赛', icon: 'mingcute:trophy-line', color: '#f39c12', onClick: () => goToMyPage('contestJoined') },
-  { label: '收藏', icon: 'mingcute:bookmark-line', color: '#722ed1', onClick: () => goToMyPage('trainingFav') },
-  { label: '团队', icon: 'mingcute:team-line', color: '#13c2c2', onClick: () => goToMyPage('team') },
+  { label: '通知', icon: 'mingcute:notification-line', color: '#e74c3c', onClick: () => navigateTo(AppPage.Notification, 'https://www.luogu.com.cn/user/notification') },
+  { label: '练习', icon: 'mingcute:chart-bar-line', color: '#52c41a', onClick: () => navigateTo(AppPage.Practice, `https://www.luogu.com.cn/user/${id}/practice`) },
+  { label: '题库', icon: 'mingcute:code-line', color: '#3498db', onClick: () => navigateTo(AppPage.MyProblems, 'https://www.luogu.com.cn/user/mine/problem') },
+  { label: '比赛', icon: 'mingcute:trophy-line', color: '#f39c12', onClick: () => navigateTo(AppPage.MyContests, 'https://www.luogu.com.cn/user/mine/contestJoined') },
+  { label: '收藏', icon: 'mingcute:bookmark-line', color: '#722ed1', onClick: () => navigateTo(AppPage.TrainingFav, 'https://www.luogu.com.cn/user/mine/trainingFav') },
+  { label: '团队', icon: 'mingcute:team-line', color: '#13c2c2', onClick: () => navigateTo(AppPage.Team, 'https://www.luogu.com.cn/user/mine/team') },
 ]})
 
 const relationshipLabel = computed(() => {
