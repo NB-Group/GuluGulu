@@ -9,6 +9,7 @@ const props = withDefaults(defineProps<Props>(), { min: 0, max: 100 })
 const emit = defineEmits(['update:modelValue'])
 
 const sliderRef = ref<HTMLInputElement>()
+let dragging = false
 
 function pct(v: number) {
   return ((v - props.min) / (props.max - props.min)) * 100
@@ -17,18 +18,23 @@ function pct(v: number) {
 function applyFill(v: number) {
   const el = sliderRef.value
   if (!el) return
-  const p = pct(v)
-  el.style.setProperty('--s-pct', `${p}%`)
+  el.style.setProperty('--s-pct', `${pct(v)}%`)
 }
 
 function onInput(e: Event) {
+  dragging = true
   const v = Number((e.target as HTMLInputElement).value)
   emit('update:modelValue', v)
   applyFill(v)
 }
 
+function onMouseDown() { dragging = true }
+function onMouseUp() { dragging = false; applyFill(props.modelValue) }
+
 onMounted(() => nextTick(() => applyFill(props.modelValue)))
-watch(() => props.modelValue, v => applyFill(v))
+watch(() => props.modelValue, (v) => {
+  if (!dragging) applyFill(v)
+})
 </script>
 
 <template>
@@ -41,6 +47,10 @@ watch(() => props.modelValue, v => applyFill(v))
       :value="modelValue"
       class="slider"
       @input="onInput"
+      @mousedown="onMouseDown"
+      @mouseup="onMouseUp"
+      @touchstart="onMouseDown"
+      @touchend="onMouseUp"
     >
     <span text="sm $bew-text-2" shrink-0>{{ label }}</span>
   </label>
