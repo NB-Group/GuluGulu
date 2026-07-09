@@ -9,23 +9,32 @@ import {
 } from '@vueuse/core'
 import { storage } from 'webextension-polyfill'
 
+// Track the last value we wrote so we can ignore re-reads of our own writes
+const writeCache = new Map<string, string>()
+
 const storageLocal: StorageLikeAsync = {
   removeItem(key: string) {
     try { localStorage.removeItem(key) } catch {}
+    writeCache.delete(key)
     return storage.local.remove(key)
   },
 
   setItem(key: string, value: string) {
-    // Sync to localStorage so content script can read theme synchronously
+    writeCache.set(key, value)
     try { localStorage.setItem(key, value) } catch {}
     return storage.local.set({ [key]: value })
   },
 
   async getItem(key: string) {
-    // Try localStorage first for instant availability on next page load
+    // If we just wrote this exact value, return it directly (avoid re-parse loop)
+    const cached = writeCache.get(key)
+    if (cached !== undefined) {
+      writeCache.delete(key)
+      return cached
+    }
     try {
-      const cached = localStorage.getItem(key)
-      if (cached !== null) return cached
+      const local = localStorage.getItem(key)
+      if (local !== null) return local
     } catch {}
     return (await storage.local.get(key))[key]
   },
