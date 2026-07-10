@@ -227,8 +227,11 @@ async function sendMessage() {
     })
     const json = await res.json()
     if (json?._empty !== undefined || res.ok) {
+      // Use negative timestamp as temp ID — won't collide with server IDs
+      const tempId = -Date.now()
+      const tempTime = Math.floor(Date.now() / 1000)
       const newMsgObj: Message = {
-        id: Date.now(),
+        id: tempId,
         sender: { uid: currentUid.value, name: currentName.value, avatar: `https://cdn.luogu.com.cn/upload/usericon/${currentUid.value}.png`, color: '', badge: null },
         receiver: activeChatUser.value || { uid: activeChatUid.value!, name: '', avatar: '', color: '', badge: null },
         time: Math.floor(Date.now() / 1000),
@@ -327,7 +330,16 @@ onMessagePoll((json: any) => {
   if (activeChatUid.value) {
     const newMsgs = msgs.filter((m: Message) =>
       Number(m.sender.uid) === activeChatUid.value || Number(m.receiver.uid) === activeChatUid.value
-    ).filter((m: Message) => !messages.value.find(x => x.id === m.id))
+    ).filter((m: Message) => {
+      // Check for duplicates: match by server ID, or by content+time (±2s) for temp messages
+      const dup = messages.value.find(x => {
+        if (x.id === m.id) return true
+        // Our temp IDs are negative; match sent messages by content+time
+        if (x.id < 0 && x.content === m.content && Math.abs((x.time || 0) - (m.time || 0)) <= 2) return true
+        return false
+      })
+      return !dup
+    })
     if (newMsgs.length > 0) {
       messages.value = [...messages.value, ...newMsgs].sort((a, b) => (a.time || 0) - (b.time || 0))
       scrollToBottom(true)

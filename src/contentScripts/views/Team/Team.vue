@@ -280,8 +280,7 @@ watch(teamSection, () => { if (teamId.value && teamSection.value) fetchTeamSecti
             <div grid="~ cols-2 md:cols-3" gap-3>
               <div v-for="(item, idx) in [
                 {k:'problem',l:'题目',icon:'mingcute:code-line',path:'problem'},
-                {k:'homework',l:'作业',icon:'mingcute:document-line',path:'homework'},
-                {k:'training',l:'题单',icon:'mingcute:book-4-line',path:'training'},
+                {k:'training',l:'作业',icon:'mingcute:document-line',path:'homework',usageKey:'training'},
                 {k:'contest',l:'比赛',icon:'mingcute:trophy-line',path:'contest'},
                 {k:'member',l:'成员',icon:'mingcute:team-line',path:'member'},
                 {k:'file',l:'文件',icon:'mingcute:folder-line',path:'file'},
@@ -292,11 +291,8 @@ watch(teamSection, () => { if (teamId.value && teamSection.value) fetchTeamSecti
                   <span style="font-size:var(--bew-base-font-size);color:var(--bew-text-1);font-weight:600">{{ item.l }}</span>
                 </div>
                 <div style="font-size:.85em;color:var(--bew-text-3)">
-                  <span v-if="detail.usages[item.k]?.[0] !== undefined">
-                    {{ item.k === 'file' ? formatFileSize(detail.usages[item.k][0]) : (detail.usages[item.k][0] + ' 个') }}
-                  </span>
-                  <span v-else-if="item.k === 'homework'">
-                    {{ detail.usages.training?.[0] || 0 }} 个
+                  <span v-if="item.usageKey ? (detail.usages[item.usageKey]?.[0] !== undefined) : (detail.usages[item.k]?.[0] !== undefined)">
+                    {{ item.k === 'file' ? formatFileSize(detail.usages[item.usageKey || item.k][0]) : (detail.usages[item.usageKey || item.k][0] + ' 个') }}
                   </span>
                   <span v-else>—</span>
                 </div>
