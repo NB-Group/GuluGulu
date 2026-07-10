@@ -95,15 +95,21 @@ async function handleCheckIn() {
       credentials: 'same-origin',
     })
     const data = await res.json()
-    if (data?.code === 200 && data?.html) {
-      fortuneResult.value = parsePunchHtml(data.html)
+    // code 200: success (html=fortune card), code 201: already checked in today
+    if (data?.code === 200) {
+      if (data?.html) fortuneResult.value = parsePunchHtml(data.html)
       checkInDone.value = true
       saveCheckInState()
       checkInMsg.value = ''
-    } else if (data?.code === 201 || data?.message?.includes('已经打过')) {
+    } else if (data?.code === 201 || data?.message?.includes('已经打过') || data?.message?.includes('已经打卡')) {
       checkInDone.value = true
       saveCheckInState()
       checkInMsg.value = '今日已打卡'
+    } else if (res.status === 200) {
+      // API returned 200 OK but unexpected body — treat as success
+      checkInDone.value = true
+      saveCheckInState()
+      checkInMsg.value = ''
     } else {
       checkInMsg.value = data?.message || data?.data || '打卡失败，请重试'
     }

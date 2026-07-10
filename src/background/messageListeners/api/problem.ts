@@ -36,21 +36,21 @@ const API_PROBLEM = {
     const qs = params.toString()
     const url = `https://www.luogu.com.cn/problem/list${qs ? '?' + qs : ''}`
 
-    console.log('[GulyGuly BG] fetching:', url)
+    console.log('[GuluGulu BG] fetching:', url)
     const res = await fetch(url)
-    console.log('[GulyGuly BG] status:', res.status)
+    console.log('[GuluGulu BG] status:', res.status)
     if (!res.ok) {
       return { error: `HTTP ${res.status}` }
     }
     const html = await res.text()
-    console.log('[GulyGuly BG] html len:', html.length)
+    console.log('[GuluGulu BG] html len:', html.length)
     const match = html.match(/<script\s+id="lentille-context"\s+type="application\/json">([^<]+)<\/script>/)
     if (match?.[1]) {
       const data = JSON.parse(match[1])
-      console.log('[GulyGuly BG] parsed OK, count:', data?.data?.problems?.count)
+      console.log('[GuluGulu BG] parsed OK, count:', data?.data?.problems?.count)
       return data
     }
-    console.log('[GulyGuly BG] no lentille-context, html:', html.slice(0, 200))
+    console.log('[GuluGulu BG] no lentille-context, html:', html.slice(0, 200))
     return { error: 'No data found' }
   },
 

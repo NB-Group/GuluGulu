@@ -134,7 +134,7 @@ function loadRealData() {
     loading.value = false
   }
   catch (e) {
-    console.error('[GulyGuly] Failed to load problem data:', e)
+    console.error('[GuluGulu] Failed to load problem data:', e)
     loadError.value = true
     loading.value = false
   }

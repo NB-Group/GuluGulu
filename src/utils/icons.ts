@@ -27,7 +27,7 @@ export function renderIcon(name: string, size = 24): string {
 
   const icon = icons[iconName]
   if (!icon) {
-    console.warn('[GulyGuly icon] missing icon:', iconName, 'in', prefix, 'available:', Object.keys(icons).slice(0, 5))
+    console.warn('[GuluGulu icon] missing icon:', iconName, 'in', prefix, 'available:', Object.keys(icons).slice(0, 5))
     return ''
   }
 

@@ -40,7 +40,7 @@ function getActivatedPage(): AppPage {
     return AppPage.ProblemList
 
   // Problem detail
-  if (/\/problem\/[A-Z]?\d+/i.test(currentUrl))
+  if (/\/problem\/[A-Za-z0-9_]+/i.test(currentUrl))
     return AppPage.ProblemDetail
 
   // Contest list
@@ -213,7 +213,7 @@ async function onDOMLoaded() {
       '.lfe-header, header.lfe-header, .header, nav.header, .navbar, #app > header, .top-nav'
     )
 
-    // Clear the original Luogu content — GulyGuly takes over the full page
+    // Clear the original Luogu content — GuluGulu takes over the full page
     document.body.innerHTML = ''
 
     // Re-inject CSRF meta tag (needed for submission)
@@ -345,7 +345,7 @@ function injectApp() {
       setupApp(app)
       app.mount(root)
     } catch (e) {
-      console.error('[GulyGuly] mount failed:', e)
+      console.error('[GuluGulu] mount failed:', e)
     }
   }
 

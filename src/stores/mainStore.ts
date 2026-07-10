@@ -10,7 +10,7 @@ export interface DockItem {
   openInNewTab: boolean
   useOriginalLuoguPage: boolean
   url: string
-  hasGulyPage: boolean // Whether GulyGuly has a page for this item
+  hasGulyPage: boolean // Whether GuluGulu has a page for this item
 }
 
 export interface HomeTab {

@@ -5,7 +5,7 @@ import { setupTabMsgLstnrs } from './messageListeners/tabs'
 
 browser.runtime.onInstalled.addListener(async () => {
   // eslint-disable-next-line no-console
-  console.log('GulyGuly extension installed')
+  console.log('GuluGulu extension installed')
 })
 
 function isExtensionUri(url: string) {

@@ -55,8 +55,8 @@ onMounted(fetchProblems)
             <span v-html="renderIcon('mingcute:check-circle-line', 14)" style="display:contents" /> 通过率 {{ passRate(p.accepted, p.submitted) }}%
           </div>
         </div>
+        <div v-if="problems.length === 0" style="text-align:center;color:var(--bew-text-3);font-size:var(--bew-base-font-size)" py-8>获取题目失败</div>
       </div>
-      <div v-if="!loading && problems.length === 0" style="text-align:center;color:var(--bew-text-3);font-size:var(--bew-base-font-size)" py-8>获取题目失败</div>
       </Transition>
     </div>
   </div>

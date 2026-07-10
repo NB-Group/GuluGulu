@@ -29,7 +29,7 @@ function getPageFromUrl(): AppPage {
   const url = document.URL
 
   if (/\/problem\/list/i.test(url)) return AppPage.ProblemList
-  if (/\/problem\/[A-Z]?\d+/i.test(url)) return AppPage.ProblemDetail
+  if (/\/problem\/[A-Za-z0-9_]+/i.test(url)) return AppPage.ProblemDetail
   if (/\/contest\/list/i.test(url)) return AppPage.ContestList
   if (/\/contest\/\d+/i.test(url)) return AppPage.ContestDetail
   if (/\/ranking/i.test(url)) return AppPage.Ranking
@@ -102,7 +102,7 @@ const reachTop = ref<boolean>(true)
 const showGulyPage = computed((): boolean => {
   if (isInIframe())
     return false
-  // Show GulyGuly full UI on all supported Luogu pages
+  // Show GuluGulu full UI on all supported Luogu pages
   const url = document.URL
   return /https?:\/\/(?:www\.)?luogu\.com(?:\.cn)?/.test(url)
     || /https?:\/\/(?:www\.)?luogu\.org/.test(url)
@@ -180,22 +180,30 @@ watch(() => [settings.value.disableFrostedGlass, settings.value.reduceFrostedGla
 
 // Listen to Luogu's own SPA navigation (hooked by inject/index.js)
 function onHistoryChange() {
+  console.log('[historyChange] navigatingFromUs:', navigatingFromUs)
+  if (navigatingFromUs) return
   const url = window.location.href
+  console.log('[historyChange] url:', url, 'currentUrl:', currentUrl.value)
   if (url !== currentUrl.value) {
     currentUrl.value = url
     const page = getPageFromUrl()
+    console.log('[historyChange] page:', page, 'activatedPage:', activatedPage.value)
     if (page !== activatedPage.value) {
       activatedPage.value = page
+      console.log('[historyChange] changed to:', page)
     }
   }
 }
 window.addEventListener('historyChange', onHistoryChange)
 // Handle browser back/forward buttons
 function onPopState() {
+  console.log('[popstate] url:', window.location.href, 'currentUrl:', currentUrl.value)
   currentUrl.value = window.location.href
   const page = getPageFromUrl()
+  console.log('[popstate] page:', page, 'activatedPage:', activatedPage.value)
   if (page !== activatedPage.value) {
     activatedPage.value = page
+    console.log('[popstate] changed to:', page)
   }
 }
 window.addEventListener('popstate', onPopState)
@@ -203,7 +211,7 @@ window.addEventListener('popstate', onPopState)
 onMounted(() => {
   window.dispatchEvent(new CustomEvent(GULY_MOUNTED))
   // Only normalize URL for list pages (not detail pages with IDs)
-  const detailPages = [AppPage.ProblemDetail, AppPage.Blog, AppPage.Record, AppPage.ContestDetail, AppPage.Training, AppPage.UserProfile, AppPage.Solution, AppPage.Article, AppPage.Practice]
+  const detailPages = [AppPage.ProblemDetail, AppPage.Blog, AppPage.Record, AppPage.ContestDetail, AppPage.Training, AppPage.UserProfile, AppPage.Solution, AppPage.Article, AppPage.Practice, AppPage.Team]
   if (!detailPages.includes(activatedPage.value)) {
     const url = mainStore.getLuoguWebPageURLByPage(activatedPage.value)
     if (url && url !== window.location.href) {
@@ -224,27 +232,31 @@ onMounted(() => {
 })
 
 const currentUrl = ref(window.location.href)
+let navigatingFromUs = false
 
 function navigateTo(pageName: AppPage, url?: string) {
   const osInstance = scrollbarRef.value?.osInstance?.()
   const scrollTopValue: number = osInstance?.elements?.().viewport?.scrollTop || 0
-
-  // Update URL even for same-page navigation (e.g. list→detail)
   const targetUrl = url || mainStore.getLuoguWebPageURLByPage(pageName)
-  if (targetUrl && targetUrl !== window.location.href) {
+  const urlChanged = targetUrl && targetUrl !== window.location.href
+
+  // Guard: prevent historyChange from pre-setting activatedPage
+  navigatingFromUs = true
+  if (urlChanged) {
     history.pushState({ page: pageName }, '', targetUrl)
     currentUrl.value = targetUrl
   }
+  navigatingFromUs = false
 
-  if (activatedPage.value === pageName) {
-    if (activatedPage.value !== AppPage.Search) {
-      if (scrollTopValue === 0)
-        handleThrottledPageRefresh()
-      else
-        handleThrottledBackToTop()
+  // Same page AND same URL → just refresh, don't re-mount
+  if (!urlChanged && activatedPage.value === pageName) {
+    if (pageName !== AppPage.Search) {
+      if (scrollTopValue === 0) handleThrottledPageRefresh()
+      else handleThrottledBackToTop()
     }
     return
   }
+
   activatedPage.value = pageName
 }
 
@@ -378,7 +390,7 @@ provide<GulyAppProvider>('GULY_APP', {
                 p="t-[calc(var(--bew-top-bar-height)+10px)]" m-auto
                 w="lg:[calc(100%-200px)] [calc(100%-150px)]"
               >
-                <Transition name="page-fade" mode="out-in">
+                <Transition name="page-fade">
                   <Component :is="pages[activatedPage]" :key="activatedPage" />
                 </Transition>
               </div>

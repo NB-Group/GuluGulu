@@ -20,7 +20,7 @@ interface ContestProblem {
 }
 interface ScoreboardRow {
   rank: number; user: { uid: number; name: string; avatar: string; color: string }
-  score: number; scores: (number | null)[]; totalTime?: number
+  score: number; scores: ({ score: number; time: number } | null)[]; totalTime?: number
 }
 
 const contest = ref<any>(null)
@@ -68,13 +68,15 @@ async function fetchContestData() {
       const cd = ctx?.currentData || ctx?.data || {}
       contest.value = cd?.contest || cd || null
       if (contest.value) {
-        problems.value = (contest.value.problems || []).map((p: any, i: number) => ({
-          pid: p.pid || String.fromCharCode(65 + i),
-          title: p.title || p.name || '',
+        // contestProblems is at cd level (sibling of contest), NOT inside contest
+        const rawProblems = cd?.contestProblems || contest.value.problems || []
+        problems.value = rawProblems.map((p: any, i: number) => ({
+          pid: p.problem?.pid || p.pid || String.fromCharCode(65 + i),
+          title: p.problem?.title || p.problem?.name || p.title || p.name || '',
           score: p.score || p.fullScore || p.point || 100,
-          difficulty: p.difficulty,
-          submitted: p.submittedCount || p.submitted,
-          accepted: p.acceptedCount || p.accepted,
+          difficulty: p.problem?.difficulty || p.difficulty,
+          submitted: p.problem?.submittedCount || p.submitted,
+          accepted: p.problem?.acceptedCount || p.accepted,
         }))
         userRegistration.value = cd.joined ? { registered: true } : (contest.value.userRegistration || contest.value.registration || null)
       }
@@ -186,13 +188,23 @@ async function fetchScoreboard(page = 1) {
     const json = await res.json()
     const data = json?.currentData || json?.data || json
     if (data?.scoreboard?.result) {
-      scoreboard.value = data.scoreboard.result.map((r: any) => ({
-        rank: r.rank || r.idx,
-        user: { uid: r.user?.uid || r.uid, name: r.user?.name || r.name || '', avatar: r.user?.avatar || `https://cdn.luogu.com.cn/upload/usericon/${r.user?.uid || r.uid}.png`, color: r.user?.color || r.color || '' },
-        score: r.score || r.totalScore || 0,
-        scores: r.scores || r.problemScores || [],
-        totalTime: r.totalTime || r.time || 0,
-      }))
+      scoreboard.value = data.scoreboard.result.map((r: any, i: number) => {
+        // details is { "P1356": {score, runningTime}, ... } — map to problem order
+        const detailMap = r.details || {}
+        const problemScores = problems.value.map(p => {
+          const d = detailMap[p.pid]
+          return d ? { score: d.score, time: d.runningTime } : null
+        })
+        // Total score from sum of problem scores
+        const totalScore = problemScores.reduce((s, p) => s + (p?.score || 0), 0)
+        return {
+          rank: r.rank || r.idx || (i + 1),
+          user: { uid: r.user?.uid || r.uid, name: r.user?.name || r.name || '', avatar: r.user?.avatar || `https://cdn.luogu.com.cn/upload/usericon/${r.user?.uid || r.uid}.png`, color: r.user?.color || r.color || '' },
+          score: r.score || totalScore || 0,
+          scores: problemScores,
+          totalTime: r.totalTime || r.runningTime || 0,
+        }
+      })
       rankingTotal.value = data.scoreboard.count || scoreboard.value.length
     }
   } catch {}
@@ -397,8 +409,8 @@ watch(activeTab, (t) => { if (t === 'ranking' && scoreboard.value.length === 0) 
                     <img :src="row.user.avatar" style="width:24px;height:24px;border-radius:50%;object-fit:cover" @error="(e:any) => e.target.style.display='none'" />
                     <span :style="{ color: row.user.color ? `var(--bew-${row.user.color})` : 'var(--bew-text-1)', fontWeight: 600 }">{{ row.user.name }}</span>
                   </td>
-                  <td v-for="(s, si) in row.scores" :key="si" px-4 py-3 text="center" fw-bold :style="{ color: s != null && s >= (problems[si]?.score||100) ? 'var(--bew-success-color)' : s != null ? 'var(--bew-error-color)' : 'var(--bew-text-4)' }">
-                    {{ s != null ? s : '-' }}
+                  <td v-for="(s, si) in row.scores" :key="si" px-4 py-3 text="center" fw-bold :style="{ color: s != null && s.score >= (problems[si]?.score||100) ? 'var(--bew-success-color)' : s != null ? 'var(--bew-error-color)' : 'var(--bew-text-4)' }">
+                    {{ s != null ? s.score : '-' }}
                   </td>
                   <td px-4 py-3 text="right" fw-bold style="color:var(--bew-text-1)">{{ row.score }}</td>
                 </tr>

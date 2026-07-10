@@ -51,7 +51,7 @@ function refreshPage() {
             将跳转到洛谷官方登录页面（含验证码/CAPTCHA 支持）
           </p>
           <p style="font-size: 0.75rem; color: var(--bew-text-3);" mb-6>
-            登录成功后会自动回到首页，GulyGuly 将接管并显示您的个人信息
+            登录成功后会自动回到首页，GuluGulu 将接管并显示您的个人信息
           </p>
           <Button type="primary" block center @click="doLogin">
             <span v-html="renderIcon('mingcute:arrow-right-line', 16)" style="display:contents" />

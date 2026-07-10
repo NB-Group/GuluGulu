@@ -86,7 +86,7 @@ export function extractProblemData(): any {
     return JSON.parse(el.textContent)
   }
   catch (e) {
-    console.warn('[GulyGuly] Failed to parse lentille-context:', e)
+    console.warn('[GuluGulu] Failed to parse lentille-context:', e)
     return null
   }
 }

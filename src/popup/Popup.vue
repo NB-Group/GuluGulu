@@ -11,7 +11,7 @@ function openLuogu() {
 <template>
   <main class="w-[300px] px-4 py-5 text-center text-gray-700 dark:text-gray-200">
     <div text="xl" fw-bold mb-2>
-      GulyGuly
+      GuluGulu
     </div>
     <p class="mt-2 opacity-50">
       Luogu beautifier

@@ -6,7 +6,7 @@ import SettingsItemGroup from '../components/SettingsItemGroup.vue'
 
 <template>
   <div flex="~ col gap-4">
-    <SettingsItemGroup title="关于 GulyGuly">
+    <SettingsItemGroup title="关于 GuluGulu">
       <SettingsItem title="版本" desc="当前扩展版本">
         <span style="color:var(--bew-text-2);font-size:var(--bew-base-font-size)">{{ version }}</span>
       </SettingsItem>
