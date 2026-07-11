@@ -6,7 +6,6 @@ import { createApp } from 'vue'
 import { useDark } from '~/composables/useDark'
 import { GULY_MOUNTED } from '~/constants/globalEvents'
 import { AppPage } from '~/enums/appEnums'
-import { settings } from '~/logic'
 import { setupApp } from '~/logic/common-setup'
 import RESET_GULY_CSS from '~/styles/reset.css?raw'
 import { runWhenIdle } from '~/utils/lazyLoad'
@@ -20,9 +19,11 @@ const isFirefox: boolean = /Firefox/i.test(navigator.userAgent)
 
 // Capture-phase: block `/` key from triggering Luogu's search when typing in GuluGulu's code editor
 document.addEventListener('keydown', (e) => {
-  if (e.key !== '/') return
+  if (e.key !== '/')
+    return
   const path = e.composedPath?.()
-  if (!path) return
+  if (!path)
+    return
   for (const node of path) {
     if (node instanceof HTMLElement && (node.tagName === 'TEXTAREA' || node.tagName === 'INPUT' || node.tagName === 'SELECT'))
       e.stopImmediatePropagation()
@@ -38,8 +39,10 @@ document.documentElement.appendChild(injectScript)
 
 // Fix `OverlayScrollbars` not working in Firefox
 if (isFirefox) {
-  if (window.requestIdleCallback) window.requestIdleCallback = window.requestIdleCallback.bind(window)
-  if (window.cancelIdleCallback) window.cancelIdleCallback = window.cancelIdleCallback.bind(window)
+  if (window.requestIdleCallback)
+    window.requestIdleCallback = window.requestIdleCallback.bind(window)
+  if (window.cancelIdleCallback)
+    window.cancelIdleCallback = window.cancelIdleCallback.bind(window)
   window.requestAnimationFrame = window.requestAnimationFrame.bind(window)
   window.cancelAnimationFrame = window.cancelAnimationFrame.bind(window)
   window.setTimeout = window.setTimeout.bind(window)
@@ -48,7 +51,7 @@ if (isFirefox) {
 
 const currentUrl = document.URL
 
-function getActivatedPage(): AppPage {
+function _getActivatedPage(): AppPage {
   // Homepage
   if (isHomePage())
     return AppPage.Home
@@ -58,7 +61,7 @@ function getActivatedPage(): AppPage {
     return AppPage.ProblemList
 
   // Problem detail
-  if (/\/problem\/[A-Za-z0-9_]+/i.test(currentUrl))
+  if (/\/problem\/\w+/i.test(currentUrl))
     return AppPage.ProblemDetail
 
   // Contest list
@@ -110,7 +113,8 @@ function isSupportedPages(): boolean {
     return false
 
   // Don't take over Luogu's auth pages
-  if (isAuthPage()) return false
+  if (isAuthPage())
+    return false
 
   if (
     /https?:\/\/(?:www\.)?luogu\.com\.cn/.test(currentUrl)
@@ -150,14 +154,16 @@ if (/https?:\/\/(?:www\.)?luogu\.com(?:\.cn)?/.test(currentUrl)
     const cachedDark = localStorage.getItem('gulugulu-dark')
     if (cachedDark === '1') {
       document.documentElement.classList.add('dark')
-    } else if (cachedDark === null) {
+    }
+    else if (cachedDark === null) {
       // First visit: use system preference
       if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
         document.documentElement.classList.add('dark')
       }
     }
     // cachedDark === '0' means light mode — do nothing
-  } catch {}
+  }
+  catch {}
 
   // Give the MAIN document a persistent, opaque background that flips with the
   // `.dark` class. The visible app background (AppBackground) lives inside the
@@ -208,13 +214,14 @@ setTimeout(() => {
 
 // Set the original Luogu top bar to `display: none` to prevent flash
 const removeOriginalTopBar = injectCSS(
-  `.lfe-header, .header, nav.header, .navbar, #app > header, header.lfe-header, .top-nav { visibility: hidden !important; }`
+  `.lfe-header, .header, nav.header, .navbar, #app > header, header.lfe-header, .top-nav { visibility: hidden !important; }`,
 )
 
 let onDOMLoadedCalled = false
 
 async function onDOMLoaded() {
-  if (onDOMLoadedCalled || !document.body) return
+  if (onDOMLoadedCalled || !document.body)
+    return
   onDOMLoadedCalled = true
 
   let originalTopBar: HTMLElement | null = null
@@ -237,11 +244,25 @@ async function onDOMLoaded() {
         userIdCookie = String(user.uid)
         userName = user.name || ''
       }
-    } catch {}
+    }
+    catch {}
+
+    // Wait up to 2s for Luogu's punch card to render, then extract it
+    for (let i = 0; i < 20; i++) {
+      try {
+        const punchEl = document.querySelector('.lg-punch')
+        if (punchEl && punchEl.innerHTML.includes('运势')) {
+          ;(window as any).__guly_punch = { done: true, html: punchEl.innerHTML }
+          break
+        }
+      }
+      catch {}
+      await new Promise(r => setTimeout(r, 100))
+    }
 
     // Try to find and preserve the Luogu top bar
     originalTopBar = document.querySelector<HTMLElement>(
-      '.lfe-header, header.lfe-header, .header, nav.header, .navbar, #app > header, .top-nav'
+      '.lfe-header, header.lfe-header, .header, nav.header, .navbar, #app > header, .top-nav',
     )
 
     // Clear the original Luogu content — GuluGulu takes over the full page
@@ -260,18 +281,6 @@ async function onDOMLoaded() {
       uid: userIdCookie,
       name: userName,
       csrfToken,
-    }
-
-    // Wait up to 2s for Luogu's punch card to render, then extract it
-    for (let i = 0; i < 20; i++) {
-      try {
-        const punchEl = document.querySelector('.lg-punch')
-        if (punchEl && punchEl.innerHTML.includes('运势')) {
-          ;(window as any).__guly_punch = { done: true, html: punchEl.innerHTML }
-          break
-        }
-      } catch {}
-      await new Promise(r => setTimeout(r, 100))
     }
 
     // Hide the original Luogu top bar — GuluGulu has its own TopBar + Dock
@@ -306,7 +315,8 @@ function waitForBodyThenInject() {
   // Fallback timeout
   setTimeout(() => {
     observer.disconnect()
-    if (document.body) onDOMLoaded()
+    if (document.body)
+      onDOMLoaded()
   }, 5000)
 }
 
@@ -315,7 +325,7 @@ if (document.readyState !== 'loading')
 else
   document.addEventListener('DOMContentLoaded', () => waitForBodyThenInject())
 
-function injectAppWhenIdle() {
+function _injectAppWhenIdle() {
   return new Promise<void>((resolve) => {
     runWhenIdle(async () => {
       injectApp()
@@ -352,11 +362,13 @@ function injectApp() {
     if (cachedDark === '1') {
       container.classList.add('dark')
       document.documentElement.classList.add('dark')
-    } else if (cachedDark === null && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+    }
+    else if (cachedDark === null && window.matchMedia('(prefers-color-scheme: dark)').matches) {
       container.classList.add('dark')
       document.documentElement.classList.add('dark')
     }
-  } catch {}
+  }
+  catch {}
   const root = document.createElement('div')
   const shadowDOM = container.attachShadow?.({ mode: 'open' }) || container
   const resetStyleEl = document.createElement('style')
@@ -367,7 +379,8 @@ function injectApp() {
   svgDiv.innerHTML = SVG_ICONS
   shadowDOM.appendChild(svgDiv)
 
-  if (!document.body) return
+  if (!document.body)
+    return
   document.body.appendChild(container)
 
   const mountApp = () => {
@@ -375,7 +388,8 @@ function injectApp() {
       const app = createApp(App)
       setupApp(app)
       app.mount(root)
-    } catch (e) {
+    }
+    catch (e) {
       console.error('[GuluGulu] mount failed:', e)
     }
   }
@@ -394,7 +408,8 @@ function injectApp() {
       .catch(() => {
         mountApp()
       })
-  } catch {
+  }
+  catch {
     mountApp()
   }
 }

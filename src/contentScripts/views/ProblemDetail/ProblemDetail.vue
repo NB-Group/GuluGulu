@@ -715,7 +715,6 @@ onUnmounted(() => {
             </div>
             <!-- Statement -->
             <div class="problem-statement" style="font-size:var(--bew-base-font-size);color:var(--bew-text-1);line-height:1.8;overflow-y:auto;flex:1">
-              <div v-if="problem.background" mb-4 class="markdown-body" v-html="renderedDescription.split(problem.description)[0]" />
               <div mb-4 v-html="renderedDescription" />
               <div v-if="problem.samples.length > 0" mt-6>
                 <h3 mb-3>
@@ -761,7 +760,7 @@ onUnmounted(() => {
                 <div v-if="contestProblems.length > 0" style="display:flex;align-items:center;gap:3px">
                   <span v-for="cp in contestProblems" :key="cp.no" style="padding:0 6px;border-radius:999px;cursor:pointer;font-size:.72em;font-weight:600;white-space:nowrap" :style="{ background: cp.pid === problemId ? 'var(--bew-theme-color)' : 'var(--bew-fill-2)', color: cp.pid === problemId ? '#fff' : 'var(--bew-text-2)' }" @click="switchToProblem(cp.pid)">{{ cp.no }}</span>
                 </div>
-                <select v-model="selectedLang.id" style="padding:2px 4px;background:var(--bew-fill-1);color:var(--bew-text-1);border:1px solid var(--bew-border-color);border-radius:4px;font-size:.85em;outline:none" @change="onLangChange(selectedLang)">
+                <select :value="selectedLang.id" style="padding:2px 4px;background:var(--bew-fill-1);color:var(--bew-text-1);border:1px solid var(--bew-border-color);border-radius:4px;font-size:.85em;outline:none" @change="(e: Event) => { const lang = LUOGU_LANGUAGES.find(l => l.id === Number((e.target as HTMLSelectElement).value)); if (lang) onLangChange(lang) }">
                   <option v-for="l in LUOGU_LANGUAGES" :key="l.id" :value="l.id">
                     {{ l.name }}
                   </option>
