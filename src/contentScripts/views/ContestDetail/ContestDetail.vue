@@ -118,25 +118,6 @@ async function handleRegister() {
   regLoading.value = false
 }
 
-async function handleUnregister() {
-  regLoading.value = true; regMsg.value = ''
-  try {
-    const csrf = getCsrfToken()
-    const res = await fetch(`https://www.luogu.com.cn/fe/api/contest/join/${contestId.value}`, {
-      method: 'DELETE',
-      headers: { 'X-CSRF-TOKEN': csrf, 'X-Requested-With': 'XMLHttpRequest' },
-      credentials: 'same-origin',
-    })
-    const json = await res.json()
-    if (json?.code === 200) {
-      userRegistration.value = null
-      regMsg.value = '已取消报名'
-    } else {
-      regMsg.value = json?.data || '取消报名失败'
-    }
-  } catch (e: any) { regMsg.value = '取消报名失败：' + (e.message || '网络错误') }
-  regLoading.value = false
-}
 
 // ============================================================
 // Problem statement loading
@@ -287,7 +268,7 @@ watch(activeTab, (t) => { if (t === 'ranking' && scoreboard.value.length === 0) 
               <span text="xs" fw-bold px-3 py-1 rounded-full :style="{ background: contestStatus.color + '20', color: contestStatus.color }">{{ contestStatus.label }}</span>
               <span text="xs" fw-bold px-3 py-1 rounded-full bg="$bew-theme-color-20" style="color:var(--bew-theme-color)">{{ c.ruleType || c.type || 'OI' }}</span>
               <span v-if="c.rated" text="xs" fw-bold px-3 py-1 rounded-full style="background:var(--bew-warning-color-20);color:var(--bew-warning-color)">Rated</span>
-              <span v-if="countdown()" text="xs" fw-bold px-3 py-1 rounded-full style="background:var(--bew-error-color-20);color:var(--bew-error-color)">{{ countdown() }}</span>
+              <template v-if="countdown()"><span text="xs" fw-bold px-3 py-1 rounded-full style="background:var(--bew-error-color-20);color:var(--bew-error-color)">{{ countdown() }}</span></template>
             </div>
             <h1 style="font-size:1.5rem;color:var(--bew-text-1);font-weight:700">{{ c.name }}</h1>
             <div v-if="c.host" style="font-size:var(--bew-base-font-size);color:var(--bew-text-2)" flex="~ items-center gap-2" mb-1>

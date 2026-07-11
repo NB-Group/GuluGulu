@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { onClickOutside, onKeyStroke, useMouseInElement } from '@vueuse/core'
-import type { Ref, UnwrapNestedRefs } from 'vue'
+import type { Ref } from 'vue'
 import { computed, reactive, ref } from 'vue'
 
 import { useGulyApp } from '~/composables/useAppProvider'
@@ -188,7 +188,6 @@ function handleScroll() {
 
 onKeyStroke('/', (e: KeyboardEvent) => {
   const path = e.composedPath?.() || []
-  const tags = path.filter(n => n instanceof HTMLElement).map(n => (n as HTMLElement).tagName)
   for (const node of path) {
     if (!(node instanceof HTMLElement)) continue
     const tag = node.tagName

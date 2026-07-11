@@ -281,6 +281,7 @@ async function onDOMLoaded() {
       uid: userIdCookie,
       name: userName,
       csrfToken,
+      color: '',
     }
 
     // Hide the original Luogu top bar — GuluGulu has its own TopBar + Dock

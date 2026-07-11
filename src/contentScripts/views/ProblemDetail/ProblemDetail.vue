@@ -171,9 +171,6 @@ const inContestMode = computed(() => !!contestId.value)
 const ideMode = ref(inContestMode.value || window.location.hash === '#ide')
 const isSplitView = computed(() => ideMode.value || inContestMode.value)
 
-function _toggleIDE() {
-  ideMode.value = !ideMode.value
-}
 
 // Resizable split
 const splitRatio = ref(40)
@@ -297,7 +294,6 @@ function switchToProblem(pid: string) {
 
 if (inContestMode.value)
   fetchContestProblems()
-const submitted = ref(false)
 const submitting = ref(false)
 const submitError = ref('')
 const copiedMarkdown = ref(false)
@@ -349,7 +345,7 @@ function onLangChange(lang: LuoguLanguage) {
   }
 }
 
-getDefaultCode(28) // Init with C++ template
+if (!codeContent.value) codeContent.value = getDefaultCode(28)
 
 // ============================================================
 // Computed
@@ -420,7 +416,6 @@ async function handleSubmit() {
   submitting.value = false
 
   if (result.status === 200 && result.rid) {
-    submitted.value = true
     lastRid.value = result.rid
     submitResult.value = `提交成功！评测记录 #${result.rid}`
     window.open(`https://www.luogu.com.cn/record/${result.rid}`, '_blank')
