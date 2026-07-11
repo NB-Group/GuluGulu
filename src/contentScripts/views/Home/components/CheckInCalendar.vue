@@ -96,8 +96,10 @@ async function handleCheckIn() {
     })
     const data = await res.json()
     // code 200: success (html=fortune card), code 201: already checked in today
+    // Luogu API now nests fortune HTML in more.html instead of root-level html
     if (data?.code === 200) {
-      if (data?.html) fortuneResult.value = parsePunchHtml(data.html)
+      const fortuneHtml = data?.html || data?.more?.html || ''
+      if (fortuneHtml) fortuneResult.value = parsePunchHtml(fortuneHtml)
       checkInDone.value = true
       saveCheckInState()
       checkInMsg.value = ''

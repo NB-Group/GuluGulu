@@ -180,30 +180,23 @@ watch(() => [settings.value.disableFrostedGlass, settings.value.reduceFrostedGla
 
 // Listen to Luogu's own SPA navigation (hooked by inject/index.js)
 function onHistoryChange() {
-  console.log('[historyChange] navigatingFromUs:', navigatingFromUs)
   if (navigatingFromUs) return
   const url = window.location.href
-  console.log('[historyChange] url:', url, 'currentUrl:', currentUrl.value)
   if (url !== currentUrl.value) {
     currentUrl.value = url
     const page = getPageFromUrl()
-    console.log('[historyChange] page:', page, 'activatedPage:', activatedPage.value)
     if (page !== activatedPage.value) {
       activatedPage.value = page
-      console.log('[historyChange] changed to:', page)
     }
   }
 }
 window.addEventListener('historyChange', onHistoryChange)
 // Handle browser back/forward buttons
 function onPopState() {
-  console.log('[popstate] url:', window.location.href, 'currentUrl:', currentUrl.value)
   currentUrl.value = window.location.href
   const page = getPageFromUrl()
-  console.log('[popstate] page:', page, 'activatedPage:', activatedPage.value)
   if (page !== activatedPage.value) {
     activatedPage.value = page
-    console.log('[popstate] changed to:', page)
   }
 }
 window.addEventListener('popstate', onPopState)
@@ -328,6 +321,8 @@ provide<GulyAppProvider>('GULY_APP', {
   openSettings,
   navigateTo,
 })
+onMounted(() => {
+})
 </script>
 
 <template>
@@ -390,7 +385,7 @@ provide<GulyAppProvider>('GULY_APP', {
                 p="t-[calc(var(--bew-top-bar-height)+10px)]" m-auto
                 w="lg:[calc(100%-200px)] [calc(100%-150px)]"
               >
-                <Transition name="page-fade">
+                <Transition name="page-fade" mode="out-in">
                   <Component :is="pages[activatedPage]" :key="activatedPage" />
                 </Transition>
               </div>

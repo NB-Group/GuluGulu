@@ -16,7 +16,7 @@ const props = defineProps<{
 // Problem ID — from URL or props
 // ============================================================
 function extractPidFromUrl(): string {
-  const match = document.URL.match(/\/problem\/([A-Z]?\d+)/i)
+  const match = document.URL.match(/\/problem\/([A-Za-z0-9_]+)/i)
   return match?.[1] || 'P1001'
 }
 const problemId = computed(() => props.pid || extractPidFromUrl())
@@ -340,6 +340,8 @@ function handleTabChange(tab: typeof activeTab.value) {
 // ============================================================
 onMounted(() => {
   loadRealData()
+  // Safety: force loading to false after 2s regardless of what happens
+  setTimeout(() => { if (loading.value) loading.value = false }, 2000)
 })
 </script>
 

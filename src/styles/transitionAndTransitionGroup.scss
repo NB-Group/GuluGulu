@@ -1,75 +1,59 @@
 .page-fade-enter-active {
-  transition: opacity 0.3s ease;
+  animation: page-fade-in 0.3s ease both;
   z-index: 1;
 }
 .page-fade-leave-active {
-  transition: opacity 0.3s ease;
+  animation: page-fade-out 0.3s ease both;
 }
-.page-fade-enter-from {
-  opacity: 0;
+@keyframes page-fade-in {
+  from { opacity: 0 }
+  to { opacity: 1 }
 }
-.page-fade-leave-to {
-  opacity: 0;
-}
-
-.fade-enter-active,
-.fade-leave-active {
-  transition: opacity 0.3s ease;
-}
-.fade-enter-from,
-.fade-leave-to {
-  opacity: 0;
+@keyframes page-fade-out {
+  from { opacity: 1 }
+  to { opacity: 0 }
 }
 
-.slide-fade-enter-active,
-.slide-fade-leave-active {
-  transition: all 0.5s ease;
-}
-.slide-fade-enter-from,
-.slide-fade-leave-to {
-  opacity: 0;
-}
+.fade-enter-active { animation: fade-in 0.3s ease both; }
+.fade-leave-active { animation: fade-out 0.3s ease both; }
+@keyframes fade-in { from { opacity: 0 } to { opacity: 1 } }
+@keyframes fade-out { from { opacity: 1 } to { opacity: 0 } }
 
-.list-enter-active,
-.list-leave-active {
-  transition: all 0.5s ease;
-}
-.list-enter-from,
-.list-leave-to {
-  opacity: 0;
-  transform: translateY(24px);
-}
+.slide-fade-enter-active { animation: slide-fade-in 0.5s ease both; }
+.slide-fade-leave-active { animation: slide-fade-out 0.5s ease both; }
+@keyframes slide-fade-in { from { opacity: 0 } to { opacity: 1 } }
+@keyframes slide-fade-out { from { opacity: 1 } to { opacity: 0 } }
 
-.modal-enter-active,
-.modal-leave-active {
-  transition: all 0.5s ease;
-  transform: translateZ(0);
-}
-.modal-enter-from,
-.modal-leave-to {
-  opacity: 0;
-  transform: scale(1.05) translateZ(0);
-}
+.list-enter-active { animation: list-in 0.5s ease both; }
+.list-leave-active { animation: list-out 0.5s ease both; }
+@keyframes list-in { from { opacity: 0; transform: translateY(24px) } to { opacity: 1; transform: translateY(0) } }
+@keyframes list-out { from { opacity: 1; transform: translateY(0) } to { opacity: 0; transform: translateY(24px) } }
 
-.dropdown-enter-active,
-.dropdown-leave-active {
-  transition: all 0.3s ease;
-  transform: translateZ(0);
-}
-.dropdown-enter-from,
-.dropdown-leave-to {
-  opacity: 0;
-  transform: scale(0.95) translateY(-16px) translateZ(0);
-  filter: blur(4px);
-}
+.modal-enter-active { animation: modal-in 0.5s ease both; }
+.modal-leave-active { animation: modal-out 0.5s ease both; }
+@keyframes modal-in { from { opacity: 0; transform: scale(1.05) } to { opacity: 1; transform: scale(1) } }
+@keyframes modal-out { from { opacity: 1; transform: scale(1) } to { opacity: 0; transform: scale(1.05) } }
 
-// Content reveal: fade-in + slight slide-up for post-loading content
+.dropdown-enter-active { animation: dropdown-in 0.3s ease both; }
+.dropdown-leave-active { animation: dropdown-out 0.3s ease both; }
+@keyframes dropdown-in { from { opacity: 0; transform: scale(.95) translateY(-16px); filter: blur(4px) } to { opacity: 1; transform: none; filter: none } }
+@keyframes dropdown-out { from { opacity: 1; transform: none; filter: none } to { opacity: 0; transform: scale(.95) translateY(-16px); filter: blur(4px) } }
+
+// Content reveal: fade-in + slight slide-up. Uses animation instead of
+// transition so animationend fires reliably (transitionend is flaky in Shadow DOM).
 .content-reveal-enter-active {
-  transition: opacity 0.4s ease, transform 0.4s ease;
+  animation: content-reveal-in 0.4s ease both;
 }
-.content-reveal-enter-from {
-  opacity: 0;
-  transform: translateY(12px);
+.content-reveal-leave-active {
+  animation: content-reveal-out 0.25s ease both;
+}
+@keyframes content-reveal-in {
+  from { opacity: 0; transform: translateY(12px) }
+  to { opacity: 1; transform: translateY(0) }
+}
+@keyframes content-reveal-out {
+  from { opacity: 1; transform: translateY(0) }
+  to { opacity: 0; transform: translateY(-8px) }
 }
 
 // Staggered row animation — use with :style="{ '--row-index': index }" on each item

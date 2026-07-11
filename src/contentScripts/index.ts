@@ -88,12 +88,8 @@ function isAuthPage(): boolean {
 }
 
 function isSupportedPages(): boolean {
-  if (isInIframe())
-    return false
-
-  // Don't take over Luogu's auth pages
+  if (isInIframe()) return false
   if (isAuthPage()) return false
-
   if (
     /https?:\/\/(?:www\.)?luogu\.com\.cn/.test(currentUrl)
     || /https?:\/\/(?:www\.)?luogu\.com/.test(currentUrl)
@@ -101,7 +97,6 @@ function isSupportedPages(): boolean {
   ) {
     return true
   }
-
   return false
 }
 

@@ -136,6 +136,7 @@ function formatFileSize(bytes: number): string {
 
 function loadContent() {
   if (teamId.value) {
+    loading.value = false // detail paths don't go through fetchTeamList
     detail.value = null; sectionData.value = []
     fetchTeamDetail(teamId.value)
     if (teamSection.value) fetchTeamSection(teamId.value, teamSection.value)
@@ -196,7 +197,7 @@ watch(teamSection, () => { if (teamId.value && teamSection.value) fetchTeamSecti
           <div v-else-if="sectionData.length === 0" text="center $bew-text-3" p-4>暂无内容</div>
 
           <template v-else>
-          <Transition name="content-reveal" mode="out-in">
+          <Transition name="content-reveal" mode="out-in" :duration="400">
           <!-- homework / training list -->
           <div v-if="teamSection === 'homework' || teamSection === 'training'" :key="'homework'">
             <div v-for="(item, idx) in sectionData" :key="item.id" bg="$bew-fill-1" rounded="$bew-radius" p-4 mb-3 class="stagger-row section-item" :style="{'--row-index':idx}" cursor="pointer" @click="openTrainingItem(item.id)">
@@ -266,7 +267,7 @@ watch(teamSection, () => { if (teamId.value && teamSection.value) fetchTeamSecti
         <!-- Overview (no section selected) -->
         <!-- ============================================================ -->
         <template v-if="!teamSection">
-        <Transition name="content-reveal" appear>
+        <Transition name="content-reveal" appear :duration="400">
         <div>
           <!-- Notice -->
           <div v-if="detail.notice" bg="$bew-content" rounded="$bew-radius" p-6 mb-6 shadow="[var(--bew-shadow-1)]" border="1 $bew-border-color" style="backdrop-filter:var(--bew-filter-glass-1)">
@@ -280,7 +281,8 @@ watch(teamSection, () => { if (teamId.value && teamSection.value) fetchTeamSecti
             <div grid="~ cols-2 md:cols-3" gap-3>
               <div v-for="(item, idx) in [
                 {k:'problem',l:'题目',icon:'mingcute:code-line',path:'problem'},
-                {k:'training',l:'作业',icon:'mingcute:document-line',path:'homework',usageKey:'training'},
+                {k:'homework',l:'作业',icon:'mingcute:document-line',path:'homework',usageKey:'training'},
+                {k:'training',l:'题单',icon:'mingcute:book-4-line',path:'training'},
                 {k:'contest',l:'比赛',icon:'mingcute:trophy-line',path:'contest'},
                 {k:'member',l:'成员',icon:'mingcute:team-line',path:'member'},
                 {k:'file',l:'文件',icon:'mingcute:folder-line',path:'file'},
