@@ -186,7 +186,18 @@ function handleScroll() {
   oldScrollTop.value = scrollTop.value
 }
 
-onKeyStroke('/', () => {
+onKeyStroke('/', (e: KeyboardEvent) => {
+  const path = e.composedPath?.() || []
+  const tags = path.filter(n => n instanceof HTMLElement).map(n => (n as HTMLElement).tagName)
+  for (const node of path) {
+    if (!(node instanceof HTMLElement)) continue
+    const tag = node.tagName
+    if (tag === 'TEXTAREA' || tag === 'INPUT' || tag === 'SELECT' || node.isContentEditable || node.getAttribute('contenteditable') === 'true') {
+      console.log('[TopBar] / blocked by:', tag)
+      return
+    }
+  }
+  console.log('[TopBar] / triggering search')
   toggleTopBarVisible(true)
 })
 

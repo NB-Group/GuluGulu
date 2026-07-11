@@ -210,7 +210,10 @@ onMounted(() => {
   nextTick(() => { if (obs && sentinelRef.value) obs.observe(sentinelRef.value) })
 })
 watch(sentinelRef, (el) => { obs?.disconnect(); if (el) obs?.observe(el as Element) })
-onUnmounted(() => obs?.disconnect())
+onUnmounted(() => {
+  obs?.disconnect()
+  if (tcHideTimer) clearTimeout(tcHideTimer)
+})
 </script>
 
 <template>

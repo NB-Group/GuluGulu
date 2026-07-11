@@ -43,7 +43,6 @@ export default defineConfig({
     cssCodeSplit: false,
     emptyOutDir: false,
     sourcemap: false, // https://github.com/vitejs/vite-plugin-vue/issues/35
-    charset: 'ascii', // Chrome rejects non-ASCII content scripts
     lib: {
       entry: r('src/contentScripts/index.ts'),
       name: packageJson.name,

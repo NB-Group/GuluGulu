@@ -2,12 +2,16 @@
 import { renderIcon } from '~/utils/icons'
 import { getCsrfToken, LUOGU_LANGUAGES, friendlyError } from '~/utils/luogu-api'
 import { parseMarkdownContent } from '~/utils/markdown'
+import { useGulyApp } from '~/composables/useAppProvider'
+
+const { currentUrl } = useGulyApp()
 
 // ============================================================
 // Contest ID from URL
 // ============================================================
 const contestId = computed(() => {
-  const m = document.URL.match(/\/contest\/(\d+)/)
+  const url = currentUrl.value || window.location.href
+  const m = url.match(/\/contest\/(\d+)/)
   return m ? Number(m[1]) : null
 })
 
@@ -20,7 +24,7 @@ interface ContestProblem {
 }
 interface ScoreboardRow {
   rank: number; user: { uid: number; name: string; avatar: string; color: string }
-  score: number; scores: ({ score: number; time: number } | null)[]; totalTime?: number
+  score: number; scores: (number | null)[]; totalTime?: number
 }
 
 const contest = ref<any>(null)
@@ -68,17 +72,20 @@ async function fetchContestData() {
       const cd = ctx?.currentData || ctx?.data || {}
       contest.value = cd?.contest || cd || null
       if (contest.value) {
-        // contestProblems is at cd level (sibling of contest), NOT inside contest
-        const rawProblems = cd?.contestProblems || contest.value.problems || []
-        problems.value = rawProblems.map((p: any, i: number) => ({
+        const allProblems = cd?.contestProblems || contest.value.problems || []
+        problems.value = allProblems.map((p: any, i: number) => ({
           pid: p.problem?.pid || p.pid || String.fromCharCode(65 + i),
-          title: p.problem?.title || p.problem?.name || p.title || p.name || '',
-          score: p.score || p.fullScore || p.point || 100,
-          difficulty: p.problem?.difficulty || p.difficulty,
-          submitted: p.problem?.submittedCount || p.submitted,
-          accepted: p.problem?.acceptedCount || p.accepted,
+          title: p.problem?.name || p.title || p.name || '',
+          score: p.score ?? p.problem?.score ?? 100,
+          difficulty: p.problem?.difficulty ?? p.difficulty,
+          submitted: p.submitted ?? p.problem?.submitted ?? p.submittedCount ?? 0,
+          accepted: p.accepted ?? p.problem?.accepted ?? p.acceptedCount ?? 0,
         }))
-        userRegistration.value = cd.joined ? { registered: true } : (contest.value.userRegistration || contest.value.registration || null)
+        userRegistration.value = cd.joined ? { registered: true } : (contest.value.userRegistration || cd.userRegistration || cd.registration || null)
+        const host = cd?.host || contest.value.host; if (host) contest.value.host = host
+        const cert = cd?.description || contest.value.description; if (cert) contest.value.description = cert
+        const tcr = cd?.totalRegisteredUsers || cd?.registeredCount || contest.value.totalRegisteredUsers; if (tcr) contest.value.totalRegisteredUsers = tcr
+        if (!contest.value.ruleType) contest.value.ruleType = cd?.ruleType || 1
       }
     } else {
       errorMsg.value = '未找到比赛数据'
@@ -94,20 +101,18 @@ async function handleRegister() {
   regLoading.value = true; regMsg.value = ''
   try {
     const csrf = getCsrfToken()
-    const res = await fetch(`https://www.luogu.com.cn/fe/api/contest/registration/${contestId.value}`, {
+    const res = await fetch(`https://www.luogu.com.cn/fe/api/contest/join/${contestId.value}`, {
       method: 'POST',
-      headers: { 'X-CSRF-TOKEN': csrf, 'X-Requested-With': 'XMLHttpRequest' },
+      headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrf, 'X-Requested-With': 'XMLHttpRequest' },
       credentials: 'same-origin',
+      body: '{}',
     })
     const json = await res.json()
-    if (json?.code === 200 || json?.registered) {
+    if (json?.code === 200 || json?.status === 200 || json?.id) {
       userRegistration.value = { registered: true }
       regMsg.value = '报名成功！'
-    } else if (json?.code === 400) {
-      regMsg.value = json?.data || '报名失败'
     } else {
-      // Try unregister flow
-      regMsg.value = '操作完成'
+      regMsg.value = json?.data || json?.msg || String(json?.code ?? json?.status ?? '失败')
     }
   } catch (e: any) { regMsg.value = '报名失败：' + (e.message || '网络错误') }
   regLoading.value = false
@@ -117,7 +122,7 @@ async function handleUnregister() {
   regLoading.value = true; regMsg.value = ''
   try {
     const csrf = getCsrfToken()
-    const res = await fetch(`https://www.luogu.com.cn/fe/api/contest/registration/${contestId.value}`, {
+    const res = await fetch(`https://www.luogu.com.cn/fe/api/contest/join/${contestId.value}`, {
       method: 'DELETE',
       headers: { 'X-CSRF-TOKEN': csrf, 'X-Requested-With': 'XMLHttpRequest' },
       credentials: 'same-origin',
@@ -188,23 +193,13 @@ async function fetchScoreboard(page = 1) {
     const json = await res.json()
     const data = json?.currentData || json?.data || json
     if (data?.scoreboard?.result) {
-      scoreboard.value = data.scoreboard.result.map((r: any, i: number) => {
-        // details is { "P1356": {score, runningTime}, ... } — map to problem order
-        const detailMap = r.details || {}
-        const problemScores = problems.value.map(p => {
-          const d = detailMap[p.pid]
-          return d ? { score: d.score, time: d.runningTime } : null
-        })
-        // Total score from sum of problem scores
-        const totalScore = problemScores.reduce((s, p) => s + (p?.score || 0), 0)
-        return {
-          rank: r.rank || r.idx || (i + 1),
-          user: { uid: r.user?.uid || r.uid, name: r.user?.name || r.name || '', avatar: r.user?.avatar || `https://cdn.luogu.com.cn/upload/usericon/${r.user?.uid || r.uid}.png`, color: r.user?.color || r.color || '' },
-          score: r.score || totalScore || 0,
-          scores: problemScores,
-          totalTime: r.totalTime || r.runningTime || 0,
-        }
-      })
+      scoreboard.value = data.scoreboard.result.map((r: any) => ({
+        rank: r.rank || r.idx,
+        user: { uid: r.user?.uid || r.uid, name: r.user?.name || r.name || '', avatar: r.user?.avatar || `https://cdn.luogu.com.cn/upload/usericon/${r.user?.uid || r.uid}.png`, color: r.user?.color || r.color || '' },
+        score: r.score || r.totalScore || 0,
+        scores: r.scores || r.problemScores || [],
+        totalTime: r.totalTime || r.time || 0,
+      }))
       rankingTotal.value = data.scoreboard.count || scoreboard.value.length
     }
   } catch {}
@@ -215,21 +210,23 @@ async function fetchScoreboard(page = 1) {
 // Helpers
 // ============================================================
 const c = computed(() => contest.value || {})
-const statusLabel = computed(() => {
-  const s = c.value.status || c.value.state
-  if (s === 1 || s === 'ongoing' || s === 'running') return '进行中'
-  if (s === 2 || s === 'ended' || s === 'finished') return '已结束'
-  return '即将开始'
+const nowTs = ref(Math.floor(Date.now() / 1000))
+const nowTimer = setInterval(() => { nowTs.value = Math.floor(Date.now() / 1000) }, 1000)
+onUnmounted(() => clearInterval(nowTimer))
+
+const contestStatus = computed(() => {
+  const now = nowTs.value
+  const s = c.value?.startTime || 0
+  const e = c.value?.endTime || 0
+  const phase = now < s ? 'upcoming' : now < e ? 'ongoing' : 'ended'
+  return {
+    upcoming: s > 0 && phase === 'upcoming',
+    ongoing: phase === 'ongoing',
+    ended: e > 0 && phase === 'ended',
+    label: phase === 'ongoing' ? '进行中' : phase === 'ended' ? '已结束' : '即将开始',
+    color: phase === 'ongoing' ? '#52c41a' : phase === 'ended' ? '#ff4d4f' : '#1890ff',
+  }
 })
-const statusColor = computed(() => {
-  const s = c.value.status || c.value.state
-  if (s === 1 || s === 'ongoing' || s === 'running') return '#52c41a'
-  if (s === 2 || s === 'ended' || s === 'finished') return '#ff4d4f'
-  return '#1890ff'
-})
-const isOngoing = computed(() => c.value.status === 1 || c.value.status === 'ongoing' || c.value.status === 'running')
-const isEnded = computed(() => c.value.status === 2 || c.value.status === 'ended' || c.value.status === 'finished')
-const isUpcoming = computed(() => !isOngoing.value && !isEnded.value)
 const isRegistered = computed(() => userRegistration.value?.registered || userRegistration.value?.isRegistered || false)
 const registeredCount = computed(() => c.value.registrationCount || c.value.registeredCount || 0)
 const timeRange = computed(() => {
@@ -242,11 +239,23 @@ const duration = computed(() => {
   const h = Math.floor(d / 3600), m = Math.floor((d % 3600) / 60)
   return h > 0 ? `${h}小时${m > 0 ? m + '分钟' : ''}` : `${m}分钟`
 })
+const canAccessContent = computed(() => isRegistered.value && !contestStatus.value.upcoming)
+
 function countdown(): string {
-  const now = Math.floor(Date.now() / 1000)
+  const now = nowTs.value
   const start = c.value.startTime || 0; const end = c.value.endTime || 0
-  if (now < start) { const d = start - now; const h = Math.floor(d / 3600); const m = Math.floor((d % 3600) / 60); return `距开始 ${h}:${String(m).padStart(2, '0')}` }
-  if (now < end) { const d = end - now; const h = Math.floor(d / 3600); const m = Math.floor((d % 3600) / 60); return `距结束 ${h}:${String(m).padStart(2, '0')}` }
+  if (now < start) {
+    const d = start - now
+    if (d >= 86400) return `距开始 ${Math.floor(d / 86400)} 天 ${Math.floor((d % 86400) / 3600)} 小时`
+    const h = Math.floor(d / 3600); const m = Math.floor((d % 3600) / 60)
+    return `距开始 ${h} 小时 ${m} 分钟`
+  }
+  if (now < end) {
+    const d = end - now
+    if (d >= 86400) return `距结束 ${Math.floor(d / 86400)} 天 ${Math.floor((d % 86400) / 3600)} 小时`
+    const h = Math.floor(d / 3600); const m = Math.floor((d % 3600) / 60)
+    return `距结束 ${h}:${String(m).padStart(2, '0')}`
+  }
   return ''
 }
 function problemLabel(idx: number) { return String.fromCharCode(65 + idx) }
@@ -275,28 +284,33 @@ watch(activeTab, (t) => { if (t === 'ranking' && scoreboard.value.length === 0) 
         <div bg="$bew-content" rounded="$bew-radius" p-6 mb-4 shadow="[var(--bew-shadow-1),var(--bew-shadow-edge-glow-1)]" border="1 $bew-border-color" style="backdrop-filter:var(--bew-filter-glass-1)">
           <div flex="~ col gap-4">
             <div flex="~ items-center gap-2" flex-wrap>
-              <span text="xs" fw-bold px-3 py-1 rounded-full :style="{ background: statusColor + '20', color: statusColor }">{{ statusLabel }}</span>
+              <span text="xs" fw-bold px-3 py-1 rounded-full :style="{ background: contestStatus.color + '20', color: contestStatus.color }">{{ contestStatus.label }}</span>
               <span text="xs" fw-bold px-3 py-1 rounded-full bg="$bew-theme-color-20" style="color:var(--bew-theme-color)">{{ c.ruleType || c.type || 'OI' }}</span>
               <span v-if="c.rated" text="xs" fw-bold px-3 py-1 rounded-full style="background:var(--bew-warning-color-20);color:var(--bew-warning-color)">Rated</span>
               <span v-if="countdown()" text="xs" fw-bold px-3 py-1 rounded-full style="background:var(--bew-error-color-20);color:var(--bew-error-color)">{{ countdown() }}</span>
             </div>
             <h1 style="font-size:1.5rem;color:var(--bew-text-1);font-weight:700">{{ c.name }}</h1>
+            <div v-if="c.host" style="font-size:var(--bew-base-font-size);color:var(--bew-text-2)" flex="~ items-center gap-2" mb-1>
+              <span style="font-size:.85em">主办:</span>
+              <img :src="c.host.avatar" style="width:20px;height:20px;border-radius:50%" @error="(e:any) => e.target.style.display='none'" />
+              <span :style="{color:`var(--bew-${c.host.color})`,fontWeight:500}">{{ c.host.name }}</span>
+            </div>
             <div style="font-size:var(--bew-base-font-size);color:var(--bew-text-2)" flex="~ items-center gap-2">
               <span v-html="renderIcon('mingcute:time-line', 16)" style="display:contents" />
               {{ timeRange }} ({{ duration }})
             </div>
+            <div v-if="c.description" style="font-size:var(--bew-base-font-size);color:var(--bew-text-2);line-height:1.6;white-space:pre-wrap" mt-2>{{ c.description }}</div>
             <div v-if="registeredCount > 0" style="font-size:var(--bew-base-font-size);color:var(--bew-text-3)">{{ registeredCount }} 人已报名</div>
             <!-- Registration button -->
-            <div v-if="!isEnded" flex="~ items-center gap-3">
+            <div v-if="!contestStatus.ended" flex="~ items-center gap-3">
               <Button v-if="!isRegistered" type="primary" :loading="regLoading" @click="handleRegister">
                 <span v-html="renderIcon('mingcute:user-add-line', 16)" style="display:contents" /> 报名参赛
               </Button>
-              <Button v-else type="secondary" :loading="regLoading" @click="handleUnregister">
-                <span v-html="renderIcon('mingcute:user-remove-line', 16)" style="display:contents" /> 取消报名 (已报名)
-              </Button>
+              <span v-else px-3 py-1 rounded-full style="font-size:var(--bew-base-font-size);background:var(--bew-success-color-20);color:var(--bew-success-color);font-weight:600">已报名</span>
               <span v-if="regMsg" style="font-size:var(--bew-base-font-size);color:var(--bew-success-color)">{{ regMsg }}</span>
             </div>
-            <div v-if="isEnded" style="font-size:var(--bew-base-font-size);color:var(--bew-text-3)">比赛已结束</div>
+            <div v-if="contestStatus.ended" style="font-size:var(--bew-base-font-size);color:var(--bew-text-3)">比赛已结束</div>
+            <div v-if="!canAccessContent && isRegistered" mt-2 p-3 rounded="$bew-radius" style="background:var(--bew-warning-color-20);color:var(--bew-warning-color);font-size:var(--bew-base-font-size)">比赛尚未开始，开始后可查看题目与提交</div>
           </div>
         </div>
 
@@ -305,9 +319,11 @@ watch(activeTab, (t) => { if (t === 'ranking' && scoreboard.value.length === 0) 
         <!-- ============================================================ -->
         <div bg="$bew-content" rounded="$bew-radius" mb-4 shadow="[var(--bew-shadow-1),var(--bew-shadow-edge-glow-1)]" border="1 $bew-border-color" style="backdrop-filter:var(--bew-filter-glass-1)" overflow="hidden">
           <div flex="~" border="b-1 $bew-border-color">
-            <button v-for="tab in (['overview','problems','submit','ranking'] as const)" :key="tab" flex="1" style="background:none;border:none;cursor:pointer;padding:12px 16px;font-size:var(--bew-base-font-size);font-weight:600;transition:all .2s" :style="{ color: activeTab === tab ? 'var(--bew-theme-color)' : 'var(--bew-text-3)', borderBottom: activeTab === tab ? '2px solid var(--bew-theme-color)' : '2px solid transparent' }" @click="activeTab = tab">
+            <template v-for="tab in (['overview','problems','submit','ranking'] as const)" :key="tab">
+              <button v-if="tab==='overview' || canAccessContent" flex="1" style="background:none;border:none;cursor:pointer;padding:12px 16px;font-size:var(--bew-base-font-size);font-weight:600;transition:all .2s" :style="{ color: activeTab === tab ? 'var(--bew-theme-color)' : 'var(--bew-text-3)', borderBottom: activeTab === tab ? '2px solid var(--bew-theme-color)' : '2px solid transparent' }" @click="activeTab = tab">
               {{ { overview: '概览', problems: '题目', submit: '提交', ranking: '排名' }[tab] }}
-            </button>
+              </button>
+            </template>
           </div>
         </div>
 
@@ -325,14 +341,15 @@ watch(activeTab, (t) => { if (t === 'ranking' && scoreboard.value.length === 0) 
         <!-- Tab: Problems -->
         <!-- ============================================================ -->
         <div v-if="activeTab === 'problems'" bg="$bew-content" rounded="$bew-radius" mb-6 shadow="[var(--bew-shadow-1),var(--bew-shadow-edge-glow-1)]" border="1 $bew-border-color" style="backdrop-filter:var(--bew-filter-glass-1)" overflow="hidden">
-          <div v-for="(p, idx) in problems" :key="p.pid" class="stagger-row hover-row" :style="{ '--row-index': idx }" flex="~ items-center" px-6 py-4 border="b-1 $bew-border-color" cursor="pointer" duration-200 @click="activeTab='submit';selectedPid=p.pid;loadProblem(p.pid)">
-            <span style="width:32px;font-size:var(--bew-base-font-size);color:var(--bew-text-2);font-weight:700">{{ problemLabel(idx) }}</span>
+          <a v-for="(p, idx) in problems" :key="p.pid" :href="`https://www.luogu.com.cn/problem/${p.pid}?contestId=${contestId}#ide`" target="_blank" class="stagger-row hover-row" :style="{ '--row-index': idx, textDecoration: 'none', color: 'inherit' }" flex="~ items-center" px-6 py-4 border="b-1 $bew-border-color" duration-200>
+            <span style="width:32px;font-size:var(--bew-base-font-size);color:var(--bew-text-2);font-weight:700;flex-shrink:0">{{ problemLabel(idx) }}</span>
             <div flex="1" min-w-0 mx-3>
-              <div style="font-size:var(--bew-base-font-size);color:var(--bew-text-1);font-weight:600">{{ p.title }}</div>
-              <div v-if="p.accepted != null" style="font-size:.8em;color:var(--bew-text-3)">通过 {{ p.accepted }} / 提交 {{ p.submitted }}</div>
+              <div style="font-size:var(--bew-base-font-size);color:var(--bew-text-1);font-weight:600">{{ p.pid }} {{ p.title }}</div>
+              <div v-if="p.submitted != null && p.submitted >= 0" style="font-size:.8em;color:var(--bew-text-3)">通过 {{ p.accepted }} / 提交 {{ p.submitted }}</div>
             </div>
-            <span style="font-size:var(--bew-base-font-size);color:var(--bew-text-2);font-weight:600">{{ p.score }} 分</span>
-          </div>
+            <span style="font-size:var(--bew-base-font-size);color:var(--bew-theme-color);font-weight:600;flex-shrink:0">{{ p.score }} 分</span>
+            <button ml-4 mt-0 style="background:var(--bew-theme-color-20);color:var(--bew-theme-color);border:none;border-radius:var(--bew-radius);padding:3px 12px;cursor:pointer;font-size:.8em;font-weight:600" @click.prevent="activeTab='submit';selectedPid=p.pid;loadProblem(p.pid)">提交</button>
+          </a>
           <div v-if="problems.length === 0" text="center" p-8 style="color:var(--bew-text-3);font-size:var(--bew-base-font-size)">暂无题目</div>
         </div>
 
@@ -389,7 +406,7 @@ watch(activeTab, (t) => { if (t === 'ranking' && scoreboard.value.length === 0) 
         <div v-if="activeTab === 'ranking'" bg="$bew-content" rounded="$bew-radius" mb-6 shadow="[var(--bew-shadow-1),var(--bew-shadow-edge-glow-1)]" border="1 $bew-border-color" style="backdrop-filter:var(--bew-filter-glass-1)" overflow="hidden">
           <Loading v-if="rankingLoading" />
           <div v-if="!rankingLoading && scoreboard.length === 0" text="center" p-8 style="color:var(--bew-text-3);font-size:var(--bew-base-font-size)">
-            <span v-html="renderIcon('mingcute:chart-bar-line', 48)" style="display:contents" /><p mt-2>暂无排名数据{{ isUpcoming ? '（比赛尚未开始）' : '' }}</p>
+            <span v-html="renderIcon('mingcute:chart-bar-line', 48)" style="display:contents" /><p mt-2>暂无排名数据{{ contestStatus.upcoming ? '（比赛尚未开始）' : '' }}</p>
           </div>
           <!-- Scoreboard table -->
           <div v-if="scoreboard.length > 0" overflow="auto">
@@ -409,8 +426,8 @@ watch(activeTab, (t) => { if (t === 'ranking' && scoreboard.value.length === 0) 
                     <img :src="row.user.avatar" style="width:24px;height:24px;border-radius:50%;object-fit:cover" @error="(e:any) => e.target.style.display='none'" />
                     <span :style="{ color: row.user.color ? `var(--bew-${row.user.color})` : 'var(--bew-text-1)', fontWeight: 600 }">{{ row.user.name }}</span>
                   </td>
-                  <td v-for="(s, si) in row.scores" :key="si" px-4 py-3 text="center" fw-bold :style="{ color: s != null && s.score >= (problems[si]?.score||100) ? 'var(--bew-success-color)' : s != null ? 'var(--bew-error-color)' : 'var(--bew-text-4)' }">
-                    {{ s != null ? s.score : '-' }}
+                  <td v-for="(s, si) in row.scores" :key="si" px-4 py-3 text="center" fw-bold :style="{ color: s != null && s >= (problems[si]?.score||100) ? 'var(--bew-success-color)' : s != null ? 'var(--bew-error-color)' : 'var(--bew-text-4)' }">
+                    {{ s != null ? s : '-' }}
                   </td>
                   <td px-4 py-3 text="right" fw-bold style="color:var(--bew-text-1)">{{ row.score }}</td>
                 </tr>

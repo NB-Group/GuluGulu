@@ -152,6 +152,8 @@ async function openChat(uid: number, user?: ChatUser) {
       }
     }
 
+    // Abort if user switched to another conversation during preload
+    if (activeChatUid.value !== targetUid) return
     messages.value = [...older, ...latest]
 
     // Clear unread
@@ -216,7 +218,6 @@ async function sendMessage() {
   const text = newMsg.value.trim()
   if (!text || !activeChatUid.value || sending.value) return
   sending.value = true
-  newMsg.value = '' // clear immediately to prevent double-send
   try {
     const csrf = getCsrfToken()
     const res = await fetch('https://www.luogu.com.cn/api/chat/new', {

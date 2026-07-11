@@ -88,8 +88,20 @@ function doRequest(message: Message, api: API, sendResponse?: Function, cookies?
     let { _fetch, url, params = {}, afterHandle } = api
     const { method, headers = {}, body } = _fetch as _FETCH
     const isGET = method.toLocaleLowerCase() === 'get'
-    // merge params and body
-    const targetParams = Object.assign({}, params)
+
+    // EJS-style template substitution: replace <%= key %> in URL and param values
+    const templateReplace = (str: string) => str.replace(/<%= (\w+) %>/g, (_, key) => {
+      const val = rest[key]
+      if (val !== undefined) delete rest[key]
+      return val ?? ''
+    })
+    url = templateReplace(url)
+    // Deep-copy params and process template variables in values
+    const targetParams: Record<string, any> = {}
+    for (const [key, val] of Object.entries(params)) {
+      targetParams[key] = typeof val === 'string' ? templateReplace(val) : val
+    }
+    // merge rest into params or body
     let targetBody = Object.assign({}, body)
     Object.keys(rest).forEach((key) => {
       if (body && body[key] !== undefined)
@@ -101,9 +113,13 @@ function doRequest(message: Message, api: API, sendResponse?: Function, cookies?
     // generate params
     if (Object.keys(targetParams).length) {
       const urlParams = new URLSearchParams()
-      for (const key in targetParams)
-        targetParams[key] && urlParams.append(key, targetParams[key])
-      url += `?${urlParams.toString()}`
+      for (const key in targetParams) {
+        const val = targetParams[key]
+        if (val !== undefined && val !== null && val !== '')
+          urlParams.append(key, String(val))
+      }
+      const qs = urlParams.toString()
+      if (qs) url += `?${qs}`
     }
     // generate body
     if (!isGET) {
@@ -117,7 +133,7 @@ function doRequest(message: Message, api: API, sendResponse?: Function, cookies?
       headers['firefox-multi-account-cookie'] = cookieStr
     }
     // get cant take body
-    const fetchOpt = { method, headers }
+    const fetchOpt: Record<string, any> = { method, headers, credentials: 'omit' }
     !isGET && Object.assign(fetchOpt, { body: targetBody })
     // fetch and after handle
     let baseFunc = fetch(url, {

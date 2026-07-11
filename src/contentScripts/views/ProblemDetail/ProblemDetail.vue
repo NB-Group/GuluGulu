@@ -1,8 +1,10 @@
 <script setup lang="ts">
 import { renderIcon } from '~/utils/icons'
 import { timeAgo } from '~/utils/main'
-import { parseProblemMarkdown } from '~/utils/markdown'
+import { parseProblemMarkdown, injectKatexCSS } from '~/utils/markdown'
 import { submitCode, extractProblemData, LUOGU_LANGUAGES, isLoggedIn as checkLuoguLogin } from '~/utils/luogu-api'
+import hljs from 'highlight.js'
+import type { LuoguLanguage } from '~/utils/luogu-api'
 import { AppPage } from '~/enums/appEnums'
 import { useGulyApp } from '~/composables/useAppProvider'
 
@@ -77,6 +79,7 @@ const problem = ref<ProblemData>({
 
 const loading = ref(true)
 const loadError = ref(false)
+let loadingTimer: ReturnType<typeof setTimeout> | null = null
 const discussions = ref<Array<{ id: number; title: string; author: any; time: number; replyCount: number }>>([])
 
 function loadRealData() {
@@ -84,7 +87,7 @@ function loadRealData() {
     const raw = extractProblemData()
     if (!raw?.data?.problem) {
       // No real data on page, keep mock
-      setTimeout(() => { loading.value = false }, 400)
+      loadingTimer = setTimeout(() => { loading.value = false }, 400)
       return
     }
 
@@ -130,6 +133,12 @@ function loadRealData() {
       }))
     }
 
+    // Load saved code from Luogu (lastCode / lastLanguage)
+    const savedCode = raw?.data?.lastCode || raw?.currentData?.lastCode || ''
+    const savedLang = raw?.data?.lastLanguage || raw?.currentData?.lastLanguage
+    if (savedCode) codeContent.value = savedCode
+    if (savedLang) selectedLang.value.id = savedLang
+
     document.title = `${problem.value.pid} ${problem.value.title} - GuluGulu`
     loading.value = false
   }
@@ -144,9 +153,119 @@ function loadRealData() {
 // Submission state
 // ============================================================
 const activeTab = ref<'statement' | 'submit' | 'solutions' | 'discussions'>('statement')
+const contestId = computed(() => new URLSearchParams(window.location.search).get('contestId') || '')
+const inContestMode = computed(() => !!contestId.value)
+const ideMode = ref(inContestMode.value || window.location.hash === '#ide')
+const isSplitView = computed(() => ideMode.value || inContestMode.value)
+
+function toggleIDE() {
+  ideMode.value = !ideMode.value
+}
+
+// Resizable split
+const splitRatio = ref(40)
+const isDragging = ref(false)
+function startResize(e: MouseEvent) {
+  isDragging.value = true
+  const container = (e.target as HTMLElement).parentElement!
+  const startPct = splitRatio.value
+  const startX = e.clientX
+  const totalW = container.offsetWidth
+  const onMove = (ev: MouseEvent) => {
+    const dx = ev.clientX - startX
+    splitRatio.value = Math.max(25, Math.min(65, startPct + (dx / totalW) * 100))
+  }
+  const onUp = () => {
+    isDragging.value = false
+    document.removeEventListener('mousemove', onMove)
+    document.removeEventListener('mouseup', onUp)
+  }
+  document.addEventListener('mousemove', onMove)
+  document.addEventListener('mouseup', onUp)
+}
+
+// Test samples for IDE mode
+const testInput = ref('')
+const testExpectedOutput = ref('')
+const testActualOutput = ref('')
+const testRunning = ref(false)
+const testVerdict = ref('')
+const showTestPanel = ref(true)
+
+// Copy to clipboard (Shadow DOM compatible)
+function copyText(text: string) {
+  const el = document.createElement('textarea')
+  el.value = text; el.style.cssText = 'position:fixed;left:-9999px;top:0'
+  document.body.appendChild(el)
+  el.focus(); el.select()
+  try { document.execCommand('copy') } catch {}
+  document.body.removeChild(el)
+}
+
+async function runTest() {
+  if (!codeContent.value) return
+  testRunning.value = true; testVerdict.value = ''; testActualOutput.value = ''
+  try {
+    if (!isLoggedIn.value) { testVerdict.value = '请先登录'; testRunning.value = false; return }
+    const csrf = (window as any).__guly_user?.csrfToken || ''
+    const res = await fetch(`https://www.luogu.com.cn/fe/api/problem/submit/${problemId.value}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrf, 'X-Requested-With': 'XMLHttpRequest' },
+      credentials: 'same-origin',
+      body: JSON.stringify({ code: codeContent.value, lang: selectedLang.value.id, enableO2: enableO2.value ? 1 : 0 }),
+    })
+    const json = await res.json()
+    if (json.rid) {
+      testActualOutput.value = `RID: ${json.rid} — 提交成功，查看评测结果`
+      testVerdict.value = '提交成功'
+    } else {
+      testActualOutput.value = json.data || json.errorMessage || '未知错误'
+      testVerdict.value = '提交失败'
+    }
+    // Compare with expected if both exist
+    if (testExpectedOutput.value && testActualOutput.value) {
+      const exp = testExpectedOutput.value.trim()
+      const act = testActualOutput.value.trim()
+      if (exp === act) testVerdict.value = 'AC'
+      else if (testVerdict.value === '提交成功') testVerdict.value = '已提交'
+    }
+  } catch (e: any) { testVerdict.value = 'CE'; testActualOutput.value = e.message }
+  testRunning.value = false
+}
+
+const contestProblems = ref<Array<{ no: string; pid: string; title: string; score: number }>>([])
+const showProblemSwitcher = ref(false)
+
+async function fetchContestProblems() {
+  if (!contestId.value) return
+  try {
+    const res = await fetch(`https://www.luogu.com.cn/contest/${contestId.value}`, { credentials: 'same-origin' })
+    const html = await res.text()
+    const m = html.match(/<script\s+id="lentille-context"\s+type="application\/json"[^>]*>([^<]+)<\/script>/)
+    if (m?.[1]) {
+      const ctx = JSON.parse(m[1])
+      const cd = ctx?.currentData || ctx?.data || {}
+      const all = cd?.contestProblems || []
+      contestProblems.value = all.map((p: any) => ({
+        no: p.no || '',
+        pid: p.problem?.pid || p.pid || '',
+        title: p.problem?.name || p.title || '',
+        score: p.score || 0,
+      }))
+    }
+  } catch {}
+}
+
+function switchToProblem(pid: string) {
+  if (pid) navigateTo(AppPage.ProblemDetail, `https://www.luogu.com.cn/problem/${pid}?contestId=${contestId.value}`)
+}
+
+if (inContestMode.value) fetchContestProblems()
 const submitted = ref(false)
 const submitting = ref(false)
 const submitError = ref('')
+const copiedMarkdown = ref(false)
+const copiedSample = ref<string | null>(null)
 const submitResult = ref('')
 const lastRid = ref<number | null>(null)
 
@@ -154,6 +273,19 @@ const lastRid = ref<number | null>(null)
 const selectedLang = ref(LUOGU_LANGUAGES.find(l => l.id === 28) || LUOGU_LANGUAGES[0]) // Default C++14 (GCC 9)
 const enableO2 = ref(true)
 const codeContent = ref('')
+const highlightPre = ref<HTMLPreElement>()
+const hljsMap: Record<string, string> = { c_cpp: 'cpp', python: 'python', java: 'java', plain_text: 'plaintext' }
+const highlightedCode = computed(() => {
+  if (!codeContent.value) return '\n'
+  try {
+    const lang = LUOGU_LANGUAGES.find(l => l.id === selectedLang.value.id)
+    return hljs.highlight(codeContent.value, { language: hljsMap[lang?.aceMode || ''] || 'cpp' }).value
+  } catch { return codeContent.value.replace(/</g, '&lt;').replace(/>/g, '&gt;') }
+})
+function syncScroll(e: Event) {
+  const ta = e.target as HTMLElement
+  if (highlightPre.value) { highlightPre.value.scrollTop = ta.scrollTop; highlightPre.value.scrollLeft = ta.scrollLeft }
+}
 
 // Default code templates per language
 function getDefaultCode(lang: number): string {
@@ -185,12 +317,21 @@ getDefaultCode(28) // Init with C++ template
 // ============================================================
 // Computed
 // ============================================================
-const tabs = computed(() => [
-  { key: 'statement' as const, label: '题目描述', icon: 'mingcute:document-line' },
-  { key: 'submit' as const, label: '提交代码', icon: 'mingcute:code-line' },
-  { key: 'solutions' as const, label: '题解', icon: 'mingcute:bulb-line' },
-  { key: 'discussions' as const, label: '讨论', icon: 'mingcute:comment-line' },
-])
+const tabs = computed(() => {
+  const base = [
+    { key: 'statement' as const, label: '题目描述', icon: 'mingcute:document-line' },
+    { key: 'submit' as const, label: '提交代码', icon: 'mingcute:code-line' },
+  ]
+  if (inContestMode.value) {
+    base.push({ key: 'switchProblem' as any, label: '切换题目', icon: 'mingcute:arrow-left-right-line' })
+  } else {
+    base.push(
+      { key: 'solutions' as const, label: '题解', icon: 'mingcute:bulb-line' },
+      { key: 'discussions' as const, label: '讨论', icon: 'mingcute:comment-line' },
+    )
+  }
+  return base
+})
 
 const difficultyColor = computed(() => difficultyMap[problem.value.difficulty]?.color || '#909399')
 
@@ -259,14 +400,8 @@ async function handleSubmit() {
     submitError.value = result.errorMessage || `提交失败 (HTTP ${result.status})`
   }
 }
-
-function copyText(text: string) { navigator.clipboard.writeText(text) }
-
-const copiedMarkdown = ref(false)
-const copiedSample = ref<string | null>(null)
-
 function copyWithFeedback(key: string, text: string) {
-  navigator.clipboard.writeText(text)
+  copyText(text)
   copiedSample.value = key
   setTimeout(() => { if (copiedSample.value === key) copiedSample.value = null }, 1500)
 }
@@ -299,7 +434,7 @@ function buildProblemMarkdown(): string {
 
 async function copyMarkdown() {
   try {
-    await navigator.clipboard.writeText(buildProblemMarkdown())
+    await copyText(buildProblemMarkdown())
     copiedMarkdown.value = true
     setTimeout(() => { copiedMarkdown.value = false }, 2000)
   } catch {
@@ -330,8 +465,9 @@ function openProviderProfile(uid: number) {
   window.open(`https://www.luogu.com.cn/user/${uid}`, '_blank')
 }
 
-function handleTabChange(tab: typeof activeTab.value) {
-  activeTab.value = tab
+function handleTabChange(tab: string) {
+  if (tab === 'switchProblem') { showProblemSwitcher.value = !showProblemSwitcher.value; return }
+  activeTab.value = tab as typeof activeTab.value
   submitError.value = ''
 }
 
@@ -340,6 +476,11 @@ function handleTabChange(tab: typeof activeTab.value) {
 // ============================================================
 onMounted(() => {
   loadRealData()
+  injectKatexCSS()
+})
+
+onUnmounted(() => {
+  if (loadingTimer) clearTimeout(loadingTimer)
 })
 </script>
 
@@ -352,7 +493,7 @@ onMounted(() => {
         <!-- ============================================================ -->
         <!-- Problem Header -->
         <!-- ============================================================ -->
-        <div
+        <div v-show="!isSplitView"
           bg="$bew-content" rounded="$bew-radius" p-6 mb-4
           shadow="[var(--bew-shadow-1),var(--bew-shadow-edge-glow-1)]"
           border="1 $bew-border-color"
@@ -422,7 +563,7 @@ onMounted(() => {
         <!-- ============================================================ -->
         <!-- Tab Bar -->
         <!-- ============================================================ -->
-        <div
+        <div v-show="!isSplitView"
           flex="~ gap-1" mb-4 p-1
           bg="$bew-content" rounded="$bew-radius"
           border="1 $bew-border-color"
@@ -445,12 +586,135 @@ onMounted(() => {
             <span v-html="renderIcon(tab.icon, 16)" style="display:contents" />
             {{ tab.label }}
           </button>
+          <button v-if="!isSplitView" @click="ideMode = true" flex="~ items-center gap-1" p="x-3 y-2" rounded="$bew-radius-half" text="sm" border="none" cursor="pointer" style="background:var(--bew-success-color-20);color:var(--bew-success-color);font-weight:600;margin-left:auto">IDE</button>
+        </div>
+
+        <!-- Contest Problem Switcher -->
+        <div v-if="showProblemSwitcher" bg="$bew-content" rounded="$bew-radius" p-3 mb-4 border="1 $bew-border-color" style="backdrop-filter:var(--bew-filter-glass-1)">
+          <div flex="~ items-center justify-between" mb-2>
+            <span style="font-weight:600;color:var(--bew-text-1);font-size:var(--bew-base-font-size)">切换题目</span>
+            <button @click="showProblemSwitcher=false" bg="transparent" border="none" cursor="pointer" style="color:var(--bew-text-3);font-size:1.2em">&times;</button>
+          </div>
+          <div grid="~ cols-5" gap-2>
+            <button
+              v-for="cp in contestProblems" :key="cp.no"
+              @click="switchToProblem(cp.pid)"
+              :style="{
+                background: cp.pid === problemId ? 'var(--bew-theme-color)' : 'var(--bew-fill-1)',
+                color: cp.pid === problemId ? '#fff' : 'var(--bew-text-1)',
+                border: '1px solid ' + (cp.pid === problemId ? 'var(--bew-theme-color)' : 'var(--bew-border-color)'),
+                borderRadius: 'var(--bew-radius)',
+                padding: '8px 14px',
+                cursor: 'pointer',
+                fontWeight: cp.pid === problemId ? 700 : 500,
+                fontSize: 'var(--bew-base-font-size)',
+                textAlign: 'left',
+              }"
+            >
+              <div>{{ cp.no }}. {{ cp.pid }}</div>
+              <div style="font-size:.75em;opacity:.8">{{ cp.title }}</div>
+              <div style="font-size:.7em;opacity:.6">{{ cp.score }}分</div>
+            </button>
+          </div>
+        </div>
+
+        <!-- ============================================================ -->
+        <!-- Split View (IDE / Contest mode) -->
+        <!-- ============================================================ -->
+        <div v-if="isSplitView" flex style="height:calc(100vh - 90px);margin:0 -16px 0 -16px;gap:0">
+          <!-- Left: Header + Problem Statement -->
+          <div :style="{flex: `0 0 ${splitRatio}%`,backdropFilter:'var(--bew-filter-glass-1)',overflowY:'auto',display:'flex',flexDirection:'column',gap:'8px',paddingRight:'8px'}" bg="$bew-content" rounded="$bew-radius" p-6 border="1 $bew-border-color" shadow="[var(--bew-shadow-1)]">
+            <!-- Problem header info -->
+            <h1 style="font-size:1.2rem;font-weight:700;color:var(--bew-text-1)"><span text="$bew-text-3" font-mono>{{ problem.pid }}</span> {{ problem.title }}</h1>
+            <div flex="~ gap-2 wrap" style="font-size:.8em;color:var(--bew-text-2)">
+              <span v-if="problem.difficultyLabel" px-2 py-0.5 rounded-full :style="{backgroundColor:difficultyColor+'20',color:difficultyColor}">{{ problem.difficultyLabel }}</span>
+              <span>{{ problem.timeLimit }}</span>
+              <span>{{ problem.memoryLimit }}</span>
+            </div>
+            <!-- Statement -->
+            <div class="problem-statement" style="font-size:var(--bew-base-font-size);color:var(--bew-text-1);line-height:1.8;overflow-y:auto;flex:1">
+              <div v-if="problem.background" mb-4 class="markdown-body" v-html="renderedDescription.split(problem.description)[0]" />
+              <div v-html="renderedDescription" mb-4 />
+              <div v-if="problem.samples.length > 0" mt-6>
+                <h3 mb-3>样例</h3>
+                <div v-for="(sample, idx) in problem.samples" :key="idx" mb-3>
+                  <div bg="$bew-fill-1" rounded="$bew-radius" p-3 mb-2>
+                    <div flex="~ items-center justify-between" mb-1>
+                      <span text="xs $bew-text-3">输入 #{{ idx + 1 }}</span>
+                      <button @click="copyText(String(Array.isArray(sample) ? sample[0] : sample.input))" style="background:none;border:none;cursor:pointer;color:var(--bew-text-3);font-size:.7em">复制</button>
+                    </div>
+                    <pre style="margin:0;white-space:pre-wrap;font-size:.85em;color:var(--bew-text-1);font-family:Consolas,monospace">{{ Array.isArray(sample) ? sample[0] : sample.input }}</pre>
+                  </div>
+                  <div bg="$bew-fill-1" rounded="$bew-radius" p-3>
+                    <div flex="~ items-center justify-between" mb-1>
+                      <span text="xs $bew-text-3">输出 #{{ idx + 1 }}</span>
+                      <button @click="copyText(String(Array.isArray(sample) ? sample[1] : sample.output))" style="background:none;border:none;cursor:pointer;color:var(--bew-text-3);font-size:.7em">复制</button>
+                    </div>
+                    <pre style="margin:0;white-space:pre-wrap;font-size:.85em;color:var(--bew-text-1);font-family:Consolas,monospace">{{ Array.isArray(sample) ? sample[1] : sample.output }}</pre>
+                  </div>
+                  <div v-if="(Array.isArray(sample) ? sample[2] : sample.explanation)" mt-1 text="xs" style="color:var(--bew-text-3)">说明: {{ Array.isArray(sample) ? sample[2] : sample.explanation }}</div>
+                </div>
+              </div>
+              <div v-if="problem.hint" class="markdown-body" v-html="renderedHint" mt-4 />
+            </div>
+          </div>
+
+          <!-- Resize Handle -->
+          <div @mousedown="startResize" :style="{flex:'0 0 3px',cursor:'col-resize',background:isDragging?'var(--bew-theme-color)':'transparent',transition:isDragging?'none':'background .15s',userSelect:'none',margin:'0 1px'}" />
+
+                    <!-- Right: Code Editor + Controls -->
+          <div :style="{flex: `0 0 ${100 - splitRatio - 0.5}%`,display:'flex',flexDirection:'column',gap:'6px',overflowY:'auto'}">
+            <!-- Editor Card -->
+            <div bg="$bew-content" rounded="$bew-radius" border="1 $bew-border-color" style="backdrop-filter:var(--bew-filter-glass-1);display:flex;flex-direction:column;flex:1;min-height:0">
+              <!-- Top bar: all controls -->
+              <div style="display:flex;align-items:center;gap:6px;flex-shrink:0;padding:5px 10px;border-bottom:1px solid var(--bew-border-color);font-size:.82em;overflow-x:auto">
+                <div v-if="contestProblems.length > 0" style="display:flex;align-items:center;gap:3px">
+                  <span v-for="cp in contestProblems" :key="cp.no" @click="switchToProblem(cp.pid)" style="padding:0 6px;border-radius:999px;cursor:pointer;font-size:.72em;font-weight:600;white-space:nowrap" :style="{background:cp.pid===problemId?'var(--bew-theme-color)':'var(--bew-fill-2)',color:cp.pid===problemId?'#fff':'var(--bew-text-2)'}">{{ cp.no }}</span>
+                </div>
+                <select v-model="selectedLang.id" @change="onLangChange(selectedLang)" style="padding:2px 4px;background:var(--bew-fill-1);color:var(--bew-text-1);border:1px solid var(--bew-border-color);border-radius:4px;font-size:.85em;outline:none">
+                  <option v-for="l in LUOGU_LANGUAGES" :key="l.id" :value="l.id">{{ l.name }}</option>
+                </select>
+                <label style="display:flex;align-items:center;gap:3px;color:var(--bew-text-2);cursor:pointer;white-space:nowrap;font-size:.85em">
+                  <input type="checkbox" v-model="enableO2" style="width:13px;height:13px;cursor:pointer" /> O2
+                </label>
+                <span style="flex:1"></span>
+                <button @click="showTestPanel = !showTestPanel" style="background:none;border:1px solid var(--bew-border-color);border-radius:4px;padding:2px 8px;cursor:pointer;color:var(--bew-text-2);font-size:.82em;white-space:nowrap">{{ showTestPanel ? '▾ 自测' : '▸ 自测' }}</button>
+                <button v-if="!inContestMode" @click="ideMode = false" style="background:none;border:1px solid var(--bew-border-color);border-radius:4px;padding:2px 8px;cursor:pointer;color:var(--bew-text-2);font-size:.82em;white-space:nowrap">退出</button>
+                <button @click="handleSubmit" :disabled="submitting" style="background:var(--bew-theme-color);color:#fff;border:none;border-radius:4px;padding:3px 12px;cursor:pointer;font-size:.85em;font-weight:600;white-space:nowrap">{{ submitting ? '…' : '提交' }}</button>
+              </div>
+              <div style="flex:1;position:relative;overflow:hidden">
+                <pre ref="highlightPre" style="position:absolute;inset:0;margin:0;padding:14px 18px;font-family:Cascadia Code,Fira Code,JetBrains Mono,Consolas,monospace;font-size:14px;line-height:1.65;tab-size:4;white-space:pre-wrap;word-wrap:break-word;overflow:auto;pointer-events:none;color:var(--bew-text-1);background:var(--bew-fill-1)"><code v-html="highlightedCode" /></pre>
+                <textarea v-model="codeContent" @scroll="syncScroll" style="position:relative;width:100%;height:100%;background:transparent;color:transparent;caret-color:var(--bew-text-1);border:none;padding:14px 18px;font-family:Cascadia Code,Fira Code,JetBrains Mono,Consolas,monospace;font-size:14px;line-height:1.65;resize:none;tab-size:4;outline:none;z-index:1" placeholder="在此输入代码…" spellcheck="false" />
+              </div>
+            </div>
+
+            <!-- Test Panels -->
+            <div v-if="showTestPanel" style="flex-shrink:0;display:flex;gap:6px;min-height:120px">
+              <div bg="$bew-content" rounded="$bew-radius" style="backdrop-filter:var(--bew-filter-glass-1);display:flex;flex-direction:column;flex:1;overflow:hidden;border:1px solid var(--bew-border-color)">
+                <div style="padding:6px 10px 2px;font-size:.75em;color:var(--bew-text-3);border-bottom:1px solid var(--bew-border-color)">自测输入</div>
+                <textarea v-model="testInput" style="flex:1;width:100%;background:var(--bew-fill-1);color:var(--bew-text-1);border:none;padding:8px 10px;font-family:Consolas,monospace;font-size:.78em;resize:none;outline:none" placeholder="输入…" />
+              </div>
+              <div bg="$bew-content" rounded="$bew-radius" style="backdrop-filter:var(--bew-filter-glass-1);display:flex;flex-direction:column;flex:1;overflow:hidden;border:1px solid var(--bew-border-color)">
+                <div style="flex:1;display:flex;flex-direction:column;border-bottom:1px solid var(--bew-border-color)">
+                  <div style="padding:6px 10px 2px;font-size:.75em;color:var(--bew-text-3)">预期输出</div>
+                  <textarea v-model="testExpectedOutput" style="flex:1;width:100%;background:var(--bew-fill-1);color:var(--bew-text-1);border:none;padding:8px 10px;font-family:Consolas,monospace;font-size:.78em;resize:none;outline:none" placeholder="手动填入" />
+                </div>
+                <div style="flex:1;display:flex;flex-direction:column">
+                  <div style="display:flex;align-items:center;justify-content:space-between;padding:6px 10px 2px;font-size:.75em;color:var(--bew-text-3)">
+                    <span>自测输出</span>
+                    <span v-if="testVerdict" style="padding:0 6px;border-radius:999px;font-size:.75em;font-weight:700;line-height:1.5" :style="{background:testVerdict==='AC'?'var(--bew-success-color-20)':'var(--bew-error-color-20)',color:testVerdict==='AC'?'var(--bew-success-color)':'var(--bew-error-color)'}">{{ testVerdict }}</span>
+                  </div>
+                  <textarea v-model="testActualOutput" style="flex:1;width:100%;background:var(--bew-fill-1);color:var(--bew-text-1);border:none;padding:8px 10px;font-family:Consolas,monospace;font-size:.78em;resize:none;outline:none" placeholder="—" readonly />
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
 
         <!-- ============================================================ -->
         <!-- Statement Tab -->
         <!-- ============================================================ -->
-        <Transition name="page-fade" mode="out-in">
+        <Transition v-if="!isSplitView" name="page-fade" mode="out-in">
           <div
             v-if="activeTab === 'statement'"
             :key="'statement'"
@@ -460,12 +724,7 @@ onMounted(() => {
           style="backdrop-filter: var(--bew-filter-glass-1)"
         >
           <div class="problem-statement">
-            <!-- Background -->
-            <div v-if="problem.background" mb-6>
-              <blockquote v-html="renderedDescription.split(problem.description)[0]" />
-            </div>
-
-            <!-- Main description -->
+            <!-- Main description (includes background, description, I/O format) -->
             <div v-html="renderedDescription" mb-6 />
 
             <!-- Sample I/O -->

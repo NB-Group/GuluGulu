@@ -60,6 +60,10 @@ function loadMore() {
 const discussId = computed(() => { const m = currentUrl.value.match(/\/discuss\/(\d+)/i) || currentUrl.value.match(/\/blog\/(\d+)/i); return m ? Number(m[1]) : null })
 const detail = ref<any>(null)
 const detailLoading = ref(false)
+const replies = ref<any[]>([])
+const replyContent = ref('')
+const replyError = ref('')
+const replySending = ref(false)
 
 async function fetchDetail(id: number) {
   detailLoading.value = true

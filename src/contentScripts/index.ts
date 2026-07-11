@@ -18,10 +18,28 @@ import App from './views/App.vue'
 
 const isFirefox: boolean = /Firefox/i.test(navigator.userAgent)
 
+// Capture-phase: block `/` key from triggering Luogu's search when typing in GuluGulu's code editor
+document.addEventListener('keydown', (e) => {
+  if (e.key !== '/') return
+  const path = e.composedPath?.()
+  if (!path) return
+  for (const node of path) {
+    if (node instanceof HTMLElement && (node.tagName === 'TEXTAREA' || node.tagName === 'INPUT' || node.tagName === 'SELECT'))
+      e.stopImmediatePropagation()
+  }
+}, true) // capture phase
+
+// Inject the history monkey-patch script into the page context before any page JS runs.
+// This ensures pushState/replaceState dispatch `historyChange` custom events that the
+// Vue app listens for to detect SPA navigation on Luogu.
+const injectScript = document.createElement('script')
+injectScript.src = browser.runtime.getURL('dist/inject/index.js')
+document.documentElement.appendChild(injectScript)
+
 // Fix `OverlayScrollbars` not working in Firefox
 if (isFirefox) {
-  window.requestIdleCallback = window.requestIdleCallback.bind(window)
-  window.cancelIdleCallback = window.cancelIdleCallback.bind(window)
+  if (window.requestIdleCallback) window.requestIdleCallback = window.requestIdleCallback.bind(window)
+  if (window.cancelIdleCallback) window.cancelIdleCallback = window.cancelIdleCallback.bind(window)
   window.requestAnimationFrame = window.requestAnimationFrame.bind(window)
   window.cancelAnimationFrame = window.cancelAnimationFrame.bind(window)
   window.setTimeout = window.setTimeout.bind(window)
@@ -174,17 +192,30 @@ if (isSupportedPages() || isSupportedIframePages()) {
 }
 
 window.addEventListener(GULY_MOUNTED, () => {
-  if (beforeLoadedStyleEl)
-    document.documentElement.removeChild(beforeLoadedStyleEl)
+  if (beforeLoadedStyleEl?.parentNode) {
+    beforeLoadedStyleEl.parentNode.removeChild(beforeLoadedStyleEl)
+    beforeLoadedStyleEl = undefined
+  }
 })
+
+// Fallback: if Vue mount fails, show the body anyway so the page isn't permanently blank
+setTimeout(() => {
+  if (beforeLoadedStyleEl?.parentNode) {
+    beforeLoadedStyleEl.parentNode.removeChild(beforeLoadedStyleEl)
+    beforeLoadedStyleEl = undefined
+  }
+}, 5000)
 
 // Set the original Luogu top bar to `display: none` to prevent flash
 const removeOriginalTopBar = injectCSS(
   `.lfe-header, .header, nav.header, .navbar, #app > header, header.lfe-header, .top-nav { visibility: hidden !important; }`
 )
 
+let onDOMLoadedCalled = false
+
 async function onDOMLoaded() {
-  if (!document.body) return
+  if (onDOMLoadedCalled || !document.body) return
+  onDOMLoadedCalled = true
 
   let originalTopBar: HTMLElement | null = null
 
