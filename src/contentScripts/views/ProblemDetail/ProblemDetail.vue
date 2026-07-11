@@ -149,8 +149,11 @@ function loadRealData() {
     const savedLang = raw?.data?.lastLanguage || raw?.currentData?.lastLanguage
     if (savedCode)
       codeContent.value = savedCode
-    if (savedLang)
-      selectedLang.value.id = savedLang
+    if (savedLang) {
+      const found = LUOGU_LANGUAGES.find(l => l.id === savedLang)
+      if (found)
+        selectedLang.value = found
+    }
 
     document.title = `${problem.value.pid} ${problem.value.title} - GuluGulu`
     loading.value = false
@@ -170,7 +173,6 @@ const contestId = computed(() => new URLSearchParams(window.location.search).get
 const inContestMode = computed(() => !!contestId.value)
 const ideMode = ref(inContestMode.value || window.location.hash === '#ide')
 const isSplitView = computed(() => ideMode.value || inContestMode.value)
-
 
 // Resizable split
 const splitRatio = ref(40)
@@ -345,7 +347,8 @@ function onLangChange(lang: LuoguLanguage) {
   }
 }
 
-if (!codeContent.value) codeContent.value = getDefaultCode(28)
+if (!codeContent.value)
+  codeContent.value = getDefaultCode(28)
 
 // ============================================================
 // Computed
@@ -479,30 +482,11 @@ function buildProblemMarkdown(): string {
 }
 
 async function copyMarkdown() {
-  try {
-    await copyText(buildProblemMarkdown())
-    copiedMarkdown.value = true
-    setTimeout(() => {
-      copiedMarkdown.value = false
-    }, 2000)
-  }
-  catch {
-    const ta = document.createElement('textarea')
-    ta.value = buildProblemMarkdown()
-    ta.style.position = 'fixed'
-    ta.style.opacity = '0'
-    document.body.appendChild(ta)
-    ta.select()
-    try {
-      document.execCommand('copy')
-    }
-    catch {}
-    document.body.removeChild(ta)
-    copiedMarkdown.value = true
-    setTimeout(() => {
-      copiedMarkdown.value = false
-    }, 2000)
-  }
+  copyText(buildProblemMarkdown())
+  copiedMarkdown.value = true
+  setTimeout(() => {
+    copiedMarkdown.value = false
+  }, 2000)
 }
 function openLuoguIDE() {
   // Open Luogu's own IDE for code submission (handles Cloudflare/captcha natively)
@@ -806,7 +790,12 @@ onUnmounted(() => {
                 <div style="flex:1;display:flex;flex-direction:column">
                   <div style="display:flex;align-items:center;justify-content:space-between;padding:6px 10px 2px;font-size:.75em;color:var(--bew-text-3)">
                     <span>自测输出</span>
-                    <span v-if="testVerdict" style="padding:0 6px;border-radius:999px;font-size:.75em;font-weight:700;line-height:1.5" :style="{ background: testVerdict === 'AC' ? 'var(--bew-success-color-20)' : 'var(--bew-error-color-20)', color: testVerdict === 'AC' ? 'var(--bew-success-color)' : 'var(--bew-error-color)' }">{{ testVerdict }}</span>
+                    <span flex="~ items-center gap-1">
+                      <span v-if="testVerdict" style="padding:0 6px;border-radius:999px;font-size:.75em;font-weight:700;line-height:1.5" :style="{ background: testVerdict === 'AC' ? 'var(--bew-success-color-20)' : 'var(--bew-error-color-20)', color: testVerdict === 'AC' ? 'var(--bew-success-color)' : 'var(--bew-error-color)' }">{{ testVerdict }}</span>
+                      <button :disabled="testRunning" style="background:var(--bew-theme-color);color:#fff;border:none;border-radius:4px;padding:2px 8px;cursor:pointer;font-size:.82em;font-weight:600;white-space:nowrap" @click="_runTest">
+                        {{ testRunning ? '…' : '运行测试' }}
+                      </button>
+                    </span>
                   </div>
                   <textarea v-model="testActualOutput" style="flex:1;width:100%;background:var(--bew-fill-1);color:var(--bew-text-1);border:none;padding:8px 10px;font-family:Consolas,monospace;font-size:.78em;resize:none;outline:none" placeholder="—" readonly />
                 </div>
