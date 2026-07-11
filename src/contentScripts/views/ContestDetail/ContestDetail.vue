@@ -154,7 +154,7 @@ async function loadProblem(pid: string) {
       const ctx = JSON.parse(m[1])
       problemStatement.value = ctx?.currentData?.problem || ctx?.data?.problem || null
     }
-  } catch {}
+  } catch { statementLoading.value = false }
   statementLoading.value = false
 }
 
@@ -202,7 +202,7 @@ async function fetchScoreboard(page = 1) {
       }))
       rankingTotal.value = data.scoreboard.count || scoreboard.value.length
     }
-  } catch {}
+  } catch { scoreboard.value = [] }
   rankingLoading.value = false
 }
 

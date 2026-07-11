@@ -178,6 +178,7 @@ function _toggleIDE() {
 // Resizable split
 const splitRatio = ref(40)
 const isDragging = ref(false)
+let cleanupResize: (() => void) | null = null
 function startResize(e: MouseEvent) {
   isDragging.value = true
   const container = (e.target as HTMLElement).parentElement!
@@ -189,6 +190,12 @@ function startResize(e: MouseEvent) {
     splitRatio.value = Math.max(25, Math.min(65, startPct + (dx / totalW) * 100))
   }
   const onUp = () => {
+    isDragging.value = false
+    document.removeEventListener('mousemove', onMove)
+    document.removeEventListener('mouseup', onUp)
+    cleanupResize = null
+  }
+  cleanupResize = () => {
     isDragging.value = false
     document.removeEventListener('mousemove', onMove)
     document.removeEventListener('mouseup', onUp)
@@ -538,6 +545,7 @@ onMounted(() => {
 onUnmounted(() => {
   if (loadingTimer)
     clearTimeout(loadingTimer)
+  cleanupResize?.()
 })
 </script>
 
