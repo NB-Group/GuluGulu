@@ -250,29 +250,27 @@ function copyText(text: string) {
 async function _runTest() {
   if (!codeContent.value.trim()) { testVerdict.value = "无代码"; return }
   if (!isLoggedIn.value) { testVerdict.value = "请先登录"; return }
-  testRunning.value = true
-  testVerdict.value = ""
-  testActualOutput.value = "提交中…"
-  const result = await submitCode({
-    pid: problemId.value,
-    code: codeContent.value,
-    lang: selectedLang.value.id,
-    enableO2: enableO2.value && selectedLang.value.canO2,
-  })
-  testRunning.value = false
-  if (result.status === 200 && result.rid) {
-    testActualOutput.value = "提交成功 RID #" + result.rid
-    testVerdict.value = testExpectedOutput.value.trim() ? "已提交" : "提交成功"
-    window.open("https://www.luogu.com.cn/record/" + result.rid, "_blank")
-  } else if (result.needCaptcha) {
-    testVerdict.value = "需验证"
-    testActualOutput.value = "请打开洛谷页面完成人机验证后重试"
-  } else if (result.status === 403) {
-    testVerdict.value = "未登录"
-    testActualOutput.value = result.errorMessage || "请先登录洛谷"
-  } else {
-    testVerdict.value = "失败"
-    testActualOutput.value = result.errorMessage || "提交失败"
+  testRunning.value = true; testVerdict.value = ""; testActualOutput.value = "运行中…"
+  try {
+    const csrf = (window as any).__guly_user?.csrfToken || ""
+    const r = await fetch("https://www.luogu.com.cn/api/ide_submit", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "X-CSRF-TOKEN": csrf, "X-Requested-With": "XMLHttpRequest" },
+      credentials: "same-origin",
+      body: JSON.stringify({ lang: selectedLang.value.id, code: codeContent.value, input: testInput.value, o2: enableO2.value ? "true" : "false" }),
+    })
+    const j = await r.json()
+    testRunning.value = false
+    if (j?.data?.rid) {
+      testActualOutput.value = "RID #" + j.data.rid
+      testVerdict.value = testExpectedOutput.value.trim() ? "已提交" : "运行成功"
+      window.open("https://www.luogu.com.cn/record/" + j.data.rid, "_blank")
+    } else {
+      testVerdict.value = "失败"
+      testActualOutput.value = j?.errorMessage || "IDE 提交失败"
+    }
+  } catch (e) {
+    testRunning.value = false; testVerdict.value = "错误"; testActualOutput.value = (e as any).message || "请求失败"
   }
 }
 const contestProblems = ref<Array<{ no: string, pid: string, title: string, score: number }>>([])
