@@ -18,17 +18,25 @@ import App from './views/App.vue'
 const isFirefox: boolean = /Firefox/i.test(navigator.userAgent)
 
 // Capture-phase: block `/` key from triggering Luogu's search when typing in GuluGulu's code editor
-document.addEventListener('keydown', (e) => {
-  if (e.key !== '/')
-    return
-  const path = e.composedPath?.()
-  if (!path)
-    return
-  for (const node of path) {
-    if (node instanceof HTMLElement && (node.tagName === 'TEXTAREA' || node.tagName === 'INPUT' || node.tagName === 'SELECT'))
-      e.stopImmediatePropagation()
-  }
-}, true) // capture phase
+document.addEventListener(
+  'keydown',
+  (e) => {
+    if (e.key !== '/')
+      return
+    const path = e.composedPath?.()
+    if (!path)
+      return
+    for (const node of path) {
+      if (
+        node instanceof HTMLElement
+        && (node.tagName === 'TEXTAREA' || node.tagName === 'INPUT' || node.tagName === 'SELECT')
+      ) {
+        e.stopImmediatePropagation()
+      }
+    }
+  },
+  true,
+) // capture phase
 
 // Inject the history monkey-patch script into the page context before any page JS runs.
 // This ensures pushState/replaceState dispatch `historyChange` custom events that the
@@ -145,8 +153,7 @@ export function isSupportedIframePages(): boolean {
 let beforeLoadedStyleEl: HTMLStyleElement | undefined
 
 // Apply dark mode + guly-design class on ALL Luogu pages (including auth)
-if (/https?:\/\/(?:www\.)?luogu\.com(?:\.cn)?/.test(currentUrl)
-  || /https?:\/\/(?:www\.)?luogu\.org/.test(currentUrl)) {
+if (/https?:\/\/(?:www\.)?luogu\.com(?:\.cn)?/.test(currentUrl) || /https?:\/\/(?:www\.)?luogu\.org/.test(currentUrl)) {
   document.documentElement.classList.add('guly-design')
   // Set dark class synchronously before Vue mounts to prevent flash
   // Cache is written by useDark.ts whenever theme changes
@@ -247,6 +254,8 @@ async function onDOMLoaded() {
     }
     catch {}
 
+    document.documentElement.style.display = 'block'
+
     // Wait up to 2s for Luogu's punch card to render, then extract it
     for (let i = 0; i < 20; i++) {
       try {
@@ -321,10 +330,14 @@ function waitForBodyThenInject() {
   }, 5000)
 }
 
-if (document.readyState !== 'loading')
+if (document.readyState !== 'loading') {
+  document.documentElement.style.display = 'none'
   waitForBodyThenInject()
-else
+}
+else {
+  document.documentElement.style.display = 'none'
   document.addEventListener('DOMContentLoaded', () => waitForBodyThenInject())
+}
 
 function _injectAppWhenIdle() {
   return new Promise<void>((resolve) => {

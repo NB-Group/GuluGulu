@@ -2,15 +2,15 @@
 import { useElementSize, useWindowSize } from '@vueuse/core'
 import { computed, reactive, ref } from 'vue'
 
-import { renderIcon } from '~/utils/icons'
 import { useGulyApp } from '~/composables/useAppProvider'
 import { useDark } from '~/composables/useDark'
-import { useMessagePolling } from '~/composables/useMessagePolling'
 import { useDelayedHover } from '~/composables/useDelayedHover'
+import { useMessagePolling } from '~/composables/useMessagePolling'
 import { AppPage } from '~/enums/appEnums'
 import { settings } from '~/logic'
 import type { DockItem } from '~/stores/mainStore'
 import { useMainStore } from '~/stores/mainStore'
+import { renderIcon } from '~/utils/icons'
 
 import type { HoveringDockItem } from './types'
 
@@ -67,41 +67,65 @@ const showBackToTopOrRefreshButton = computed((): boolean => {
   return props.activatedPage !== AppPage.Search
 })
 
-watch(() => settings.autoHideDock, (newValue) => {
-  hideDock.value = newValue
-}, { immediate: true })
+watch(
+  () => settings.autoHideDock,
+  (newValue) => {
+    hideDock.value = newValue
+  },
+  { immediate: true },
+)
 
-watch(() => JSON.stringify(settings.dockItemsConfig), () => {
-  currentDockItems.value = computeDockItem()
-}, { immediate: true })
+watch(
+  () => JSON.stringify(settings.dockItemsConfig),
+  () => {
+    currentDockItems.value = computeDockItem()
+  },
+  { immediate: true },
+)
 
 function computeDockItem(): DockItem[] {
   if (Array.isArray(settings.dockItemsConfig) && settings.dockItemsConfig.length < mainStore.dockItems.length) {
-    const missingItems = mainStore.dockItems.filter(dock => !settings.dockItemsConfig.some(item => item.page === dock.page))
+    const missingItems = mainStore.dockItems.filter(
+      dock => !settings.dockItemsConfig.some(item => item.page === dock.page),
+    )
     settings.dockItemsConfig = [
       ...settings.dockItemsConfig,
-      ...missingItems.map(dock => ({ page: dock.page, visible: true, openInNewTab: false, useOriginalLuoguPage: false })),
+      ...missingItems.map(dock => ({
+        page: dock.page,
+        visible: true,
+        openInNewTab: false,
+        useOriginalLuoguPage: false,
+      })),
     ]
   }
-  else if (!Array.isArray(settings.dockItemsConfig) || settings.dockItemsConfig.length !== mainStore.dockItems.length) {
-    settings.dockItemsConfig = mainStore.dockItems.map(dock =>
-      ({ page: dock.page, visible: true, openInNewTab: false, useOriginalLuoguPage: false }),
-    )
+  else if (
+    !Array.isArray(settings.dockItemsConfig)
+    || settings.dockItemsConfig.length !== mainStore.dockItems.length
+  ) {
+    settings.dockItemsConfig = mainStore.dockItems.map(dock => ({
+      page: dock.page,
+      visible: true,
+      openInNewTab: false,
+      useOriginalLuoguPage: false,
+    }))
   }
 
   const targetDockItems: DockItem[] = []
 
   settings.dockItemsConfig.forEach((item) => {
     const foundItem = mainStore.dockItems.find(defaultItem => defaultItem.page === item.page)
-    item.visible && targetDockItems.push({
-      i18nKey: foundItem?.i18nKey || '',
-      icon: foundItem?.icon || '',
-      iconActivated: foundItem?.iconActivated || '',
-      page: foundItem?.page || AppPage.Home,
-      openInNewTab: item.openInNewTab,
-      useOriginalLuoguPage: item.useOriginalLuoguPage || false,
-      url: foundItem?.url || '',
-    })
+    if (item.visible) {
+      targetDockItems.push({
+        i18nKey: foundItem?.i18nKey || '',
+        icon: foundItem?.icon || '',
+        iconActivated: foundItem?.iconActivated || '',
+        page: foundItem?.page || AppPage.Home,
+        openInNewTab: item.openInNewTab,
+        useOriginalLuoguPage: item.useOriginalLuoguPage || false,
+        url: foundItem?.url || '',
+        hasGulyPage: foundItem?.hasGulyPage || false,
+      })
+    }
   })
   return targetDockItems
 }
@@ -109,8 +133,7 @@ function computeDockItem(): DockItem[] {
 function toggleHideDock(hide: boolean) {
   if (settings.autoHideDock)
     hideDock.value = hide
-  else
-    hideDock.value = false
+  else hideDock.value = false
 }
 
 function handleDockItemClick($event: MouseEvent, dockItem: DockItem) {
@@ -140,8 +163,7 @@ function handleBackToTopOrRefresh(action: 'backToTop' | 'refresh' | 'auto' = 'au
   else {
     if (reachTop.value)
       emit('refresh')
-    else
-      emit('backToTop')
+    else emit('backToTop')
   }
 }
 
@@ -159,13 +181,9 @@ const dockScale = computed((): number => {
   const maxAllowedHeight = windowHeight.value - 180
   const maxAllowedWidth = windowWidth.value - 180
 
-  const heightScale = dockHeight.value > maxAllowedHeight
-    ? maxAllowedHeight / dockHeight.value
-    : 1
+  const heightScale = dockHeight.value > maxAllowedHeight ? maxAllowedHeight / dockHeight.value : 1
 
-  const widthScale = dockWidth.value > maxAllowedWidth
-    ? maxAllowedWidth / dockWidth.value
-    : 1
+  const widthScale = dockWidth.value > maxAllowedWidth ? maxAllowedWidth / dockWidth.value : 1
 
   return Math.min(heightScale, widthScale)
 })
@@ -174,11 +192,12 @@ const dockTransformStyle = computed((): { transform: string, transformOrigin: st
   const position = settings.dockPosition
   const scale = dockScale.value
 
-  const origin = {
-    left: 'left center',
-    right: 'right center',
-    bottom: 'center bottom',
-  }[position] || 'center center'
+  const origin
+    = {
+      left: 'left center',
+      right: 'right center',
+      bottom: 'center bottom',
+    }[position] || 'center center'
 
   return {
     transform: `scale(${scale})`,
@@ -190,8 +209,13 @@ const dockTransformStyle = computed((): { transform: string, transformOrigin: st
 <template>
   <aside
     class="dock-wrap"
-    pos="fixed top-0" z-100 flex="~ col justify-center items-center" w-full h-full
-    z-10 pointer-events-none
+    pos="fixed top-0"
+    z-100
+    flex="~ col justify-center items-center"
+    w-full
+    h-full
+    z-10
+    pointer-events-none
   >
     <!-- Edge Div -->
     <div
@@ -218,9 +242,7 @@ const dockTransformStyle = computed((): { transform: string, transformOrigin: st
       @mouseenter="toggleHideDock(false)"
       @mouseleave="toggleHideDock(true)"
     >
-      <div
-        class="dock-content-inner"
-      >
+      <div class="dock-content-inner">
         <template v-for="dockItem in currentDockItems" :key="dockItem.page">
           <button
             class="dock-item group"
@@ -235,11 +257,12 @@ const dockTransformStyle = computed((): { transform: string, transformOrigin: st
             @click.middle="openDockItemInNewTab(dockItem)"
           >
             <span
+              style="display: contents"
               v-html="renderIcon(isDockItemActivated(dockItem) ? dockItem.iconActivated : dockItem.icon, 22)"
-              style="display:contents"
             />
             <!-- Unread badge for messages -->
-            <span v-if="dockItem.page === AppPage.Messages && settings.dockMessageBadge && unreadMsgCount > 0"
+            <span
+              v-if="dockItem.page === AppPage.Messages && settings.dockMessageBadge && unreadMsgCount > 0"
               class="dock-badge"
               :style="{ background: isDockItemActivated(dockItem) ? 'var(--bew-error-color)' : '#e74c3c' }"
             >{{ unreadMsgCount > 99 ? '99+' : unreadMsgCount }}</span>
@@ -250,34 +273,43 @@ const dockTransformStyle = computed((): { transform: string, transformOrigin: st
         <div class="divider" />
 
         <!-- Dark/Light mode toggle -->
-        <div
-          v-if="!settings.disableLightDarkModeSwitcherOnDock"
-          class="group"
-          relative
-          pointer-events-none
-        >
+        <div v-if="!settings.disableLightDarkModeSwitcherOnDock" class="group" relative pointer-events-none>
           <!-- moon glow -->
           <div
             v-if="isDark"
             pos="absolute top-0 left-0 group-hover:top-2px group-hover:left--4px"
-            w-full h-full bg-white rounded-full
-            z--2 pointer-events-none
+            w-full
+            h-full
+            bg-white
+            rounded-full
+            z--2
+            pointer-events-none
             shadow="group-hover:[-8px_4px_160px_20px_hsla(226deg,85%,77%,1),-8px_4px_100px_12px_hsla(226deg,85%,77%,0.8),-8px_4px_60px_10px_hsla(226deg,85%,77%,0.6),-8px_4px_20px_4px_hsla(226deg,85%,77%,0.4),-4px_2px_8px_0_hsla(226deg,85%,77%,0.8)]"
-            opacity-0 group-hover:opacity-100
+            opacity-0
+            group-hover:opacity-100
             duration-600
           />
 
           <button
             class="dock-item"
-            bg="!dark-hover:$bew-bg" transform="!dark-hover:scale-100"
+            bg="!dark-hover:$bew-bg"
+            transform="!dark-hover:scale-100"
             shadow="!dark-hover:[inset_4px_-2px_8px_hsla(226deg,85%,77%,1)]"
             pointer-events-auto
             @click="toggleDark"
             @mouseenter="hoveringDockItem.themeMode = true"
             @mouseleave="hoveringDockItem.themeMode = false"
           >
-            <span v-if="isDark" v-html="renderIcon('line-md:moon-to-sunny-outline-transition', 22)" style="display:contents;pointer-events:none" />
-            <span v-else v-html="renderIcon('line-md:sunny-outline-to-moon-transition', 22)" style="display:contents;pointer-events:none" />
+            <span
+              v-if="isDark"
+              style="display: contents; pointer-events: none"
+              v-html="renderIcon('line-md:moon-to-sunny-outline-transition', 22)"
+            />
+            <span
+              v-else
+              style="display: contents; pointer-events: none"
+              v-html="renderIcon('line-md:sunny-outline-to-moon-transition', 22)"
+            />
           </button>
         </div>
 
@@ -291,7 +323,7 @@ const dockTransformStyle = computed((): { transform: string, transformOrigin: st
           pointer-events-auto
           @click="emit('settingsVisibilityChange')"
         >
-          <span v-html="renderIcon('mingcute:settings-3-line', 22)" style="display:contents" />
+          <span style="display: contents" v-html="renderIcon('mingcute:settings-3-line', 22)" />
         </button>
       </div>
 
@@ -318,16 +350,8 @@ const dockTransformStyle = computed((): { transform: string, transformOrigin: st
                 }"
                 @click="handleBackToTopOrRefresh(key === 1 ? 'refresh' : 'backToTop')"
               >
-                  <span
-                  v-if="key === 1"
-                  v-html="renderIcon('line-md:rotate-270', 24)"
-                  style="display:contents"
-                />
-                <span
-                  v-else
-                  v-html="renderIcon('line-md:arrow-small-up', 24)"
-                  style="display:contents"
-                />
+                <span v-if="key === 1" style="display: contents" v-html="renderIcon('line-md:rotate-270', 24)" />
+                <span v-else style="display: contents" v-html="renderIcon('line-md:arrow-small-up', 24)" />
               </button>
             </Transition>
           </template>
@@ -341,16 +365,8 @@ const dockTransformStyle = computed((): { transform: string, transformOrigin: st
             @click="handleBackToTopOrRefresh('auto')"
           >
             <Transition name="fade">
-              <span
-                v-if="reachTop"
-                v-html="renderIcon('line-md:rotate-270', 24)"
-                style="display:contents"
-              />
-              <span
-                v-else
-                v-html="renderIcon('line-md:arrow-small-up', 24)"
-                style="display:contents"
-              />
+              <span v-if="reachTop" style="display: contents" v-html="renderIcon('line-md:rotate-270', 24)" />
+              <span v-else style="display: contents" v-html="renderIcon('line-md:arrow-small-up', 24)" />
             </Transition>
           </button>
         </template>
@@ -534,7 +550,7 @@ const dockTransformStyle = computed((): { transform: string, transformOrigin: st
     align-items: center;
     justify-content: center;
     line-height: 1;
-    box-shadow: 0 1px 3px rgba(0,0,0,.3);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
   }
 
   svg {

@@ -13,7 +13,10 @@ export default defineConfig(() => ({
     ...(isDev ? { mv3client: './scripts/client.ts' } : {}),
   },
   async onSuccess() {
-    fs.copySync(path.resolve(__dirname, './src/inject/index.js'), path.resolve(__dirname, `./${outDir}/inject/index.js`))
+    fs.copySync(
+      path.resolve(__dirname, './src/inject/index.js'),
+      path.resolve(__dirname, `./${outDir}/inject/index.js`),
+    )
   },
   outDir,
   format: ['esm'],
@@ -22,7 +25,7 @@ export default defineConfig(() => ({
   splitting: false,
   sourcemap: false, // https://github.com/vitejs/vite-plugin-vue/issues/35
   define: {
-    '__DEV__': JSON.stringify(isDev),
+    __DEV__: JSON.stringify(isDev),
     'process.env.NODE_ENV': JSON.stringify(isDev ? 'development' : 'production'),
     'process.env.FIREFOX': isFirefox ? 'true' : 'false',
   },

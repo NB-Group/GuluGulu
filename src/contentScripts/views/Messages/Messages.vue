@@ -1,19 +1,29 @@
 <script setup lang="ts">
+import { onMessagePoll, useMessagePolling } from '~/composables/useMessagePolling'
 import { renderIcon } from '~/utils/icons'
-import { getCsrfToken, friendlyError } from '~/utils/luogu-api'
-import { useMessagePolling, onMessagePoll } from '~/composables/useMessagePolling'
+import { friendlyError, getCsrfToken } from '~/utils/luogu-api'
 
 const { notifyEnabled, toggleNotify, resetUnread } = useMessagePolling()
 
 interface ChatUser {
-  uid: number; name: string; avatar: string; color: string; badge: string | null
+  uid: number
+  name: string
+  avatar: string
+  color: string
+  badge: string | null
 }
 interface Message {
-  id: number; sender: ChatUser; receiver: ChatUser; time: number; status: number
+  id: number
+  sender: ChatUser
+  receiver: ChatUser
+  time: number
+  status: number
   content: string
 }
 interface Conversation {
-  user: ChatUser; lastMsg: Message; unread: number
+  user: ChatUser
+  lastMsg: Message
+  unread: number
 }
 
 // ============================================================
@@ -48,7 +58,8 @@ const msgEndRef = ref<HTMLDivElement>()
 // ============================================================
 function onMsgListScroll() {
   const el = msgListRef.value
-  if (!el || loadingOlder.value || chatLoading.value) return
+  if (!el || loadingOlder.value || chatLoading.value)
+    return
   // Fire at 300px from top — by the time user reaches top, more messages are already there
   if (el.scrollTop <= 300 && msgPage.value > 1) {
     loadOlderMessages()
@@ -72,7 +83,8 @@ function getOppositeUser(msg: Message): ChatUser {
 }
 
 async function fetchConversations() {
-  loading.value = true; errorMsg.value = ''
+  loading.value = true
+  errorMsg.value = ''
   try {
     const res = await fetch('https://www.luogu.com.cn/chat?_contentOnly=1', { credentials: 'same-origin' })
     const json = await res.json()
@@ -95,7 +107,10 @@ async function fetchConversations() {
       }
     }
     conversations.value = [...map.values()]
-  } catch (e: any) { errorMsg.value = friendlyError(e) }
+  }
+  catch (e: any) {
+    errorMsg.value = friendlyError(e)
+  }
   loading.value = false
 }
 
@@ -117,7 +132,8 @@ async function openChat(uid: number, user?: ChatUser) {
     })
     const json = await res.json()
     // Abort if user switched to another conversation while fetching
-    if (activeChatUid.value !== targetUid) return
+    if (activeChatUid.value !== targetUid)
+      return
     const latest = (json?.messages?.result || []).sort((a: any, b: any) => (a.time || 0) - (b.time || 0))
 
     const total = json?.messages?.count || latest.length
@@ -139,21 +155,26 @@ async function openChat(uid: number, user?: ChatUser) {
           fetch(`https://www.luogu.com.cn/api/chat/record?user=${uid}&page=${p}`, {
             credentials: 'same-origin',
             headers: { 'X-Requested-With': 'XMLHttpRequest' },
-          }).then(r => r.json())
-        )
+          }).then(r => r.json()),
+        ),
       )
       // Sort fetched pages by page number (ascending → oldest first)
       const sorted = results
-        .map((j: any, i) => ({ page: preloadPages[i], msgs: (j?.messages?.result || []).sort((a: any, b: any) => (a.time || 0) - (b.time || 0)) }))
+        .map((j: any, i) => ({
+          page: preloadPages[i],
+          msgs: (j?.messages?.result || []).sort((a: any, b: any) => (a.time || 0) - (b.time || 0)),
+        }))
         .sort((a: any, b: any) => a.page - b.page)
       for (const s of sorted) {
         older = [...older, ...s.msgs]
-        if (s.page < msgPage.value) msgPage.value = s.page
+        if (s.page < msgPage.value)
+          msgPage.value = s.page
       }
     }
 
     // Abort if user switched to another conversation during preload
-    if (activeChatUid.value !== targetUid) return
+    if (activeChatUid.value !== targetUid)
+      return
     messages.value = [...older, ...latest]
 
     // Clear unread
@@ -166,10 +187,13 @@ async function openChat(uid: number, user?: ChatUser) {
         body: JSON.stringify({ user: uid }),
       })
       const idx = conversations.value.findIndex(c => c.user.uid === uid)
-      if (idx !== -1) conversations.value[idx] = { ...conversations.value[idx], unread: 0 }
-    } catch {}
+      if (idx !== -1)
+        conversations.value[idx] = { ...conversations.value[idx], unread: 0 }
+    }
+    catch {}
     resetUnread()
-  } catch {}
+  }
+  catch {}
   chatLoading.value = false
   scrollToBottom()
 }
@@ -186,7 +210,8 @@ function closeChat() {
 // Load older messages — triggered when close to top (300px)
 // ============================================================
 async function loadOlderMessages() {
-  if (!activeChatUid.value || loadingOlder.value || msgPage.value <= 1) return
+  if (!activeChatUid.value || loadingOlder.value || msgPage.value <= 1)
+    return
   loadingOlder.value = true
   const prevPage = msgPage.value - 1
   const listEl = msgListRef.value
@@ -207,7 +232,8 @@ async function loadOlderMessages() {
         listEl.scrollTop = listEl.scrollHeight - prevScrollHeight
       }
     }
-  } catch {}
+  }
+  catch {}
   loadingOlder.value = false
 }
 
@@ -216,7 +242,8 @@ async function loadOlderMessages() {
 // ============================================================
 async function sendMessage() {
   const text = newMsg.value.trim()
-  if (!text || !activeChatUid.value || sending.value) return
+  if (!text || !activeChatUid.value || sending.value)
+    return
   sending.value = true
   try {
     const csrf = getCsrfToken()
@@ -230,7 +257,13 @@ async function sendMessage() {
     if (json?._empty !== undefined || res.ok) {
       const newMsgObj: Message = {
         id: Date.now(),
-        sender: { uid: currentUid.value, name: currentName.value, avatar: `https://cdn.luogu.com.cn/upload/usericon/${currentUid.value}.png`, color: '', badge: null },
+        sender: {
+          uid: currentUid.value,
+          name: currentName.value,
+          avatar: `https://cdn.luogu.com.cn/upload/usericon/${currentUid.value}.png`,
+          color: '',
+          badge: null,
+        },
         receiver: activeChatUser.value || { uid: activeChatUid.value!, name: '', avatar: '', color: '', badge: null },
         time: Math.floor(Date.now() / 1000),
         status: 2,
@@ -242,7 +275,8 @@ async function sendMessage() {
       const idx = conversations.value.findIndex(c => c.user.uid === activeChatUid.value)
       if (idx !== -1) {
         conversations.value[idx] = { ...conversations.value[idx], lastMsg: newMsgObj, unread: 0 }
-      } else {
+      }
+      else {
         conversations.value.unshift({
           user: activeChatUser.value || { uid: activeChatUid.value!, name: '', avatar: '', color: '', badge: null },
           lastMsg: newMsgObj,
@@ -252,7 +286,8 @@ async function sendMessage() {
 
       scrollToBottom(true)
     }
-  } catch (e: any) {
+  }
+  catch (e: any) {
     console.error('[GuluGulu] Send message error:', e)
   }
   sending.value = false
@@ -265,7 +300,8 @@ async function sendMessage() {
 const MSG_STAGGER_COUNT = 30
 const msgDelays = computed(() => {
   const n = messages.value.length
-  if (n <= 1) return {} as Record<number, number>
+  if (n <= 1)
+    return {} as Record<number, number>
   const delays: Record<number, number> = {}
   // Only animate the tail
   const start = Math.max(0, n - MSG_STAGGER_COUNT)
@@ -291,16 +327,28 @@ function formatTime(ts: number): string {
   const d = new Date(ts * 1000)
   const now = new Date()
   const isToday = d.toDateString() === now.toDateString()
-  if (isToday) return d.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })
+  if (isToday)
+    return d.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })
   return `${d.getMonth() + 1}/${d.getDate()} ${d.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })}`
 }
-function openUser(uid: number) { window.open(`https://www.luogu.com.cn/user/${uid}`, '_blank') }
+function openUser(uid: number) {
+  window.open(`https://www.luogu.com.cn/user/${uid}`, '_blank')
+}
 function handleKeydown(e: KeyboardEvent) {
-  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage() }
+  if (e.key === 'Enter' && !e.shiftKey) {
+    e.preventDefault()
+    sendMessage()
+  }
 }
 
-onMounted(() => { (window as any).__guly_viewing_messages = true; fetchConversations(); resetUnread() })
-onUnmounted(() => { (window as any).__guly_viewing_messages = false })
+onMounted(() => {
+  ;(window as any).__guly_viewing_messages = true
+  fetchConversations()
+  resetUnread()
+})
+onUnmounted(() => {
+  ;(window as any).__guly_viewing_messages = false
+})
 
 // When polling detects new messages, merge into conversation list
 onMessagePoll((json: any) => {
@@ -316,9 +364,14 @@ onMessagePoll((json: any) => {
     // Don't show unread for the active chat (user is looking at it)
     const isActive = activeChatUid.value != null && other.uid === activeChatUid.value
     if (idx !== -1) {
-      conversations.value[idx] = { ...conversations.value[idx], lastMsg: msg, unread: isActive ? 0 : (unread[String(other.uid)] || 0) }
-    } else {
-      conversations.value.push({ user: other, lastMsg: msg, unread: isActive ? 0 : (unread[String(other.uid)] || 0) })
+      conversations.value[idx] = {
+        ...conversations.value[idx],
+        lastMsg: msg,
+        unread: isActive ? 0 : unread[String(other.uid)] || 0,
+      }
+    }
+    else {
+      conversations.value.push({ user: other, lastMsg: msg, unread: isActive ? 0 : unread[String(other.uid)] || 0 })
     }
   }
   // Sort by most recent first (force new array reference for Vue reactivity)
@@ -326,9 +379,11 @@ onMessagePoll((json: any) => {
 
   // Also update active chat messages if new ones arrived from this person
   if (activeChatUid.value) {
-    const newMsgs = msgs.filter((m: Message) =>
-      Number(m.sender.uid) === activeChatUid.value || Number(m.receiver.uid) === activeChatUid.value
-    ).filter((m: Message) => !messages.value.find(x => x.id === m.id))
+    const newMsgs = msgs
+      .filter(
+        (m: Message) => Number(m.sender.uid) === activeChatUid.value || Number(m.receiver.uid) === activeChatUid.value,
+      )
+      .filter((m: Message) => !messages.value.find(x => x.id === m.id))
     if (newMsgs.length > 0) {
       messages.value = [...messages.value, ...newMsgs].sort((a, b) => (a.time || 0) - (b.time || 0))
       scrollToBottom(true)
@@ -346,45 +401,132 @@ onMessagePoll((json: any) => {
         <!-- ============================================================ -->
         <!-- Messages Layout: sidebar + chat area -->
         <!-- ============================================================ -->
-        <div class="chat-layout" flex="~" bg="$bew-content" rounded="$bew-radius" shadow="[var(--bew-shadow-1),var(--bew-shadow-edge-glow-1)]" border="1 $bew-border-color" style="backdrop-filter:var(--bew-filter-glass-1)" overflow="hidden">
+        <div
+          class="chat-layout"
+          flex="~"
+          bg="$bew-content"
+          rounded="$bew-radius"
+          shadow="[var(--bew-shadow-1),var(--bew-shadow-edge-glow-1)]"
+          border="1 $bew-border-color"
+          style="backdrop-filter: var(--bew-filter-glass-1)"
+          overflow="hidden"
+        >
           <!-- Sidebar: conversation list -->
-          <div class="chat-sidebar" w="300px" shrink-0 border="r-1 $bew-border-color" bg="$bew-content" flex="~ col">
+          <div
+            class="chat-sidebar" w="300px" shrink-0 border="r-1 $bew-border-color" bg="$bew-content"
+            flex="~ col"
+          >
             <div p-4 border="b-1 $bew-border-color" bg="$bew-fill-1" flex="~ items-center justify-between">
-              <h2 style="font-size:var(--bew-base-font-size);color:var(--bew-text-1);font-weight:700">私信</h2>
+              <h2 style="font-size: var(--bew-base-font-size); color: var(--bew-text-1); font-weight: 700">
+                私信
+              </h2>
               <button
-                @click="toggleNotify"
                 :title="notifyEnabled ? '桌面通知已开启' : '桌面通知已关闭'"
-                style="background:none;border:1px solid var(--bew-border-color);border-radius:999px;cursor:pointer;padding:3px 10px;font-size:11px;font-weight:600;color:var(--bew-text-2);display:flex;align-items:center;gap:4px;transition:all .2s"
-                :style="notifyEnabled ? { background: 'var(--bew-theme-color-20)', color: 'var(--bew-theme-color)', borderColor: 'var(--bew-theme-color-30)' } : {}"
+                style="
+                  background: none;
+                  border: 1px solid var(--bew-border-color);
+                  border-radius: 999px;
+                  cursor: pointer;
+                  padding: 3px 10px;
+                  font-size: 11px;
+                  font-weight: 600;
+                  color: var(--bew-text-2);
+                  display: flex;
+                  align-items: center;
+                  gap: 4px;
+                  transition: all 0.2s;
+                "
+                :style="
+                  notifyEnabled
+                    ? {
+                      background: 'var(--bew-theme-color-20)',
+                      color: 'var(--bew-theme-color)',
+                      borderColor: 'var(--bew-theme-color-30)',
+                    }
+                    : {}
+                "
+                @click="toggleNotify"
               >
-                <span v-html="renderIcon(notifyEnabled ? 'mingcute:notification-line' : 'mingcute:notification-off-line', 13)" style="display:contents" />
+                <span
+                  style="display: contents"
+                  v-html="
+                    renderIcon(notifyEnabled ? 'mingcute:notification-line' : 'mingcute:notification-off-line', 13)
+                  "
+                />
                 {{ notifyEnabled ? '提醒' : '静音' }}
               </button>
             </div>
             <div flex="1" overflow="y-auto" class="sidebar-scroll">
-              <div v-if="conversations.length === 0" p-8 text="center" style="color:var(--bew-text-3);font-size:var(--bew-base-font-size)">
+              <div
+                v-if="conversations.length === 0"
+                p-8
+                text="center"
+                style="color: var(--bew-text-3); font-size: var(--bew-base-font-size)"
+              >
                 暂无私信
               </div>
               <div
-                v-for="(conv, idx) in conversations" :key="conv.user.uid"
+                v-for="(conv, idx) in conversations"
+                :key="conv.user.uid"
                 class="stagger-row conversation-item"
-                :style="{ '--row-index': idx, background: activeChatUid === conv.user.uid ? 'var(--bew-fill-2)' : 'transparent' }"
-                flex="~ items-center gap-3" p="x-4 y-3" cursor="pointer" duration-150
+                :style="{
+                  '--row-index': idx,
+                  'background': activeChatUid === conv.user.uid ? 'var(--bew-fill-2)' : 'transparent',
+                }"
+                flex="~ items-center gap-3"
+                p="x-4 y-3"
+                cursor="pointer"
+                duration-150
                 border="b-1 $bew-border-color"
                 @click="openChat(conv.user.uid, conv.user)"
               >
                 <div pos="relative" shrink-0>
-                  <img :src="conv.user.avatar" style="width:40px;height:40px;border-radius:50%;object-fit:cover" @error="(e:any) => e.target.style.display='none'" />
-                  <div v-if="conv.unread > 0" pos="absolute top-0 right-0" style="min-width:18px;height:18px;background:var(--bew-error-color);color:white;font-size:11px;font-weight:700;border-radius:9px;display:flex;align-items:center;justify-content:center;padding:0 5px;transform:translate(30%,-30%)">
+                  <img
+                    :src="conv.user.avatar"
+                    style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover"
+                    @error="(e: any) => (e.target.style.display = 'none')"
+                  >
+                  <div
+                    v-if="conv.unread > 0"
+                    pos="absolute top-0 right-0"
+                    style="
+                      min-width: 18px;
+                      height: 18px;
+                      background: var(--bew-error-color);
+                      color: white;
+                      font-size: 11px;
+                      font-weight: 700;
+                      border-radius: 9px;
+                      display: flex;
+                      align-items: center;
+                      justify-content: center;
+                      padding: 0 5px;
+                      transform: translate(30%, -30%);
+                    "
+                  >
                     {{ conv.unread > 99 ? '99+' : conv.unread }}
                   </div>
                 </div>
                 <div flex="1" min-w-0>
                   <div flex="~ items-center justify-between" mb-1>
-                    <span fw-bold style="font-size:var(--bew-base-font-size);color:var(--bew-text-1)">{{ conv.user.name }}</span>
-                    <span style="font-size:.75em;color:var(--bew-text-4)">{{ formatTime(conv.lastMsg.time) }}</span>
+                    <span fw-bold style="font-size: var(--bew-base-font-size); color: var(--bew-text-1)">{{
+                      conv.user.name
+                    }}</span>
+                    <span style="font-size: 0.75em; color: var(--bew-text-4)">{{ formatTime(conv.lastMsg.time) }}</span>
                   </div>
-                  <div style="font-size:.85em;color:var(--bew-text-3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis" :style="{ fontWeight: conv.unread > 0 ? 600 : 400, color: conv.unread > 0 ? 'var(--bew-text-1)' : 'var(--bew-text-3)' }">
+                  <div
+                    style="
+                      font-size: 0.85em;
+                      color: var(--bew-text-3);
+                      white-space: nowrap;
+                      overflow: hidden;
+                      text-overflow: ellipsis;
+                    "
+                    :style="{
+                      fontWeight: conv.unread > 0 ? 600 : 400,
+                      color: conv.unread > 0 ? 'var(--bew-text-1)' : 'var(--bew-text-3)',
+                    }"
+                  >
                     {{ conv.lastMsg.content.slice(0, 50) }}
                   </div>
                 </div>
@@ -395,40 +537,97 @@ onMessagePoll((json: any) => {
           <!-- Chat area -->
           <div class="chat-area" flex="1">
             <!-- No chat selected — always fills the chat area -->
-            <div v-if="!activeChatUid" flex="~ col items-center justify-center" style="flex:1;color:var(--bew-text-3)">
-              <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="opacity:.4"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-              <p mt-4 style="font-size:var(--bew-base-font-size)">选择对话开始聊天</p>
+            <div
+              v-if="!activeChatUid"
+              flex="~ col items-center justify-center"
+              style="flex: 1; color: var(--bew-text-3)"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="64"
+                height="64"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.5"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                style="opacity: 0.4"
+              >
+                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+              </svg>
+              <p mt-4 style="font-size: var(--bew-base-font-size)">
+                选择对话开始聊天
+              </p>
             </div>
 
             <!-- Active chat: header + messages + input (input pinned to bottom) -->
             <template v-if="activeChatUid">
               <!-- Chat header -->
               <div flex="~ items-center gap-3" p="x-4 y-3" border="b-1 $bew-border-color" bg="$bew-fill-1" shrink-0>
-                <button style="background:none;border:none;cursor:pointer;color:var(--bew-text-2);padding:4px" @click="closeChat">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+                <button
+                  style="background: none; border: none; cursor: pointer; color: var(--bew-text-2); padding: 4px"
+                  @click="closeChat"
+                >
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="20"
+                    height="20"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  >
+                    <path d="M19 12H5M12 19l-7-7 7-7" />
+                  </svg>
                 </button>
-                <img v-if="activeChatUser?.avatar" :src="activeChatUser.avatar" style="width:32px;height:32px;border-radius:50%;object-fit:cover" @error="(e:any) => e.target.style.display='none'" />
-                <span fw-bold cursor="pointer" style="font-size:var(--bew-base-font-size);color:var(--bew-text-1)" @click="openUser(activeChatUid)">{{ activeChatUser?.name || 'UID:' + activeChatUid }}</span>
+                <img
+                  v-if="activeChatUser?.avatar"
+                  :src="activeChatUser.avatar"
+                  style="width: 32px; height: 32px; border-radius: 50%; object-fit: cover"
+                  @error="(e: any) => (e.target.style.display = 'none')"
+                >
+                <span
+                  fw-bold
+                  cursor="pointer"
+                  style="font-size: var(--bew-base-font-size); color: var(--bew-text-1)"
+                  @click="openUser(activeChatUid)"
+                >{{ activeChatUser?.name || `UID:${activeChatUid}` }}</span>
               </div>
 
               <!-- Messages list — flex:1 fills remaining space, input at bottom -->
               <div ref="msgListRef" class="msg-list" flex="1" @scroll="onMsgListScroll">
-                <div v-if="loadingOlder" class="loading-older" p-2 text="center sm $bew-text-3">加载更早的消息...</div>
+                <div v-if="loadingOlder" class="loading-older" p-2 text="center sm $bew-text-3">
+                  加载更早的消息...
+                </div>
                 <Loading v-if="chatLoading" />
                 <div v-else p="x-4 y-3">
-                  <div v-if="messages.length === 0" text="center" style="color:var(--bew-text-3);font-size:var(--bew-base-font-size)" py-8>
+                  <div
+                    v-if="messages.length === 0"
+                    text="center"
+                    style="color: var(--bew-text-3); font-size: var(--bew-base-font-size)"
+                    py-8
+                  >
                     暂无消息，发送第一条消息吧
                   </div>
                   <TransitionGroup name="msg-fade" tag="div" appear>
                     <div
-                      v-for="msg in messages" :key="msg.id"
+                      v-for="msg in messages"
+                      :key="msg.id"
                       flex="~"
-                      :style="{ justifyContent: Number(msg.sender.uid) === currentUid ? 'flex-end' : 'flex-start', '--msg-delay': (msgDelays[msg.id] || 0) + 'ms' }"
+                      :style="{
+                        'justifyContent': Number(msg.sender.uid) === currentUid ? 'flex-end' : 'flex-start',
+                        '--msg-delay': `${msgDelays[msg.id] || 0}ms`,
+                      }"
                       mb-2
                     >
                       <div class="msg-bubble" :class="Number(msg.sender.uid) === currentUid ? 'msg-mine' : 'msg-other'">
                         {{ msg.content }}
-                        <div class="msg-time">{{ formatTime(msg.time) }}</div>
+                        <div class="msg-time">
+                          {{ formatTime(msg.time) }}
+                        </div>
                       </div>
                     </div>
                   </TransitionGroup>
@@ -441,15 +640,38 @@ onMessagePoll((json: any) => {
               <div border="t-1 $bew-border-color" p-3 flex="~ items-end gap-2" bg="$bew-fill-1" shrink-0>
                 <textarea
                   v-model="newMsg"
-                  style="flex:1;background:var(--bew-content);color:var(--bew-text-1);border:1px solid var(--bew-border-color);border-radius:var(--bew-radius);padding:8px 12px;font-size:var(--bew-base-font-size);resize:none;min-height:40px;max-height:120px;font-family:inherit;outline:none"
+                  style="
+                    flex: 1;
+                    background: var(--bew-content);
+                    color: var(--bew-text-1);
+                    border: 1px solid var(--bew-border-color);
+                    border-radius: var(--bew-radius);
+                    padding: 8px 12px;
+                    font-size: var(--bew-base-font-size);
+                    resize: none;
+                    min-height: 40px;
+                    max-height: 120px;
+                    font-family: inherit;
+                    outline: none;
+                  "
                   placeholder="输入消息... (Enter 发送)"
                   rows="1"
                   @keydown="handleKeydown"
                 />
                 <button
-                  style="background:var(--bew-theme-color);color:white;border:none;border-radius:var(--bew-radius);padding:8px 16px;cursor:pointer;font-size:var(--bew-base-font-size);font-weight:600;white-space:nowrap"
+                  style="
+                    background: var(--bew-theme-color);
+                    color: white;
+                    border: none;
+                    border-radius: var(--bew-radius);
+                    padding: 8px 16px;
+                    cursor: pointer;
+                    font-size: var(--bew-base-font-size);
+                    font-weight: 600;
+                    white-space: nowrap;
+                  "
                   :disabled="sending || !newMsg.trim()"
-                  :style="{ opacity: (sending || !newMsg.trim()) ? .5 : 1 }"
+                  :style="{ opacity: sending || !newMsg.trim() ? 0.5 : 1 }"
                   @click="sendMessage"
                 >
                   {{ sending ? '发送中...' : '发送' }}
@@ -475,11 +697,19 @@ onMessagePoll((json: any) => {
   overflow: hidden;
   display: flex;
   flex-direction: column;
-  @media (max-width: 768px) { width: 100% !important; border-right: none !important; }
+  @media (max-width: 768px) {
+    width: 100% !important;
+    border-right: none !important;
+  }
 }
 .sidebar-scroll {
-  &::-webkit-scrollbar { width: 5px; }
-  &::-webkit-scrollbar-thumb { background: var(--bew-border-color); border-radius: 3px; }
+  &::-webkit-scrollbar {
+    width: 5px;
+  }
+  &::-webkit-scrollbar-thumb {
+    background: var(--bew-border-color);
+    border-radius: 3px;
+  }
 }
 .chat-area {
   min-height: 0;
@@ -489,11 +719,23 @@ onMessagePoll((json: any) => {
 .msg-list {
   min-height: 0;
   overflow-y: auto;
-  &::-webkit-scrollbar { width: 5px; }
-  &::-webkit-scrollbar-track { background: transparent; }
-  &::-webkit-scrollbar-thumb { background: var(--bew-border-color); border-radius: 3px; &:hover { background: var(--bew-text-4); } }
+  &::-webkit-scrollbar {
+    width: 5px;
+  }
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  &::-webkit-scrollbar-thumb {
+    background: var(--bew-border-color);
+    border-radius: 3px;
+    &:hover {
+      background: var(--bew-text-4);
+    }
+  }
 }
-.conversation-item:hover { background: var(--bew-fill-2); }
+.conversation-item:hover {
+  background: var(--bew-fill-2);
+}
 /* Message bubbles */
 .msg-bubble {
   max-width: 70%;
@@ -515,15 +757,17 @@ onMessagePoll((json: any) => {
   border-bottom-left-radius: 4px;
 }
 .msg-time {
-  font-size: .7em;
+  font-size: 0.7em;
   margin-top: 4px;
-  opacity: .7;
+  opacity: 0.7;
   text-align: right;
 }
 /* Message fade animation */
 .msg-fade-enter-active,
 .msg-fade-appear-active {
-  transition: opacity 0.35s ease, transform 0.35s ease;
+  transition:
+    opacity 0.35s ease,
+    transform 0.35s ease;
   transition-delay: var(--msg-delay, 0ms);
 }
 .msg-fade-leave-active {

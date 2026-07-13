@@ -44,13 +44,13 @@ https://cdn.luogu.com.cn/upload/usericon/{uid}.png
 {
   "currentData": {
     "bulletin": { "html": "..." },
-    "punch": { "enabled": true, "history": [{"finished": true, "time": 1751443200}, ...] },
-    "rankingList": {  "result": [{"user": {...}, "ranking": 1}] },
-    "recommendedContests": { "featured": [...] },
-    "loginState": { "user": {"uid": 123, "name": "...", "avatar": "..."} },
-    "recentContests": { "result": [{"id": 123, "name": "...", "startTime": ..., "endTime": ..., "rated": 1, "ruleType": 1}] },
-    "hotProblems": { "result": [{"pid": "P1001", "title": "...", "difficulty": 1, "totalSubmit": 100, "totalAccepted": 50}] },
-    "recentDiscussions": { "result": [{"id": 123, "title": "...", "Forum": {...}, "author": {...}, "time": ..., "replyCount": 5}] }
+    "punch": { "enabled": true, "history": [{ "finished": true, "time": 1751443200 }, "..."] },
+    "rankingList": { "result": [{ "user": { "...": "..." }, "ranking": 1 }] },
+    "recommendedContests": { "featured": ["..."] },
+    "loginState": { "user": { "uid": 123, "name": "...", "avatar": "..." } },
+    "recentContests": { "result": [{ "id": 123, "name": "...", "startTime": "...", "endTime": "...", "rated": 1, "ruleType": 1 }] },
+    "hotProblems": { "result": [{ "pid": "P1001", "title": "...", "difficulty": 1, "totalSubmit": 100, "totalAccepted": 50 }] },
+    "recentDiscussions": { "result": [{ "id": 123, "title": "...", "Forum": { "...": "..." }, "author": { "...": "..." }, "time": "...", "replyCount": 5 }] }
   }
 }
 ```
@@ -78,9 +78,13 @@ https://cdn.luogu.com.cn/upload/usericon/{uid}.png
       "count": 10000,
       "result": [
         {
-          "pid": "P1001", "title": "A+B Problem",
-          "difficulty": 1, "totalSubmit": 5000, "totalAccepted": 3000,
-          "tags": [1, 2], "type": "P"
+          "pid": "P1001",
+          "title": "A+B Problem",
+          "difficulty": 1,
+          "totalSubmit": 5000,
+          "totalAccepted": 3000,
+          "tags": [1, 2],
+          "type": "P"
         }
       ]
     }
@@ -97,13 +101,22 @@ https://cdn.luogu.com.cn/upload/usericon/{uid}.png
 {
   "currentData": {
     "problem": {
-      "pid": "P1001", "title": "A+B Problem", "difficulty": 1,
-      "background": "## 题目背景", "description": "## 题目描述",
-      "inputFormat": "## 输入格式", "outputFormat": "## 输出格式",
-      "hint": "## 提示", "totalSubmit": 5000, "totalAccepted": 3000,
-      "tags": [1, 2], "limits": { "time": [1000], "memory": [128] },
-      "samples": [["1 2", "3"]], "languages": [3, 7, 28],
-      "flag": 0, "fullScore": 100
+      "pid": "P1001",
+      "title": "A+B Problem",
+      "difficulty": 1,
+      "background": "## 题目背景",
+      "description": "## 题目描述",
+      "inputFormat": "## 输入格式",
+      "outputFormat": "## 输出格式",
+      "hint": "## 提示",
+      "totalSubmit": 5000,
+      "totalAccepted": 3000,
+      "tags": [1, 2],
+      "limits": { "time": [1000], "memory": [128] },
+      "samples": [["1 2", "3"]],
+      "languages": [3, 7, 28],
+      "flag": 0,
+      "fullScore": 100
     },
     "lastLanguage": 28,
     "lastCode": "#include <iostream>..."
@@ -155,8 +168,15 @@ https://cdn.luogu.com.cn/upload/usericon/{uid}.png
     "contests": {
       "count": 100,
       "result": [
-        { "id": 123, "name": "...", "startTime": 1750000000, "endTime": 1750086400,
-          "rated": 1, "ruleType": 1, "host": {"uid": ..., "name": "..."} }
+        {
+          "id": 123,
+          "name": "...",
+          "startTime": 1750000000,
+          "endTime": 1750086400,
+          "rated": 1,
+          "ruleType": 1,
+          "host": { "uid": "...", "name": "..." }
+        }
       ]
     }
   }
@@ -172,12 +192,17 @@ https://cdn.luogu.com.cn/upload/usericon/{uid}.png
 {
   "currentData": {
     "contest": {
-      "id": 123, "name": "...", "description": "...",
-      "startTime": ..., "endTime": ..., "ruleType": 1,
-      "host": {"uid": ..., "name": "..."},
-      "problemCount": 4, "problems": [{"pid": "P1001", "title": "...", "score": 100}]
+      "id": 123,
+      "name": "...",
+      "description": "...",
+      "startTime": "...",
+      "endTime": "...",
+      "ruleType": 1,
+      "host": { "uid": "...", "name": "..." },
+      "problemCount": 4,
+      "problems": [{ "pid": "P1001", "title": "...", "score": 100 }]
     },
-    "contestProblems": [{"pid": "P1001", "title": "...", "score": 100}]
+    "contestProblems": [{ "pid": "P1001", "title": "...", "score": 100 }]
   }
 }
 ```
@@ -202,9 +227,12 @@ https://cdn.luogu.com.cn/upload/usericon/{uid}.png
   "scoreboard": {
     "count": 100,
     "result": [
-      { "user": {"uid": ..., "name": "...", "avatar": "..."},
-        "score": 300, "scores": [{"score": 100, "time": 3600}, ...],
-        "rank": 1 }
+      {
+        "user": { "uid": "...", "name": "...", "avatar": "..." },
+        "score": 300,
+        "scores": [{ "score": 100, "time": 3600 }, "..."],
+        "rank": 1
+      }
     ]
   }
 }
@@ -245,12 +273,19 @@ https://cdn.luogu.com.cn/upload/usericon/{uid}.png
     "posts": {
       "count": 1000,
       "result": [
-        { "id": 123, "title": "...", "time": ..., "topped": false, "locked": false,
-          "replyCount": 5, "forum": {"name": "...", "color": "...", "slug": "..."},
-          "author": {"uid": ..., "avatar": "...", "name": "...", "color": "..."} }
+        {
+          "id": 123,
+          "title": "...",
+          "time": "...",
+          "topped": false,
+          "locked": false,
+          "replyCount": 5,
+          "forum": { "name": "...", "color": "...", "slug": "..." },
+          "author": { "uid": "...", "avatar": "...", "name": "...", "color": "..." }
+        }
       ]
     },
-    "publicForums": [{"name": "...", "slug": "...", "color": "..."}]
+    "publicForums": [{ "name": "...", "slug": "...", "color": "..." }]
   }
 }
 ```
@@ -262,10 +297,10 @@ https://cdn.luogu.com.cn/upload/usericon/{uid}.png
 ```json
 {
   "currentData": {
-    "post": { "id": 123, "title": "...", "content": "# markdown...", "time": ..., "author": {...} },
+    "post": { "id": 123, "title": "...", "content": "# markdown...", "time": "...", "author": { "...": "..." } },
     "replies": {
       "result": [
-        { "id": 456, "content": "...", "time": ..., "author": {...} }
+        { "id": 456, "content": "...", "time": "...", "author": { "...": "..." } }
       ]
     }
   }
@@ -295,8 +330,13 @@ https://cdn.luogu.com.cn/upload/usericon/{uid}.png
   "currentData": {
     "latestMessages": {
       "result": [
-        { "id": 123, "from": {"uid": 1, "name": "...", "avatar": "..."},
-          "content": "...", "time": ..., "unread": true }
+        {
+          "id": 123,
+          "from": { "uid": 1, "name": "...", "avatar": "..." },
+          "content": "...",
+          "time": "...",
+          "unread": true
+        }
       ]
     }
   }
@@ -312,8 +352,12 @@ https://cdn.luogu.com.cn/upload/usericon/{uid}.png
 ```json
 {
   "messages": [
-    { "id": 1, "sender": {"uid": 1, "name": "...", "avatar": "..."},
-      "content": "...", "time": 1750000000 }
+    {
+      "id": 1,
+      "sender": { "uid": 1, "name": "...", "avatar": "..." },
+      "content": "...",
+      "time": 1750000000
+    }
   ],
   "unreadCount": 0
 }
@@ -345,10 +389,19 @@ https://cdn.luogu.com.cn/upload/usericon/{uid}.png
     "records": {
       "count": 1000,
       "result": [
-        { "id": 12345678, "problem": {"pid": "P1001", "title": "A+B"},
-          "contest": null, "sourceCodeLength": 200,
-          "submitTime": 1750000000, "status": 12, "score": 100,
-          "time": 15, "memory": 1024, "language": 28, "enableO2": false }
+        {
+          "id": 12345678,
+          "problem": { "pid": "P1001", "title": "A+B" },
+          "contest": null,
+          "sourceCodeLength": 200,
+          "submitTime": 1750000000,
+          "status": 12,
+          "score": 100,
+          "time": 15,
+          "memory": 1024,
+          "language": 28,
+          "enableO2": false
+        }
       ]
     }
   }
@@ -363,22 +416,32 @@ https://cdn.luogu.com.cn/upload/usericon/{uid}.png
 {
   "currentData": {
     "record": {
-      "id": 12345678, "problem": {"pid": "P1001", "title": "A+B"},
-      "sourceCode": "#include...", "compileResult": {"success": true, "message": ""},
+      "id": 12345678,
+      "problem": { "pid": "P1001", "title": "A+B" },
+      "sourceCode": "#include...",
+      "compileResult": { "success": true, "message": "" },
       "detail": {
         "judgeResult": {
           "subtasks": [
-            { "id": 0, "score": 100, "status": 12,
+            {
+              "id": 0,
+              "score": 100,
+              "status": 12,
               "testCases": [
                 { "id": 0, "time": 15, "memory": 1024, "score": 10, "status": 12, "description": "AC" }
               ]
+
             }
           ],
-          "compileResult": {"success": true}
+          "compileResult": { "success": true }
         }
       },
-      "status": 12, "score": 100, "time": 15, "memory": 1024,
-      "language": 28, "submitTime": 1750000000
+      "status": 12,
+      "score": 100,
+      "time": 15,
+      "memory": 1024,
+      "language": 28,
+      "submitTime": 1750000000
     }
   }
 }
@@ -396,14 +459,21 @@ https://cdn.luogu.com.cn/upload/usericon/{uid}.png
 {
   "currentData": {
     "user": {
-      "uid": 1, "name": "...", "color": "Red", "badge": "...",
+      "uid": 1,
+      "name": "...",
+      "color": "Red",
+      "badge": "...",
       "avatar": "https://cdn.luogu.com.cn/upload/usericon/1.png",
-      "slogan": "...", "followingCount": 10, "followerCount": 100,
-      "ccfLevel": 7, "rating": 2000, "passedProblemCount": 500
+      "slogan": "...",
+      "followingCount": 10,
+      "followerCount": 100,
+      "ccfLevel": 7,
+      "rating": 2000,
+      "passedProblemCount": 500
     },
-    "passedProblems": { "count": 500, "result": [...] },
-    "following": { "count": 10, "result": [...] },
-    "followers": { "count": 100, "result": [...] }
+    "passedProblems": { "count": 500, "result": ["..."] },
+    "following": { "count": 10, "result": ["..."] },
+    "followers": { "count": 100, "result": ["..."] }
   }
 }
 ```
@@ -455,16 +525,25 @@ https://cdn.luogu.com.cn/upload/usericon/{uid}.png
 ```json
 {
   "data": {
-    "team": { "id": 131554, "name": "...", "type": 1, "isPremium": false,
-      "memberCount": 10, "createTime": 1700000000,
-      "master": {"uid": ..., "name": "...", "avatar": "...", "color": "..."} },
+    "team": {
+      "id": 131554,
+      "name": "...",
+      "type": 1,
+      "isPremium": false,
+      "memberCount": 10,
+      "createTime": 1700000000,
+      "master": { "uid": "...", "name": "...", "avatar": "...", "color": "..." }
+    },
     "currentMember": { "type": 1 },
-    "groups": [{"id": 1, "name": "..."}],
-    "latestDiscussions": [...],
+    "groups": [{ "id": 1, "name": "..." }],
+    "latestDiscussions": ["..."],
     "notice": "...",
     "usages": {
-      "problem": [50], "training": [10], "contest": [5],
-      "homework": [3], "file": [1048576]
+      "problem": [50],
+      "training": [10],
+      "contest": [5],
+      "homework": [3],
+      "file": [1048576]
     }
   }
 }
@@ -493,9 +572,11 @@ https://cdn.luogu.com.cn/upload/usericon/{uid}.png
 ```json
 {
   "data": {
-    "contests": { "result": [
-      { "id": 123, "name": "..." }
-    ]}
+    "contests": {
+      "result": [
+        { "id": 123, "name": "..." }
+      ]
+    }
   }
 }
 ```
@@ -516,8 +597,11 @@ https://cdn.luogu.com.cn/upload/usericon/{uid}.png
 {
   "currentData": {
     "training": {
-      "id": 123, "title": "...", "description": "...",
-      "author": {...}, "problems": [{"pid": "P1001", "title": "...", "difficulty": 1}]
+      "id": 123,
+      "title": "...",
+      "description": "...",
+      "author": { "...": "..." },
+      "problems": [{ "pid": "P1001", "title": "...", "difficulty": 1 }]
     }
   }
 }
@@ -591,7 +675,7 @@ enum AppPage {
 
 ### URL 匹配规则
 
-```typescript
+```plain
 // getActivatedPage() in contentScripts/index.ts
 /home                → AppPage.Home
 /problem/list        → AppPage.ProblemList

@@ -5,11 +5,13 @@ import { runWhenIdle } from '~/utils/lazyLoad'
 
 let viewTransitionStyleInjected = false
 function ensureViewTransitionStyles(toDark: boolean) {
-  if (typeof document === 'undefined') return
+  if (typeof document === 'undefined')
+    return
 
   // Remove previous dynamic VT style (direction changes each toggle)
   const prev = document.getElementById('gulugulu-vt-dynamic')
-  if (prev) prev.remove()
+  if (prev)
+    prev.remove()
 
   if (!viewTransitionStyleInjected) {
     viewTransitionStyleInjected = true
@@ -44,7 +46,8 @@ function ensureViewTransitionStyles(toDark: boolean) {
       }
       ::view-transition-new(root) { z-index: 1; }
     `
-  } else {
+  }
+  else {
     // Dark→Light: new-light-snapshot EXPANDS from click, covering dark
     dyn.textContent = `
       ::view-transition-new(root) {
@@ -59,12 +62,11 @@ function ensureViewTransitionStyles(toDark: boolean) {
 
 export function useDark() {
   const isPreferredDark = usePreferredDark()
-  const currentSystemColorScheme = computed(() => isPreferredDark.value ? 'dark' : 'light')
+  const currentSystemColorScheme = computed(() => (isPreferredDark.value ? 'dark' : 'light'))
   const currentAppColorScheme = computed((): 'dark' | 'light' => {
     if (settings.value.themeMode !== 'auto')
       return settings.value.themeMode
-    else
-      return currentSystemColorScheme.value
+    else return currentSystemColorScheme.value
   })
   const isDark = computed(() => currentAppColorScheme.value === 'dark')
 
@@ -96,7 +98,10 @@ export function useDark() {
         document.body?.classList.add('dark')
       })
       // Cache for synchronous access in content script (prevents flash)
-      try { localStorage.setItem('gulugulu-dark', '1') } catch {}
+      try {
+        localStorage.setItem('gulugulu-dark', '1')
+      }
+      catch {}
       window.dispatchEvent(new CustomEvent('global.themeChange', { detail: 'dark' }))
     }
     else {
@@ -105,7 +110,10 @@ export function useDark() {
       nextTick(() => {
         document.body?.classList.remove('dark')
       })
-      try { localStorage.setItem('gulugulu-dark', '0') } catch {}
+      try {
+        localStorage.setItem('gulugulu-dark', '0')
+      }
+      catch {}
       window.dispatchEvent(new CustomEvent('global.themeChange', { detail: 'light' }))
     }
   }
@@ -114,21 +122,24 @@ export function useDark() {
 
   function toggleDark(e: MouseEvent) {
     // Prevent double-click during View Transition animation (avoids theme oscillation)
-    if (transitioning) return
+    if (transitioning)
+      return
     transitioning = true
-    setTimeout(() => { transitioning = false }, 500)
+    setTimeout(() => {
+      transitioning = false
+    }, 500)
 
     const updateThemeSettings = () => {
       if (currentAppColorScheme.value !== currentSystemColorScheme.value)
         settings.value.themeMode = 'auto'
-      else
-        settings.value.themeMode = isPreferredDark.value ? 'light' : 'dark'
+      else settings.value.themeMode = isPreferredDark.value ? 'light' : 'dark'
     }
 
-    const isAppearanceTransition = typeof document !== 'undefined'
-    // @ts-expect-error: Transition API
-      && document.startViewTransition
-      && !window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    const isAppearanceTransition
+      = typeof document !== 'undefined'
+      // @ts-expect-error: Transition API
+        && document.startViewTransition
+        && !window.matchMedia('(prefers-reduced-motion: reduce)').matches
     if (!isAppearanceTransition) {
       updateThemeSettings()
     }
@@ -138,10 +149,7 @@ export function useDark() {
 
       const x = e.clientX
       const y = e.clientY
-      const endRadius = Math.hypot(
-        Math.max(x, innerWidth - x),
-        Math.max(y, innerHeight - y),
-      )
+      const endRadius = Math.hypot(Math.max(x, innerWidth - x), Math.max(y, innerHeight - y))
       // https://github.com/vueuse/vueuse/pull/3129
       const style = document.createElement('style')
       const styleString = `

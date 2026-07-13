@@ -1,6 +1,4 @@
 <script setup lang="ts">
-import { settings } from '~/logic/storage'
-
 function openLuogu() {
   window.open('https://www.luogu.com.cn/', '_blank')
 }
@@ -15,7 +13,8 @@ function openLuogu() {
       Luogu beautifier - Options Page
     </p>
     <div class="mt-4">
-      Powered by Vite <div i-logos:vitejs class="align-middle inline-block" />
+      Powered by Vite
+      <div i-logos:vitejs class="align-middle inline-block" />
     </div>
   </main>
 </template>

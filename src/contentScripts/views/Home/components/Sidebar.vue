@@ -29,63 +29,57 @@ const links = {
 </script>
 
 <template>
-  <aside style="display:flex;flex-direction:column;gap:16px;">
+  <aside style="display: flex; flex-direction: column; gap: 16px">
     <CheckInCalendar />
 
     <!-- 本站公告 -->
     <div class="side-card">
-      <h3 class="side-title">本站公告</h3>
-      <div style="display:flex;flex-direction:column;gap:2px;">
-        <a
-          v-for="item in announcements"
-          :key="item.url"
-          :href="item.url"
-          target="_blank"
-          class="side-link"
-        >{{ item.title }}</a>
+      <h3 class="side-title">
+        本站公告
+      </h3>
+      <div style="display: flex; flex-direction: column; gap: 2px">
+        <a v-for="item in announcements" :key="item.url" :href="item.url" target="_blank" class="side-link">{{
+          item.title
+        }}</a>
       </div>
     </div>
 
     <!-- 友情链接 -->
     <div class="side-card">
-      <h3 class="side-title">友情链接</h3>
+      <h3 class="side-title">
+        友情链接
+      </h3>
 
-      <div style="margin-bottom:12px;">
-        <p class="side-subtitle">推荐题库</p>
-        <div style="display:flex;flex-wrap:wrap;gap:4px 8px;">
-          <a
-            v-for="link in links.problemBanks"
-            :key="link.name"
-            :href="link.url"
-            target="_blank"
-            class="side-link"
-          >{{ link.name }}</a>
+      <div style="margin-bottom: 12px">
+        <p class="side-subtitle">
+          推荐题库
+        </p>
+        <div style="display: flex; flex-wrap: wrap; gap: 4px 8px">
+          <a v-for="link in links.problemBanks" :key="link.name" :href="link.url" target="_blank" class="side-link">{{
+            link.name
+          }}</a>
         </div>
       </div>
 
-      <div style="margin-bottom:12px;">
-        <p class="side-subtitle">开源项目</p>
-        <div style="display:flex;flex-direction:column;gap:2px;">
-          <a
-            v-for="link in links.openSource"
-            :key="link.name"
-            :href="link.url"
-            target="_blank"
-            class="side-link"
-          >{{ link.name }}</a>
+      <div style="margin-bottom: 12px">
+        <p class="side-subtitle">
+          开源项目
+        </p>
+        <div style="display: flex; flex-direction: column; gap: 2px">
+          <a v-for="link in links.openSource" :key="link.name" :href="link.url" target="_blank" class="side-link">{{
+            link.name
+          }}</a>
         </div>
       </div>
 
       <div>
-        <p class="side-subtitle">洛谷服务</p>
-        <div style="display:flex;flex-direction:column;gap:2px;">
-          <a
-            v-for="link in links.services"
-            :key="link.name"
-            :href="link.url"
-            target="_blank"
-            class="side-link"
-          >{{ link.name }}</a>
+        <p class="side-subtitle">
+          洛谷服务
+        </p>
+        <div style="display: flex; flex-direction: column; gap: 2px">
+          <a v-for="link in links.services" :key="link.name" :href="link.url" target="_blank" class="side-link">{{
+            link.name
+          }}</a>
         </div>
       </div>
     </div>

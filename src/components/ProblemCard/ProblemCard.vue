@@ -8,12 +8,15 @@ export interface ProblemInfo {
   totalAccepted: number
 }
 
-const props = withDefaults(defineProps<{
-  problem?: ProblemInfo
-  skeleton?: boolean
-}>(), {
-  skeleton: false,
-})
+const props = withDefaults(
+  defineProps<{
+    problem?: ProblemInfo
+    skeleton?: boolean
+  }>(),
+  {
+    skeleton: false,
+  },
+)
 
 const emit = defineEmits<{
   (e: 'click', problem: ProblemInfo): void
@@ -74,7 +77,8 @@ function handleClick() {
 
 <template>
   <div
-    duration-300 ease-in-out
+    duration-300
+    ease-in-out
     rounded="$bew-radius"
     ring="hover:8 hover:$bew-fill-2 active:8 active:$bew-fill-3"
     bg="hover:$bew-fill-2 active:$bew-fill-3"
@@ -85,11 +89,10 @@ function handleClick() {
     <div
       v-if="skeleton"
       class="problem-card-skeleton"
-      w-full rounded="$bew-radius" p-6
-      style="
-        box-shadow: var(--bew-shadow-edge-glow-1), var(--bew-shadow-1);
-        backdrop-filter: var(--bew-filter-glass-1);
-      "
+      w-full
+      rounded="$bew-radius"
+      p-6
+      style="box-shadow: var(--bew-shadow-edge-glow-1), var(--bew-shadow-1); backdrop-filter: var(--bew-filter-glass-1)"
       bg="$bew-content"
     >
       <div bg="$bew-skeleton" w="80px" h="22px" rounded="$bew-radius-half" mb-3 />
@@ -102,19 +105,15 @@ function handleClick() {
     </div>
 
     <!-- Actual card -->
-    <div
-      v-if="!skeleton && problem"
-      class="problem-card group"
-      w="full"
-      rounded="$bew-radius"
-    >
+    <div v-if="!skeleton && problem" class="problem-card group" w="full" rounded="$bew-radius">
       <div
         style="
           box-shadow: var(--bew-shadow-edge-glow-1), var(--bew-shadow-1);
           backdrop-filter: var(--bew-filter-glass-1);
         "
         bg="$bew-content"
-        p-6 rounded="$bew-radius"
+        p-6
+        rounded="$bew-radius"
         cursor="pointer"
         transform="~ translate-z-0"
         duration-300
@@ -125,7 +124,8 @@ function handleClick() {
         <!-- Header: Problem ID badge + Difficulty -->
         <div flex="~ items-center gap-2" mb-3>
           <span
-            text="xs" fw-bold
+            text="xs"
+            fw-bold
             p="x-2 y-0.5"
             rounded="$bew-radius-half"
             bg="$bew-theme-color-20"
@@ -148,8 +148,7 @@ function handleClick() {
 
         <!-- Title -->
         <h3
-          text="lg $bew-text-1" fw-bold
-          overflow-hidden text-ellipsis whitespace-nowrap
+          text="lg $bew-text-1" fw-bold overflow-hidden text-ellipsis whitespace-nowrap
           mb-2
         >
           {{ problem.title }}
@@ -157,10 +156,7 @@ function handleClick() {
 
         <!-- Pass Rate -->
         <div flex="~ items-center gap-2" mb-3>
-          <div
-            text="xs"
-            :style="{ color: passRateColor }"
-          >
+          <div text="xs" :style="{ color: passRateColor }">
             通过率 {{ passRate }}%
           </div>
           <span text="xs $bew-text-3">
@@ -181,11 +177,7 @@ function handleClick() {
           >
             {{ tag }}
           </span>
-          <span
-            v-if="problem.tags && problem.tags.length > 4"
-            text="xs $bew-text-3"
-            p="x-2 y-0.5"
-          >
+          <span v-if="problem.tags && problem.tags.length > 4" text="xs $bew-text-3" p="x-2 y-0.5">
             +{{ problem.tags.length - 4 }}
           </span>
         </div>
@@ -196,7 +188,9 @@ function handleClick() {
 
 <style lang="scss" scoped>
 .problem-card {
-  transition: transform 300ms ease, box-shadow 300ms ease;
+  transition:
+    transform 300ms ease,
+    box-shadow 300ms ease;
 }
 
 .problem-card-skeleton {
@@ -204,7 +198,8 @@ function handleClick() {
 }
 
 @keyframes pulse {
-  0%, 100% {
+  0%,
+  100% {
     opacity: 1;
   }
   50% {

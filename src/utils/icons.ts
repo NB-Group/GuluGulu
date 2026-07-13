@@ -39,5 +39,8 @@ export function renderIcon(name: string, size = 24): string {
 }
 
 // Prevent tree-shaking: force access to commonly used icons
-void (mingcuteIcons.icons['home-4-fill'] && mingcuteIcons.icons['home-4-line']
-  && lineMdIcons.icons['moon-to-sunny-outline-transition'])
+void (
+  mingcuteIcons.icons['home-4-fill']
+  && mingcuteIcons.icons['home-4-line']
+  && lineMdIcons.icons['moon-to-sunny-outline-transition']
+)

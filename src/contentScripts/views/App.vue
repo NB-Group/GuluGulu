@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { useEventListener, useThrottleFn, useToggle } from '@vueuse/core'
+import { useThrottleFn, useToggle } from '@vueuse/core'
 import type { Ref } from 'vue'
 
 import type { GulyAppProvider } from '~/composables/useAppProvider'
@@ -14,6 +14,8 @@ import emitter from '~/utils/mitt'
 const mainStore = useMainStore()
 const { isDark } = useDark()
 const [showSettings, toggleSettings] = useToggle(false)
+let navigatingFromUs = false
+const currentUrl = ref(window.location.href)
 
 // Get the 'page' query parameter from the URL
 function getPageParam(): AppPage | null {
@@ -28,31 +30,56 @@ function getPageParam(): AppPage | null {
 function getPageFromUrl(): AppPage {
   const url = document.URL
 
-  if (/\/problem\/list/i.test(url)) return AppPage.ProblemList
-  if (/\/problem\/[A-Za-z0-9_]+/i.test(url)) return AppPage.ProblemDetail
-  if (/\/contest\/list/i.test(url)) return AppPage.ContestList
-  if (/\/contest\/\d+/i.test(url)) return AppPage.ContestDetail
-  if (/\/ranking/i.test(url)) return AppPage.Ranking
-  if (/\/blog\//i.test(url) || /\/discuss/i.test(url)) return AppPage.Blog
-  if (/\/user\/mine\/problem/i.test(url)) return AppPage.MyProblems
-  if (/\/user\/mine\/contestJoined/i.test(url)) return AppPage.MyContests
-  if (/\/user\/mine\/team/i.test(url)) return AppPage.Team
-  if (/\/user\/mine\/trainingFav/i.test(url)) return AppPage.TrainingFav
-  if (/\/user\/mine\/contest/i.test(url)) return AppPage.CreatedContests
-  if (/\/user\/mine\/training/i.test(url)) return AppPage.CreatedTrainings
-  if (/\/user\/notification/i.test(url)) return AppPage.Notification
-  if (/\/user\/\d+\/practice/i.test(url)) return AppPage.Practice
-  if (/\/user\/\d+\/follower/i.test(url)) return AppPage.UserProfile
-  if (/\/user\/\d+\/following/i.test(url)) return AppPage.UserProfile
-  if (/\/user\//i.test(url)) return AppPage.UserProfile
-  if (/\/training\/list/i.test(url)) return AppPage.Training
-  if (/\/training\/\d+/i.test(url)) return AppPage.Training
-  if (/\/article/i.test(url)) return AppPage.Article
-  if (/\/team\//i.test(url)) return AppPage.Team
-  if (/\/problem\/solution/i.test(url)) return AppPage.Solution
-  if (/\/record\//i.test(url)) return AppPage.Record
-  if (/\/chat/i.test(url) && !/\/discuss/i.test(url)) return AppPage.Messages
-  if (/\/search/i.test(url) || /\/problem\/keyword/i.test(url)) return AppPage.Search
+  if (/\/problem\/list/i.test(url))
+    return AppPage.ProblemList
+  if (/\/problem\/\w+/i.test(url))
+    return AppPage.ProblemDetail
+  if (/\/contest\/list/i.test(url))
+    return AppPage.ContestList
+  if (/\/contest\/\d+/i.test(url))
+    return AppPage.ContestDetail
+  if (/\/ranking/i.test(url))
+    return AppPage.Ranking
+  if (/\/blog\//i.test(url) || /\/discuss/i.test(url))
+    return AppPage.Blog
+  if (/\/user\/mine\/problem/i.test(url))
+    return AppPage.MyProblems
+  if (/\/user\/mine\/contestJoined/i.test(url))
+    return AppPage.MyContests
+  if (/\/user\/mine\/team/i.test(url))
+    return AppPage.Team
+  if (/\/user\/mine\/trainingFav/i.test(url))
+    return AppPage.TrainingFav
+  if (/\/user\/mine\/contest/i.test(url))
+    return AppPage.CreatedContests
+  if (/\/user\/mine\/training/i.test(url))
+    return AppPage.CreatedTrainings
+  if (/\/user\/notification/i.test(url))
+    return AppPage.Notification
+  if (/\/user\/\d+\/practice/i.test(url))
+    return AppPage.Practice
+  if (/\/user\/\d+\/follower/i.test(url))
+    return AppPage.UserProfile
+  if (/\/user\/\d+\/following/i.test(url))
+    return AppPage.UserProfile
+  if (/\/user\//i.test(url))
+    return AppPage.UserProfile
+  if (/\/training\/list/i.test(url))
+    return AppPage.Training
+  if (/\/training\/\d+/i.test(url))
+    return AppPage.Training
+  if (/\/article/i.test(url))
+    return AppPage.Article
+  if (/\/team\//i.test(url))
+    return AppPage.Team
+  if (/\/problem\/solution/i.test(url))
+    return AppPage.Solution
+  if (/\/record\//i.test(url))
+    return AppPage.Record
+  if (/\/chat/i.test(url) && !/\/discuss/i.test(url))
+    return AppPage.Messages
+  if (/\/search/i.test(url) || /\/problem\/keyword/i.test(url))
+    return AppPage.Search
 
   return AppPage.Home
 }
@@ -60,7 +87,8 @@ function getPageFromUrl(): AppPage {
 const activatedPage = ref<AppPage>(
   getPageParam()
   || getPageFromUrl()
-  || (settings.value.dockItemsConfig.find(e => e.visible === true)?.page || AppPage.Home)
+  || settings.value.dockItemsConfig.find(e => e.visible === true)?.page
+  || AppPage.Home,
 )
 
 const pages = {
@@ -104,8 +132,7 @@ const showGulyPage = computed((): boolean => {
     return false
   // Show GuluGulu full UI on all supported Luogu pages
   const url = document.URL
-  return /https?:\/\/(?:www\.)?luogu\.com(?:\.cn)?/.test(url)
-    || /https?:\/\/(?:www\.)?luogu\.org/.test(url)
+  return /https?:\/\/(?:www\.)?luogu\.com(?:\.cn)?/.test(url) || /https?:\/\/(?:www\.)?luogu\.org/.test(url)
 })
 
 const showTopBar = computed((): boolean => {
@@ -147,7 +174,8 @@ watch(
 // Apply theme color CSS variables to the shadow root
 function applyThemeColor() {
   const el = document.getElementById('guly')
-  if (!el) return
+  if (!el)
+    return
   const color = settings.value.themeColor
   el.style.setProperty('--bew-theme-color', color)
   // Generate opacity variants using color-mix
@@ -159,29 +187,45 @@ function applyThemeColor() {
 watch(() => settings.value.themeColor, applyThemeColor, { immediate: true })
 
 // Apply base font size
-watch(() => settings.value.baseFontSize, (size) => {
-  const el = document.getElementById('guly')
-  if (el) el.style.setProperty('--bew-base-font-size', `${size}px`)
-}, { immediate: true })
+watch(
+  () => settings.value.baseFontSize,
+  (size) => {
+    const el = document.getElementById('guly')
+    if (el)
+      el.style.setProperty('--bew-base-font-size', `${size}px`)
+  },
+  { immediate: true },
+)
 
 // Apply page max width
-watch(() => settings.value.pageMaxWidth, (width) => {
-  const el = document.getElementById('guly')
-  if (el) el.style.setProperty('--bew-page-max-width', `${width}px`)
-}, { immediate: true })
+watch(
+  () => settings.value.pageMaxWidth,
+  (width) => {
+    const el = document.getElementById('guly')
+    if (el)
+      el.style.setProperty('--bew-page-max-width', `${width}px`)
+  },
+  { immediate: true },
+)
 
 // Apply frosted glass CSS classes to document root
 function applyFrostedGlassClasses() {
   const root = document.documentElement
   root.classList.toggle('disable-frosted-glass', settings.value.disableFrostedGlass)
-  root.classList.toggle('reduce-frosted-glass-blur', !settings.value.disableFrostedGlass && settings.value.reduceFrostedGlassBlur)
+  root.classList.toggle(
+    'reduce-frosted-glass-blur',
+    !settings.value.disableFrostedGlass && settings.value.reduceFrostedGlassBlur,
+  )
 }
-watch(() => [settings.value.disableFrostedGlass, settings.value.reduceFrostedGlassBlur], applyFrostedGlassClasses, { immediate: true })
+watch(() => [settings.value.disableFrostedGlass, settings.value.reduceFrostedGlassBlur], applyFrostedGlassClasses, {
+  immediate: true,
+})
 
 // Listen to Luogu's own SPA navigation (hooked by inject/index.js)
 function onHistoryChange() {
   console.log('[historyChange] navigatingFromUs:', navigatingFromUs)
-  if (navigatingFromUs) return
+  if (navigatingFromUs)
+    return
   const url = window.location.href
   console.log('[historyChange] url:', url, 'currentUrl:', currentUrl.value)
   if (url !== currentUrl.value) {
@@ -211,7 +255,18 @@ window.addEventListener('popstate', onPopState)
 onMounted(() => {
   window.dispatchEvent(new CustomEvent(GULY_MOUNTED))
   // Only normalize URL for list pages (not detail pages with IDs)
-  const detailPages = [AppPage.ProblemDetail, AppPage.Blog, AppPage.Record, AppPage.ContestDetail, AppPage.Training, AppPage.UserProfile, AppPage.Solution, AppPage.Article, AppPage.Practice, AppPage.Team]
+  const detailPages = [
+    AppPage.ProblemDetail,
+    AppPage.Blog,
+    AppPage.Record,
+    AppPage.ContestDetail,
+    AppPage.Training,
+    AppPage.UserProfile,
+    AppPage.Solution,
+    AppPage.Article,
+    AppPage.Practice,
+    AppPage.Team,
+  ]
   if (!detailPages.includes(activatedPage.value)) {
     const url = mainStore.getLuoguWebPageURLByPage(activatedPage.value)
     if (url && url !== window.location.href) {
@@ -226,13 +281,9 @@ onMounted(() => {
   document.addEventListener('scroll', () => {
     if (window.scrollY > 0)
       reachTop.value = false
-    else
-      reachTop.value = true
+    else reachTop.value = true
   })
 })
-
-const currentUrl = ref(window.location.href)
-let navigatingFromUs = false
 
 function navigateTo(pageName: AppPage, url?: string) {
   const osInstance = scrollbarRef.value?.osInstance?.()
@@ -251,7 +302,8 @@ function navigateTo(pageName: AppPage, url?: string) {
   // Same page AND same URL → just refresh, don't re-mount
   if (!urlChanged && activatedPage.value === pageName) {
     if (pageName !== AppPage.Search) {
-      if (scrollTopValue === 0) handleThrottledPageRefresh()
+      if (scrollTopValue === 0)
+        handleThrottledPageRefresh()
       else handleThrottledBackToTop()
     }
     return
@@ -272,7 +324,8 @@ function handleOsScroll() {
   emitter.emit(OVERLAY_SCROLL_BAR_SCROLL)
 
   const osInstance = scrollbarRef.value?.osInstance?.()
-  if (!osInstance?.elements) return
+  if (!osInstance?.elements)
+    return
   const { viewport } = osInstance.elements()
   const { scrollTop, scrollHeight, clientHeight } = viewport
 
@@ -350,8 +403,7 @@ provide<GulyAppProvider>('GULY_APP', {
 
     <!-- Dock -->
     <div
-      v-if="!isInIframe()"
-      pos="absolute top-0 left-0" w-full h-full overflow-hidden
+      v-if="!isInIframe()" pos="absolute top-0 left-0" w-full h-full overflow-hidden
       pointer-events-none
     >
       <Dock
@@ -366,18 +418,14 @@ provide<GulyAppProvider>('GULY_APP', {
     </div>
 
     <!-- TopBar -->
-    <div
-      v-if="showTopBar"
-      m-auto max-w="$bew-page-max-width"
-    >
-      <TopBar
-        ref="topBarRef"
-        pos="top-0 left-0" z="99 hover:1001" w-full
-      />
+    <div v-if="showTopBar" m-auto max-w="$bew-page-max-width">
+      <TopBar ref="topBarRef" pos="top-0 left-0" z="99 hover:1001" w-full />
     </div>
 
     <div
-      pos="absolute top-0 left-0" w-full h-full
+      pos="absolute top-0 left-0"
+      w-full
+      h-full
       :style="{
         height: showGulyPage ? '100dvh' : '0',
       }"
@@ -386,10 +434,7 @@ provide<GulyAppProvider>('GULY_APP', {
         <template v-if="showGulyPage">
           <OverlayScrollbarsComponent ref="scrollbarRef" element="div" h-inherit defer @os-scroll="handleOsScroll">
             <main m-auto max-w="$bew-page-max-width">
-              <div
-                p="t-[calc(var(--bew-top-bar-height)+10px)]" m-auto
-                w="lg:[calc(100%-200px)] [calc(100%-150px)]"
-              >
+              <div p="t-[calc(var(--bew-top-bar-height)+10px)]" m-auto w="lg:[calc(100%-200px)] [calc(100%-150px)]">
                 <Transition name="page-fade">
                   <Component :is="pages[activatedPage]" :key="activatedPage" />
                 </Transition>
@@ -399,9 +444,7 @@ provide<GulyAppProvider>('GULY_APP', {
         </template>
       </Transition>
     </div>
-
   </div>
 </template>
 
-<style lang="scss" scoped>
-</style>
+<style lang="scss" scoped></style>

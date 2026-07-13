@@ -13,7 +13,9 @@ const API_RANKING = {
         return JSON.parse(match[1])
       return { error: 'No data' }
     }
-    catch (e: any) { return { error: e.message } }
+    catch (e: any) {
+      return { error: e.message }
+    }
   },
   'RANKING.getUserRank': async (message: any) => {
     try {
@@ -29,7 +31,9 @@ const API_RANKING = {
         return JSON.parse(match[1])
       return { error: 'No data' }
     }
-    catch (e: any) { return { error: e.message } }
+    catch (e: any) {
+      return { error: e.message }
+    }
   },
 }
 

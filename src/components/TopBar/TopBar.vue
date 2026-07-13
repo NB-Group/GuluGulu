@@ -6,12 +6,11 @@ import { computed, reactive, ref } from 'vue'
 import { useGulyApp } from '~/composables/useAppProvider'
 import { useDark } from '~/composables/useDark'
 import { useDelayedHover } from '~/composables/useDelayedHover'
+// === Message notification polling ===
+import { useMessagePolling } from '~/composables/useMessagePolling'
 import { AppPage } from '~/enums/appEnums'
 import { settings } from '~/logic'
 import { renderIcon } from '~/utils/icons'
-
-import type { UserInfo } from './types'
-
 import { searchKeyword } from '~/utils/luogu-api'
 
 const { activatedPage, scrollbarRef, reachTop, navigateTo } = useGulyApp()
@@ -24,7 +23,8 @@ async function logoutAndSwitch() {
   // Clear Luogu session, then go to homepage (shows login button)
   try {
     await browser.runtime.sendMessage({ contentScriptQuery: 'HOME.logout' })
-  } catch {}
+  }
+  catch {}
   location.href = 'https://www.luogu.com.cn/'
 }
 
@@ -54,8 +54,10 @@ onMounted(async () => {
   if (stored?.uid && stored.uid !== '0') {
     isLogin.value = true
     userUid.value = Number(stored.uid)
-    if (stored.name) userName.value = stored.name
-    if (stored.color) userColor.value = stored.color
+    if (stored.name)
+      userName.value = stored.name
+    if (stored.color)
+      userColor.value = stored.color
     return
   }
   // Fallback: fetch directly from frontend
@@ -66,15 +68,20 @@ onMounted(async () => {
     if (user?.uid) {
       isLogin.value = true
       userUid.value = Number(user.uid)
-      if (user.name) userName.value = user.name
-      if (user.color) userColor.value = user.color
-      ;(window as any).__guly_user = { uid: String(user.uid), name: user.name || '', color: user.color || '', csrfToken: '' }
+      if (user.name)
+        userName.value = user.name
+      if (user.color)
+        userColor.value = user.color
+      ;(window as any).__guly_user = {
+        uid: String(user.uid),
+        name: user.name || '',
+        color: user.color || '',
+        csrfToken: '',
+      }
     }
-  } catch {}
+  }
+  catch {}
 })
-
-// === Message notification polling ===
-import { useMessagePolling } from '~/composables/useMessagePolling'
 const { unreadMsgCount } = useMessagePolling()
 
 function goToMessages() {
@@ -154,10 +161,13 @@ Object.entries(topBarItemElements).forEach(([key, val]) => {
 
 // #endregion
 
-watch(() => settings.value.autoHideTopBar, (newVal) => {
-  if (!newVal)
-    toggleTopBarVisible(true)
-})
+watch(
+  () => settings.value.autoHideTopBar,
+  (newVal) => {
+    if (!newVal)
+      toggleTopBarVisible(true)
+  },
+)
 
 onMounted(() => {
   nextTick(() => {
@@ -179,8 +189,7 @@ function handleScroll() {
   if (settings.value.autoHideTopBar && isOutsideTopBar && scrollTop.value !== 0) {
     if (scrollTop.value > oldScrollTop.value)
       toggleTopBarVisible(false)
-    else
-      toggleTopBarVisible(true)
+    else toggleTopBarVisible(true)
   }
 
   oldScrollTop.value = scrollTop.value
@@ -189,9 +198,16 @@ function handleScroll() {
 onKeyStroke('/', (e: KeyboardEvent) => {
   const path = e.composedPath?.() || []
   for (const node of path) {
-    if (!(node instanceof HTMLElement)) continue
+    if (!(node instanceof HTMLElement))
+      continue
     const tag = node.tagName
-    if (tag === 'TEXTAREA' || tag === 'INPUT' || tag === 'SELECT' || node.isContentEditable || node.getAttribute('contenteditable') === 'true') {
+    if (
+      tag === 'TEXTAREA'
+      || tag === 'INPUT'
+      || tag === 'SELECT'
+      || node.isContentEditable
+      || node.getAttribute('contenteditable') === 'true'
+    ) {
       console.log('[TopBar] / blocked by:', tag)
       return
     }
@@ -211,159 +227,219 @@ defineExpose({
 </script>
 
 <template>
-  <Transition name="top-bar">
-    <header
-      ref="headerTarget"
-      w="full" transition="all 300 ease-in-out"
-      :class="{ 'hide': hideTopBar }"
-      :style="{ position: isTopBarFixed ? 'fixed' : 'absolute' }"
+  <!-- <Transition name="top-bar"> -->
+  <header
+    ref="headerTarget"
+    w="full"
+    transition="all 300 ease-in-out"
+    :class="{ hide: hideTopBar }"
+    :style="{ position: isTopBarFixed ? 'fixed' : 'absolute' }"
+  >
+    <main
+      max-w="$bew-page-max-width"
+      flex="~ justify-between items-center gap-4"
+      p="x-12"
+      m-auto
+      h="$bew-top-bar-height"
     >
-      <main
-        max-w="$bew-page-max-width"
-        flex="~ justify-between items-center gap-4"
-        p="x-12" m-auto
-        h="$bew-top-bar-height"
-      >
-        <!-- Top bar mask -->
-        <div
-          v-if="!reachTop"
-          style="
-            mask-image: linear-gradient(to bottom, rgba(0, 0, 0, 1), rgba(0, 0, 0, 1) 24px, rgba(0, 0, 0, 0.9) 44px, transparent);
+      <!-- Top bar mask -->
+      <div
+        v-if="!reachTop"
+        style="
+            mask-image: linear-gradient(
+              to bottom,
+              rgba(0, 0, 0, 1),
+              rgba(0, 0, 0, 1) 24px,
+              rgba(0, 0, 0, 0.9) 44px,
+              transparent
+            );
           "
-          :style="{ backdropFilter: settings.disableFrostedGlass ? 'none' : 'blur(12px)' }"
-          pos="absolute top-0 left-0" w-full h="[calc(var(--bew-top-bar-height)+16px)]"
-          pointer-events-none transform-gpu
-        />
+        :style="{ backdropFilter: settings.disableFrostedGlass ? 'none' : 'blur(12px)' }"
+        pos="absolute top-0 left-0"
+        w-full
+        h="[calc(var(--bew-top-bar-height)+16px)]"
+        pointer-events-none
+        transform-gpu
+      />
 
-        <div
-          pos="absolute top-0 left-0" w-full
-          pointer-events-none opacity-100 duration-300
-          :style="{
-            background: `linear-gradient(to bottom,
+      <div
+        pos="absolute top-0 left-0"
+        w-full
+        pointer-events-none
+        opacity-100
+        duration-300
+        :style="{
+          background: `linear-gradient(to bottom,
               color-mix(in oklab, var(--bew-bg), transparent 20%),
               color-mix(in oklab, var(--bew-bg), transparent 40%) calc(var(--bew-top-bar-height) / 2),
               transparent)`,
-            opacity: reachTop ? 0.8 : 1,
-            height: reachTop ? 'var(--bew-top-bar-height)' : 'calc(var(--bew-top-bar-height) + 20px)',
-          }"
-        />
+          opacity: reachTop ? 0.8 : 1,
+          height: reachTop ? 'var(--bew-top-bar-height)' : 'calc(var(--bew-top-bar-height) + 20px)',
+        }"
+      />
 
-        <!-- Top bar theme color gradient -->
-        <Transition name="fade">
-          <div
-            v-if="settings.showTopBarThemeColorGradient && reachTop && isDark"
-            pos="absolute top-0 left-0" w-full h="$bew-top-bar-height" pointer-events-none
-            :style="{ background: 'linear-gradient(to bottom, var(--bew-theme-color-10), transparent)' }"
+      <!-- Top bar theme color gradient -->
+      <Transition name="fade">
+        <div
+          v-if="settings.showTopBarThemeColorGradient && reachTop && isDark"
+          pos="absolute top-0 left-0"
+          w-full
+          h="$bew-top-bar-height"
+          pointer-events-none
+          :style="{ background: 'linear-gradient(to bottom, var(--bew-theme-color-10), transparent)' }"
+        />
+      </Transition>
+
+      <div shrink-0 flex="inline xl:1 justify-start items-center gap-2" pos="relative" z-1>
+        <!-- Logo -->
+        <a
+          href="https://www.luogu.com.cn"
+          target="_top"
+          class="logo"
+          style="
+              font-size: var(--bew-base-font-size);
+              font-weight: 700;
+              color: var(--bew-theme-color);
+              text-decoration: none;
+            "
+        >
+          GuluGulu
+        </a>
+      </div>
+
+      <!-- search bar -->
+      <div flex="inline 1 md:justify-center items-center" w="full">
+        <Transition name="slide-out">
+          <SearchBar
+            v-if="showSearchBar"
+            class="search-bar"
+            :style="{
+              '--b-search-bar-normal-color': settings.disableFrostedGlass
+                ? 'var(--bew-elevated)'
+                : 'color-mix(in oklab, var(--bew-elevated-solid), transparent 60%)',
+              '--b-search-bar-hover-color': 'var(--bew-elevated-hover)',
+              '--b-search-bar-focus-color': 'var(--bew-elevated)',
+              '--b-search-bar-normal-icon-color': 'var(--bew-text-1)',
+              '--b-search-bar-normal-text-color': 'var(--bew-text-1)',
+            }"
+            @search="handleSearch"
           />
         </Transition>
+      </div>
 
-        <div shrink-0 flex="inline xl:1 justify-start items-center gap-2" pos="relative" z-1>
-          <!-- Logo -->
-          <a
-            href="https://www.luogu.com.cn"
-            target="_top"
-            class="logo"
-            style="font-size: var(--bew-base-font-size); font-weight: 700; color: var(--bew-theme-color); text-decoration: none;"
-          >
-            GuluGulu
-          </a>
-        </div>
-
-        <!-- search bar -->
-        <div flex="inline 1 md:justify-center items-center" w="full">
-          <Transition name="slide-out">
-            <SearchBar
-              v-if="showSearchBar"
-              class="search-bar"
-              @search="handleSearch"
-              :style="{
-                '--b-search-bar-normal-color': settings.disableFrostedGlass ? 'var(--bew-elevated)' : 'color-mix(in oklab, var(--bew-elevated-solid), transparent 60%)',
-                '--b-search-bar-hover-color': 'var(--bew-elevated-hover)',
-                '--b-search-bar-focus-color': 'var(--bew-elevated)',
-                '--b-search-bar-normal-icon-color': 'var(--bew-text-1)',
-                '--b-search-bar-normal-text-color': 'var(--bew-text-1)',
-              }"
-            />
-          </Transition>
-        </div>
-
-        <!-- right content -->
+      <!-- right content -->
+      <div class="right-side" flex="inline xl:1 justify-end items-center">
         <div
-          class="right-side"
-          flex="inline xl:1 justify-end items-center"
+          class="others" flex="~ items-center gap-1" h-46px px-5px text="$bew-text-1"
+          transform-gpu
         >
+          <div v-if="!isLogin" class="right-side-item">
+            <button
+              class="login-btn"
+              style="
+                  display: flex;
+                  align-items: center;
+                  gap: 6px;
+                  padding: 0 16px;
+                  height: 34px;
+                  border-radius: 9999px;
+                  border: none;
+                  cursor: pointer;
+                  font-size: var(--bew-base-font-size);
+                  font-weight: 700;
+                  background: var(--bew-theme-color-10);
+                  color: var(--bew-theme-color);
+                  border: 1px solid var(--bew-theme-color-20);
+                  transition: all 0.2s;
+                "
+              @click="goToLogin"
+            >
+              <span style="display: contents" v-html="renderIcon('mingcute:user-4-line', 18)" />
+              登录
+            </button>
+          </div>
+          <!-- Avatar + username + panel -->
           <div
-            class="others"
-            flex="~ items-center gap-1" h-46px px-5px
-            text="$bew-text-1"
-            transform-gpu
+            v-if="isLogin"
+            ref="avatar"
+            :class="{ hover: popupVisible.userPanel }"
+            style="display: flex; align-items: center; gap: 8px; cursor: pointer; position: relative"
+            @click="(event) => handleClickTopBarItem(event, 'userPanel')"
           >
-            <div
-              v-if="!isLogin"
-              class="right-side-item"
-            >
-              <button
-                class="login-btn"
-                style="display:flex;align-items:center;gap:6px;padding:0 16px;height:34px;border-radius:9999px;border:none;cursor:pointer;font-size:var(--bew-base-font-size);font-weight:700;background:var(--bew-theme-color-10);color:var(--bew-theme-color);border:1px solid var(--bew-theme-color-20);transition:all .2s"
-                @click="goToLogin"
+            <div style="width: 34px; height: 34px; border-radius: 50%; overflow: hidden; flex-shrink: 0">
+              <img
+                :src="`https://cdn.luogu.com.cn/upload/usericon/${userUid}.png`"
+                style="width: 100%; height: 100%; object-fit: cover"
+                @error="
+                  (e) => {
+                      ;(e.target as HTMLImageElement).style.display = 'none'
+                      ;(e.target as HTMLImageElement).parentElement!.querySelector('span')!.removeAttribute('hidden')
+                  }
+                "
               >
-                <span v-html="renderIcon('mingcute:user-4-line', 18)" style="display:contents" />
-                登录
-              </button>
+              <span
+                style="position: absolute; top: 8px; left: 8px"
+                hidden
+                v-html="renderIcon('mingcute:user-4-line', 18)"
+              />
             </div>
-            <!-- Avatar + username + panel -->
-            <div
-              v-if="isLogin"
-              ref="avatar"
-              :class="{ hover: popupVisible.userPanel }"
-              style="display:flex;align-items:center;gap:8px;cursor:pointer;position:relative;"
-              @click="event => handleClickTopBarItem(event, 'userPanel')"
-            >
-              <div style="width:34px;height:34px;border-radius:50%;overflow:hidden;flex-shrink:0;">
-                <img
-                  :src="`https://cdn.luogu.com.cn/upload/usericon/${userUid}.png`"
-                  style="width:100%;height:100%;object-fit:cover;"
-                  @error="(e) => { (e.target as HTMLImageElement).style.display = 'none'; (e.target as HTMLImageElement).parentElement!.querySelector('span')!.removeAttribute('hidden') }"
-                >
-                <span v-html="renderIcon('mingcute:user-4-line', 18)" style="position:absolute;top:8px;left:8px;" hidden />
-              </div>
-              <span v-if="userName" :style="{fontSize:'var(--bew-base-font-size)',color:userColor?`var(--bew-${userColor})`:'var(--bew-text-1)',fontWeight:600,whiteSpace:'nowrap',lineHeight:'var(--bew-top-bar-height)'}">{{ userName }}</span>
-              <!-- User panel popup -->
-              <Transition name="dropdown">
-                <div v-if="popupVisible.userPanel" class="user-panel-dropdown" @click.stop>
-                  <div class="user-panel-header">
-                    <img :src="`https://cdn.luogu.com.cn/upload/usericon/${userUid}.png`" style="width:48px;height:48px;border-radius:50%;object-fit:cover">
-                    <div>
-                      <div style="font-size:var(--bew-base-font-size);font-weight:600;color:var(--bew-text-1)">{{ userName || 'UID:' + userUid }}</div>
-                      <div style="font-size:var(--bew-base-font-size);color:var(--bew-text-3)">UID: {{ userUid }}</div>
+            <span
+              v-if="userName"
+              :style="{
+                fontSize: 'var(--bew-base-font-size)',
+                color: userColor ? `var(--bew-${userColor})` : 'var(--bew-text-1)',
+                fontWeight: 600,
+                whiteSpace: 'nowrap',
+                lineHeight: 'var(--bew-top-bar-height)',
+              }"
+            >{{ userName }}</span>
+            <!-- User panel popup -->
+            <Transition name="dropdown">
+              <div v-if="popupVisible.userPanel" class="user-panel-dropdown" @click.stop>
+                <div class="user-panel-header">
+                  <img
+                    :src="`https://cdn.luogu.com.cn/upload/usericon/${userUid}.png`"
+                    style="width: 48px; height: 48px; border-radius: 50%; object-fit: cover"
+                  >
+                  <div>
+                    <div style="font-size: var(--bew-base-font-size); font-weight: 600; color: var(--bew-text-1)">
+                      {{ userName || `UID:${userUid}` }}
+                    </div>
+                    <div style="font-size: var(--bew-base-font-size); color: var(--bew-text-3)">
+                      UID: {{ userUid }}
                     </div>
                   </div>
-                  <div class="user-panel-divider" />
-                  <a :href="'https://www.luogu.com.cn/user/' + userUid" target="_blank" class="user-panel-item">
-                    <span v-html="renderIcon('mingcute:user-4-line', 16)" style="display:contents" />
-                    个人主页
-                  </a>
-                  <a href="https://www.luogu.com.cn/chat" target="_blank" class="user-panel-item">
-                    <span v-html="renderIcon('mingcute:notification-line', 16)" style="display:contents" />
-                    通知
-                  </a>
-                  <a href="https://www.luogu.com.cn/record/list" target="_blank" class="user-panel-item">
-                    <span v-html="renderIcon('mingcute:file-list-line', 16)" style="display:contents" />
-                    评测记录
-                  </a>
-                  <div class="user-panel-divider" />
-                  <button class="user-panel-item" style="width:100%;text-align:left;border:none;background:none;cursor:pointer" @click="logoutAndSwitch">
-                    <span v-html="renderIcon('mingcute:exit-line', 16)" style="display:contents" />
-                    切换账号
-                  </button>
                 </div>
-              </Transition>
-            </div>
+                <div class="user-panel-divider" />
+                <a :href="`https://www.luogu.com.cn/user/${userUid}`" target="_blank" class="user-panel-item">
+                  <span style="display: contents" v-html="renderIcon('mingcute:user-4-line', 16)" />
+                  个人主页
+                </a>
+                <a href="https://www.luogu.com.cn/chat" target="_blank" class="user-panel-item">
+                  <span style="display: contents" v-html="renderIcon('mingcute:notification-line', 16)" />
+                  通知
+                </a>
+                <a href="https://www.luogu.com.cn/record/list" target="_blank" class="user-panel-item">
+                  <span style="display: contents" v-html="renderIcon('mingcute:file-list-line', 16)" />
+                  评测记录
+                </a>
+                <div class="user-panel-divider" />
+                <button
+                  class="user-panel-item"
+                  style="width: 100%; text-align: left; border: none; background: none; cursor: pointer"
+                  @click="logoutAndSwitch"
+                >
+                  <span style="display: contents" v-html="renderIcon('mingcute:exit-line', 16)" />
+                  切换账号
+                </button>
+              </div>
+            </Transition>
           </div>
         </div>
-      </main>
-    </header>
-  </Transition>
+      </div>
+    </main>
+  </header>
+  <!-- </Transition> -->
 </template>
 
 <style lang="scss" scoped>
@@ -474,7 +550,7 @@ defineExpose({
 
     &:hover::after,
     &.hover::after {
-      content: '';
+      content: "";
       position: absolute;
       right: 0;
       top: 20px;

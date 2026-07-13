@@ -12,8 +12,7 @@ watch([() => settings.enableHorizontalScrolling, scrollListWrap], ([enableHorizo
 
   if (enableHorizontalScrolling)
     scrollListWrap.addEventListener('wheel', handleMouseScroll)
-  else
-    scrollListWrap.removeEventListener('wheel', handleMouseScroll)
+  else scrollListWrap.removeEventListener('wheel', handleMouseScroll)
 })
 
 function handleMouseScroll(event: WheelEvent) {
@@ -28,7 +27,8 @@ function handleMouseScroll(event: WheelEvent) {
       ref="scrollListWrap"
       w="[calc(100%+80px)]"
       h="[calc(100%+40px)]"
-      m="x--40px y--20px" p="x-40px y-20px"
+      m="x--40px y--20px"
+      p="x-40px y-20px"
       overflow-x-scroll
       overflow-y-hidden
       relative

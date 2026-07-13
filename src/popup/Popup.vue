@@ -16,10 +16,33 @@ function openLuogu() {
     <p class="mt-2 opacity-50">
       Luogu beautifier
     </p>
-    <button class="btn mt-2" p="x-4 y-2" rounded="$bew-radius-half" bg="$bew-theme-color" text="white" cursor-pointer border-none duration-300 hover:opacity-80 @click="openLuogu">
+    <button
+      class="btn mt-2"
+      p="x-4 y-2"
+      rounded="$bew-radius-half"
+      bg="$bew-theme-color"
+      text="white"
+      cursor-pointer
+      border-none
+      duration-300
+      hover:opacity-80
+      @click="openLuogu"
+    >
       Open Luogu
     </button>
-    <button class="btn mt-2" p="x-4 y-2" rounded="$bew-radius-half" bg="$bew-fill-2" text="$bew-text-1" cursor-pointer border-none duration-300 hover:opacity-80 ml-2 @click="openOptionsPage">
+    <button
+      class="btn mt-2"
+      p="x-4 y-2"
+      rounded="$bew-radius-half"
+      bg="$bew-fill-2"
+      text="$bew-text-1"
+      cursor-pointer
+      border-none
+      duration-300
+      hover:opacity-80
+      ml-2
+      @click="openOptionsPage"
+    >
       Options
     </button>
   </main>

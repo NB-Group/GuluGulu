@@ -27,9 +27,7 @@ export const sharedConfig: UserConfig = {
       imports: [
         'vue',
         {
-          'webextension-polyfill': [
-            ['*', 'browser'],
-          ],
+          'webextension-polyfill': [['*', 'browser']],
         },
       ],
     }),
@@ -46,11 +44,11 @@ export const sharedConfig: UserConfig = {
     UnoCSS(),
 
     replace({
-      '__DEV__': JSON.stringify(isDev),
+      __DEV__: JSON.stringify(isDev),
       'process.env.NODE_ENV': JSON.stringify(isDev ? 'development' : 'production'),
-      '__VUE_OPTIONS_API__': JSON.stringify(true),
-      '__VUE_PROD_DEVTOOLS__': JSON.stringify(false),
-      'preventAssignment': true,
+      __VUE_OPTIONS_API__: JSON.stringify(true),
+      __VUE_PROD_DEVTOOLS__: JSON.stringify(false),
+      preventAssignment: true,
     }),
 
     // rewrite assets to use relative path
@@ -64,14 +62,8 @@ export const sharedConfig: UserConfig = {
     },
   ],
   optimizeDeps: {
-    include: [
-      'vue',
-      '@vueuse/core',
-      'webextension-polyfill',
-    ],
-    exclude: [
-      'vue-demi',
-    ],
+    include: ['vue', '@vueuse/core', 'webextension-polyfill'],
+    exclude: ['vue-demi'],
   },
 }
 
@@ -100,11 +92,7 @@ export default defineConfig(({ command }) => ({
     },
     minify: 'terser',
   },
-  plugins: [
-    ...sharedConfig.plugins!,
-
-    MV3Hmr(),
-  ],
+  plugins: [...sharedConfig.plugins!, MV3Hmr()],
   test: {
     globals: true,
     environment: 'jsdom',

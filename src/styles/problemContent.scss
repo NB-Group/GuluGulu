@@ -2,7 +2,7 @@
 // Uses --bew-* CSS variables for dark/light mode compatibility
 
 // Import KaTeX CSS
-@import '../../node_modules/katex/dist/katex.css';
+@import "../../node_modules/katex/dist/katex.css";
 
 .problem-statement {
   font-size: 15px;
@@ -10,7 +10,12 @@
   color: var(--bew-text-1);
 
   // Headings
-  h1, h2, h3, h4, h5, h6 {
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
     color: var(--bew-text-1);
     font-weight: 700;
     margin-top: 1.2em;
@@ -35,7 +40,9 @@
   // Paragraphs
   p {
     margin-bottom: 0.8em;
-    &:last-child { margin-bottom: 0; }
+    &:last-child {
+      margin-bottom: 0;
+    }
   }
 
   // Inline code
@@ -44,7 +51,7 @@
     color: var(--bew-text-1);
     padding: 2px 6px;
     border-radius: 4px;
-    font-family: 'Cascadia Code', 'Fira Code', 'JetBrains Mono', 'Consolas', monospace;
+    font-family: "Cascadia Code", "Fira Code", "JetBrains Mono", "Consolas", monospace;
     font-size: 0.88em;
     border: 1px solid var(--bew-border-color);
   }
@@ -60,7 +67,7 @@
     box-shadow: var(--bew-shadow-edge-glow-1);
 
     code {
-      font-family: 'Cascadia Code', 'Fira Code', 'JetBrains Mono', 'Consolas', monospace;
+      font-family: "Cascadia Code", "Fira Code", "JetBrains Mono", "Consolas", monospace;
       font-size: 0.875em;
       line-height: 1.6;
       color: var(--bew-text-1);
@@ -77,28 +84,68 @@
     background: none;
   }
 
-  .hljs-keyword    { color: #c678dd; }
-  .hljs-string     { color: #98c379; }
-  .hljs-number     { color: #d19a66; }
-  .hljs-comment    { color: var(--bew-text-4); font-style: italic; }
-  .hljs-function   { color: #61afef; }
-  .hljs-title      { color: #61afef; }
-  .hljs-type       { color: #e5c07b; }
-  .hljs-built_in   { color: #e5c07b; }
-  .hljs-params     { color: var(--bew-text-1); }
-  .hljs-literal    { color: #d19a66; }
-  .hljs-meta       { color: #e06c75; }
-  .hljs-attr       { color: #d19a66; }
-  .hljs-variable   { color: #e06c75; }
-  .hljs-selector-class { color: #e06c75; }
-  .hljs-selector-tag   { color: #e06c75; }
-  .hljs-name       { color: #e06c75; }
-  .hljs-tag        { color: var(--bew-text-1); }
-  .hljs-addition   { color: #98c379; }
-  .hljs-deletion   { color: #e06c75; }
+  .hljs-keyword {
+    color: #c678dd;
+  }
+  .hljs-string {
+    color: #98c379;
+  }
+  .hljs-number {
+    color: #d19a66;
+  }
+  .hljs-comment {
+    color: var(--bew-text-4);
+    font-style: italic;
+  }
+  .hljs-function {
+    color: #61afef;
+  }
+  .hljs-title {
+    color: #61afef;
+  }
+  .hljs-type {
+    color: #e5c07b;
+  }
+  .hljs-built_in {
+    color: #e5c07b;
+  }
+  .hljs-params {
+    color: var(--bew-text-1);
+  }
+  .hljs-literal {
+    color: #d19a66;
+  }
+  .hljs-meta {
+    color: #e06c75;
+  }
+  .hljs-attr {
+    color: #d19a66;
+  }
+  .hljs-variable {
+    color: #e06c75;
+  }
+  .hljs-selector-class {
+    color: #e06c75;
+  }
+  .hljs-selector-tag {
+    color: #e06c75;
+  }
+  .hljs-name {
+    color: #e06c75;
+  }
+  .hljs-tag {
+    color: var(--bew-text-1);
+  }
+  .hljs-addition {
+    color: #98c379;
+  }
+  .hljs-deletion {
+    color: #e06c75;
+  }
 
   // Lists
-  ul, ol {
+  ul,
+  ol {
     padding-left: 1.5em;
     margin-bottom: 0.8em;
 
@@ -130,7 +177,8 @@
     border-radius: var(--bew-radius-half);
     overflow: hidden;
 
-    th, td {
+    th,
+    td {
       padding: 8px 12px;
       text-align: left;
       border: 1px solid var(--bew-border-color);

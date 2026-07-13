@@ -45,7 +45,8 @@ function handleKeyup(event: KeyboardEvent) {
       <div
         class="problem-input-wrapper"
         flex="~ items-center"
-        bg="$bew-fill-1" rounded-full
+        bg="$bew-fill-1"
+        rounded-full
         border="1 solid $bew-border-color"
         overflow-hidden
       >
@@ -54,8 +55,13 @@ function handleKeyup(event: KeyboardEvent) {
           type="text"
           placeholder="例：P1001"
           class="problem-input"
-          bg="transparent" text="sm $bew-text-1"
-          px-3 py-1.5 flex-1 min-w-0 outline-none
+          bg="transparent"
+          text="sm $bew-text-1"
+          px-3
+          py-1.5
+          flex-1
+          min-w-0
+          outline-none
           @keyup="handleKeyup"
         >
       </div>
@@ -63,18 +69,30 @@ function handleKeyup(event: KeyboardEvent) {
       <div flex="~ gap-2">
         <button
           class="jump-btn"
-          bg="$bew-error-color" text="sm white"
-          px-4 py-1.5 rounded-full cursor-pointer fw-bold
-          flex-1 duration-300
+          bg="$bew-error-color"
+          text="sm white"
+          px-4
+          py-1.5
+          rounded-full
+          cursor-pointer
+          fw-bold
+          flex-1
+          duration-300
           @click="handleGo"
         >
           跳转
         </button>
         <button
           class="jump-btn"
-          bg="$bew-theme-color" text="sm white"
-          px-4 py-1.5 rounded-full cursor-pointer fw-bold
-          flex-1 duration-300
+          bg="$bew-theme-color"
+          text="sm white"
+          px-4
+          py-1.5
+          rounded-full
+          cursor-pointer
+          fw-bold
+          flex-1
+          duration-300
           @click="handleRandom"
         >
           随机跳题
