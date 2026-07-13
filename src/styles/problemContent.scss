@@ -1,0 +1,203 @@
+// Problem content — markdown rendering, code blocks, math formulas
+// Uses --bew-* CSS variables for dark/light mode compatibility
+
+// Import KaTeX CSS
+@import '../../node_modules/katex/dist/katex.css';
+
+.problem-statement {
+  font-size: 15px;
+  line-height: 1.8;
+  color: var(--bew-text-1);
+
+  // Headings
+  h1, h2, h3, h4, h5, h6 {
+    color: var(--bew-text-1);
+    font-weight: 700;
+    margin-top: 1.2em;
+    margin-bottom: 0.6em;
+    line-height: 1.4;
+
+    &:first-child {
+      margin-top: 0;
+    }
+  }
+
+  h2 {
+    font-size: 1.35em;
+    border-bottom: 1px solid var(--bew-border-color);
+    padding-bottom: 0.3em;
+  }
+
+  h3 {
+    font-size: 1.15em;
+  }
+
+  // Paragraphs
+  p {
+    margin-bottom: 0.8em;
+    &:last-child { margin-bottom: 0; }
+  }
+
+  // Inline code
+  code:not(pre code) {
+    background: var(--bew-fill-2);
+    color: var(--bew-text-1);
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-family: 'Cascadia Code', 'Fira Code', 'JetBrains Mono', 'Consolas', monospace;
+    font-size: 0.88em;
+    border: 1px solid var(--bew-border-color);
+  }
+
+  // Code blocks
+  pre {
+    background: var(--bew-fill-1);
+    border: 1px solid var(--bew-border-color);
+    border-radius: var(--bew-radius);
+    padding: 16px;
+    overflow-x: auto;
+    margin: 12px 0;
+    box-shadow: var(--bew-shadow-edge-glow-1);
+
+    code {
+      font-family: 'Cascadia Code', 'Fira Code', 'JetBrains Mono', 'Consolas', monospace;
+      font-size: 0.875em;
+      line-height: 1.6;
+      color: var(--bew-text-1);
+      background: none;
+      padding: 0;
+      border: none;
+      border-radius: 0;
+    }
+  }
+
+  // Highlight.js theme — custom, using CSS variables
+  .hljs {
+    color: var(--bew-text-1);
+    background: none;
+  }
+
+  .hljs-keyword    { color: #c678dd; }
+  .hljs-string     { color: #98c379; }
+  .hljs-number     { color: #d19a66; }
+  .hljs-comment    { color: var(--bew-text-4); font-style: italic; }
+  .hljs-function   { color: #61afef; }
+  .hljs-title      { color: #61afef; }
+  .hljs-type       { color: #e5c07b; }
+  .hljs-built_in   { color: #e5c07b; }
+  .hljs-params     { color: var(--bew-text-1); }
+  .hljs-literal    { color: #d19a66; }
+  .hljs-meta       { color: #e06c75; }
+  .hljs-attr       { color: #d19a66; }
+  .hljs-variable   { color: #e06c75; }
+  .hljs-selector-class { color: #e06c75; }
+  .hljs-selector-tag   { color: #e06c75; }
+  .hljs-name       { color: #e06c75; }
+  .hljs-tag        { color: var(--bew-text-1); }
+  .hljs-addition   { color: #98c379; }
+  .hljs-deletion   { color: #e06c75; }
+
+  // Lists
+  ul, ol {
+    padding-left: 1.5em;
+    margin-bottom: 0.8em;
+
+    li {
+      margin-bottom: 0.3em;
+    }
+  }
+
+  // Blockquotes
+  blockquote {
+    border-left: 3px solid var(--bew-theme-color);
+    padding: 8px 16px;
+    margin: 12px 0;
+    background: var(--bew-fill-1);
+    border-radius: 0 var(--bew-radius-half) var(--bew-radius-half) 0;
+    color: var(--bew-text-2);
+
+    p:last-child {
+      margin-bottom: 0;
+    }
+  }
+
+  // Tables
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 12px 0;
+    border: 1px solid var(--bew-border-color);
+    border-radius: var(--bew-radius-half);
+    overflow: hidden;
+
+    th, td {
+      padding: 8px 12px;
+      text-align: left;
+      border: 1px solid var(--bew-border-color);
+    }
+
+    th {
+      background: var(--bew-fill-1);
+      font-weight: 600;
+    }
+
+    tr:nth-child(even) td {
+      background: var(--bew-fill-1);
+    }
+  }
+
+  // Horizontal rules
+  hr {
+    border: none;
+    border-top: 1px solid var(--bew-border-color);
+    margin: 16px 0;
+  }
+
+  // Links
+  a {
+    color: var(--bew-theme-color);
+    text-decoration: none;
+    &:hover {
+      text-decoration: underline;
+    }
+  }
+
+  // Images
+  img {
+    max-width: 100%;
+    border-radius: var(--bew-radius-half);
+  }
+
+  // Strong / Bold
+  strong {
+    font-weight: 700;
+    color: var(--bew-text-1);
+  }
+}
+
+// Sample I/O cards
+.sample-io {
+  margin: 12px 0;
+
+  .sample-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px;
+    background: var(--bew-fill-1);
+    border: 1px solid var(--bew-border-color);
+    border-bottom: none;
+    border-radius: var(--bew-radius-half) var(--bew-radius-half) 0 0;
+    font-weight: 600;
+    font-size: 0.9em;
+    color: var(--bew-text-2);
+  }
+
+  pre {
+    margin: 0;
+    border-radius: 0 0 var(--bew-radius-half) var(--bew-radius-half);
+    border-top: none;
+    max-height: 300px;
+    overflow-y: auto;
+  }
+}
