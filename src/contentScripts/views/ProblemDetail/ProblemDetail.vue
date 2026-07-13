@@ -82,6 +82,25 @@ const loading = ref(true)
 const loadError = ref(false)
 let loadingTimer: ReturnType<typeof setTimeout> | null = null
 const discussions = ref<Array<{ id: number, title: string, author: any, time: number, replyCount: number }>>([])
+const solutions = ref<Array<{ id: number; title: string; author: any; time: number; votes: number }>>([])
+const solutionsLoading = ref(false)
+async function loadSolutions() {
+  if (solutionsLoading.value) return
+  solutionsLoading.value = true
+  try {
+    const res = await fetch("https://www.luogu.com.cn/problem/solution/" + problemId.value, { credentials: "same-origin" })
+    const html = await res.text()
+    const m = html.match(/<script\s+id="lentille-context"\s+type="application\/json"[^>]*>([^<]*)<\/script>/)
+    if (m?.[1]) {
+      const ctx = JSON.parse(m[1])
+      const list = ctx?.data?.solutions?.result || ctx?.currentData?.solutions?.result || []
+      solutions.value = list.map(function(s) { return {
+        id: s.id || 0, title: s.title || "", author: s.author || {}, time: s.time || 0, votes: s.votes || s.thumbUp || 0,
+      }})
+    }
+  } catch(e) {}
+  solutionsLoading.value = false
+}
 
 // Code editor state — declared early to avoid use-before-define with functions below
 const selectedLang = ref(LUOGU_LANGUAGES.find(l => l.id === 28) || LUOGU_LANGUAGES[0])
@@ -550,6 +569,7 @@ function handleTabChange(tab: string) {
   }
   activeTab.value = tab as typeof activeTab.value
   submitError.value = ''
+  if (tab === 'solutions' && solutions.value.length === 0) loadSolutions()
 }
 
 // ============================================================
@@ -1100,18 +1120,39 @@ onUnmounted(() => {
             border="1 $bew-border-color"
             style="backdrop-filter: var(--bew-filter-glass-1)"
           >
-            <div flex="~ col" items="center" justify="center" py-12 text="$bew-text-2">
+            <Loading v-if="solutionsLoading" />
+            <div v-else-if="solutions.length === 0" flex="~ col" items="center" justify="center" py-12 text="$bew-text-2">
               <span style="display:contents" v-html="renderIcon('mingcute:bulb-line', 48)" />
-              <p text="lg" mt-4 mb-2>
-                题解
-              </p>
-              <p text="sm $bew-text-3" mb-4>
-                查看本题的题解
-              </p>
-              <Button type="primary" @click="openSolutionsPage">
-                <span style="display:contents" v-html="renderIcon('mingcute:document-line', 16)" />
-                查看题解
-              </Button>
+              <p text="lg" mt-4 mb-2>暂无题解</p>
+              <p text="sm $bew-text-3" mb-4>这道题目还没有题解</p>
+            </div>
+            <div v-else>
+              <h2 mb-4 style="font-size:var(--bew-base-font-size);font-weight:700;color:var(--bew-text-1)">
+                题解 ({{ solutions.length }})
+              </h2>
+              <div
+                v-for="(s, idx) in solutions" :key="s.id"
+                class="stagger-row hover:bg-$bew-fill-2"
+                :style="{ '--row-index': idx }"
+                p="x-4 y-3" flex="~ items-center gap-4"
+                border="b-1 $bew-border-color" cursor="pointer" duration-200
+                @click="navigateTo(AppPage.Solution, 'https://www.luogu.com.cn/problem/solution/' + problemId + '?sid=' + s.id)"
+              >
+                <div flex="1" min-w-0>
+                  <div style="font-size:var(--bew-base-font-size);color:var(--bew-text-1);font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">
+                    {{ s.title }}
+                  </div>
+                  <div flex="~ items-center gap-2" mt-1>
+                    <img :src="s.author?.avatar" style="width:20px;height:20px;border-radius:50%;object-fit:cover" @error="(e:any) => { e.target.style.display = 'none' }">
+                    <span text="xs" :style="{ color: s.author?.color ? 'var(--bew-' + s.author.color + ')' : 'var(--bew-text-2)' }">{{ s.author?.name }}</span>
+                    <span text="xs $bew-text-3">{{ timeAgo(s.time) }}</span>
+                  </div>
+                </div>
+                <div flex="~ items-center gap-1" shrink-0 text="sm $bew-text-3">
+                  <span style="display:contents" v-html="renderIcon('mingcute:thumb-up-line', 14)" />
+                  {{ s.votes }}
+                </div>
+              </div>
             </div>
           </div>
         </Transition>
