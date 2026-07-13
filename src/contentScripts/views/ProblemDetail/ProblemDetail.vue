@@ -300,6 +300,7 @@ const copiedMarkdown = ref(false)
 const copiedSample = ref<string | null>(null)
 const submitResult = ref('')
 const lastRid = ref<number | null>(null)
+const submitHistory = ref<Array<{ rid: number; pid: string; time: number }>>([])
 
 const highlightPre = ref<HTMLPreElement>()
 const hljsMap: Record<string, string> = { c_cpp: 'cpp', python: 'python', java: 'java', plain_text: 'plaintext' }
@@ -394,14 +395,8 @@ const renderedHint = computed(() => parseProblemMarkdown(problem.value.hint))
 // Actions
 // ============================================================
 async function handleSubmit() {
-  if (!codeContent.value.trim()) {
-    submitError.value = '请输入代码'
-    return
-  }
-  if (!isLoggedIn.value) {
-    submitError.value = '请先登录洛谷'
-    return
-  }
+  if (!codeContent.value.trim()) { submitError.value = '请输入代码'; return }
+  if (!isLoggedIn.value) { submitError.value = '请先登录洛谷'; return }
 
   submitting.value = true
   submitError.value = ''
@@ -416,27 +411,43 @@ async function handleSubmit() {
 
   submitting.value = false
 
+  // --- Success ---
   if (result.status === 200 && result.rid) {
     lastRid.value = result.rid
     submitResult.value = `提交成功！评测记录 #${result.rid}`
+    submitHistory.value.unshift({ rid: result.rid, pid: problemId.value, time: Date.now() })
+    if (submitHistory.value.length > 5) submitHistory.value.pop()
     window.open(`https://www.luogu.com.cn/record/${result.rid}`, '_blank')
+    return
   }
-  else if (result.needCaptcha) {
-    submitError.value = ''
-    // Open a verification popup — user completes Turnstile there, then re-submits here
-    const w = 400
-    const h = 500
-    const left = (screen.width - w) / 2
-    const top = (screen.height - h) / 2
-    window.open(`https://www.luogu.com.cn/problem/${problemId.value}`, 'luogu-verify', `width=${w},height=${h},left=${left},top=${top}`)
-    submitError.value = '请在弹出的验证窗口中完成人机验证，然后返回此页面重新提交。'
+
+  // --- Captcha needed (Cloudflare Turnstile) ---
+  if (result.needCaptcha) {
+    submitResult.value = ''
+    submitError.value = '需要人机验证 — 弹窗已打开，完成验证后点下方按钮重试。'
+    const w = 600
+    window.open(
+      `https://www.luogu.com.cn/problem/${problemId.value}`,
+      'luogu-verify',
+      `width=${w},height=500,left=${(screen.width - w) / 2},top=${(screen.height - 500) / 2}`,
+    )
+    return
   }
-  else if (result.status === 403) {
-    submitError.value = result.errorMessage || '请先登录洛谷后再提交'
+
+  // --- Cloudflare / network errors ---
+  if (result.status === 503 || result.status === 0) {
+    submitError.value = result.errorMessage || '网络异常，请检查洛谷是否可访问'
+    return
   }
-  else {
-    submitError.value = result.errorMessage || `提交失败 (HTTP ${result.status})`
+
+  // --- Auth / permission errors ---
+  if (result.status === 403) {
+    submitError.value = result.errorMessage || '请先登录洛谷'
+    return
   }
+
+  // --- Unknown error ---
+  submitError.value = result.errorMessage || `提交失败 (${result.status})`
 }
 function copyWithFeedback(key: string, text: string) {
   copyText(text)
@@ -973,7 +984,28 @@ onUnmounted(() => {
                 text="sm"
                 :style="{ color: 'var(--bew-error-color)' }"
               >
-                {{ submitError }}
+                <div flex="~ items-center justify-between gap-2">
+                  <span>{{ submitError }}</span>
+                  <button v-if="submitError.includes('人机验证')"
+                    style="background:var(--bew-theme-color);color:#fff;border:none;border-radius:4px;padding:3px 10px;cursor:pointer;font-size:.82em;font-weight:600;white-space:nowrap;flex-shrink:0"
+                    @click="handleSubmit">
+                    重试提交
+                  </button>
+                </div>
+              </div>
+
+              <!-- Submit history -->
+              <div v-if="submitHistory.length > 0" mt-2>
+                <div text="xs $bew-text-3" mb-1>最近提交</div>
+                <div flex="~ col gap-1">
+                  <div v-for="h in submitHistory" :key="h.rid" flex="~ items-center gap-2" text="xs">
+                    <a :href="`https://www.luogu.com.cn/record/${h.rid}`" target="_blank"
+                      style="color:var(--bew-theme-color);text-decoration:none;font-family:monospace">
+                      #{{ h.rid }}
+                    </a>
+                    <span style="color:var(--bew-text-3)">{{ h.pid }}</span>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
