@@ -7,16 +7,15 @@ defineProps<{
 </script>
 
 <template>
-  <div w="full" min-h="46px" p="y-12" flex="~ col" justify="center" items="center" gap-3>
+  <div
+    w="full" min-h="46px" p="y-12" flex="~ col" justify="center"
+    items="center" gap-3
+  >
     <div class="loading-spinner">
-      <span v-html="renderIcon('line-md:loading-twotone-loop', 28)" style="display:contents" />
+      <span style="display: contents" v-html="renderIcon('line-md:loading-twotone-loop', 28)" />
     </div>
     <Transition name="fade" mode="out-in">
-      <span
-        text="sm $bew-text-3"
-        :key="text || 'default'"
-        class="loading-text"
-      >{{ text || '加载中...' }}</span>
+      <span :key="text || 'default'" text="sm $bew-text-3" class="loading-text">{{ text || '加载中...' }}</span>
     </Transition>
   </div>
 </template>
@@ -32,8 +31,15 @@ defineProps<{
 }
 
 @keyframes loading-pulse {
-  0%, 100% { opacity: 0.5; transform: scale(0.95); }
-  50% { opacity: 1; transform: scale(1.05); }
+  0%,
+  100% {
+    opacity: 0.5;
+    transform: scale(0.95);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.05);
+  }
 }
 
 .loading-text {

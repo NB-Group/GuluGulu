@@ -5,7 +5,8 @@ async function setupStyles() {
   const currentUrl = document.URL
 
   // Login / Auth pages — style only
-  if (/https?:\/\/(?:www\.)?luogu\.com(?:\.cn)?\/auth\/login/.test(currentUrl)
+  if (
+    /https?:\/\/(?:www\.)?luogu\.com(?:\.cn)?\/auth\/login/.test(currentUrl)
     || /https?:\/\/(?:www\.)?luogu\.com(?:\.cn)?\/auth\/register/.test(currentUrl)
     || /https?:\/\/(?:www\.)?luogu\.com(?:\.cn)?\/openid\//.test(currentUrl)
   ) {

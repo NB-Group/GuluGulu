@@ -24,15 +24,13 @@ export default antfu(
       ],
       'no-alert': 'off',
       'style/quote-props': 'off',
+      'no-console': 'off',
+      'unused-imports/no-unused-vars': 'warn',
+      'ts/no-use-before-define': 'warn',
+      'ts/no-unsafe-function-type': 'warn',
     },
     eslint: {
-      ignorePatterns: [
-        'dist',
-        'node_modules',
-        'public',
-        'extension',
-        'extension-firefox',
-      ],
+      ignorePatterns: ['dist', 'node_modules', 'public', 'extension', 'extension-firefox'],
     },
   },
   {

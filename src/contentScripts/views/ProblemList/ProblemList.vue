@@ -68,9 +68,7 @@ const gridClass = computed(() => {
   return 'grid-single-column'
 })
 
-const totalPages = computed(() =>
-  Math.max(1, Math.ceil(totalCount.value / pageSize)),
-)
+const totalPages = computed(() => Math.max(1, Math.ceil(totalCount.value / pageSize)))
 
 async function fetchProblems(append = false) {
   if (append)
@@ -192,13 +190,7 @@ function difficultyColor(d: number) {
 </script>
 
 <template>
-  <div
-    class="page-container"
-    w-full
-    h-full
-    p="x-4 md:x-8 lg:x-16"
-    pos="relative"
-  >
+  <div class="page-container" w-full h-full p="x-4 md:x-8 lg:x-16" pos="relative">
     <div
       bg="$bew-content"
       rounded="$bew-radius"
@@ -206,16 +198,9 @@ function difficultyColor(d: number) {
       mb-6
       shadow="[var(--bew-shadow-1),var(--bew-shadow-edge-glow-1)]"
       border="1 $bew-border-color"
-      style="
-        backdrop-filter: var(--bew-filter-glass-1);
-        z-index: 99999;
-        position: relative;
-      "
+      style="backdrop-filter: var(--bew-filter-glass-1); z-index: 99999; position: relative"
     >
-      <h1
-        style="font-size: 1.5rem; color: var(--bew-text-1); font-weight: 700"
-        mb-4
-      >
+      <h1 style="font-size: 1.5rem; color: var(--bew-text-1); font-weight: 700" mb-4>
         题库
       </h1>
       <div mb-4>
@@ -223,24 +208,10 @@ function difficultyColor(d: number) {
       </div>
       <div flex="~ col md:row gap-3" items="center" justify="between">
         <div flex="~ gap-2 wrap">
-          <Select
-            v-model="selectedType"
-            :options="typeOptions"
-            placeholder="题目来源"
-          />
-          <Select
-            v-model="selectedDifficulty"
-            :options="difficultyOptions"
-            placeholder="题目难度"
-          />
+          <Select v-model="selectedType" :options="typeOptions" placeholder="题目来源" />
+          <Select v-model="selectedDifficulty" :options="difficultyOptions" placeholder="题目难度" />
         </div>
-        <div
-          flex="~ gap-1"
-          items="center"
-          bg="$bew-fill-1"
-          rounded="$bew-radius-half"
-          p-1
-        >
+        <div flex="~ gap-1" items="center" bg="$bew-fill-1" rounded="$bew-radius-half" p-1>
           <button
             v-for="m in [
               { k: 'adaptive', i: 'layout-6-line' },
@@ -253,16 +224,12 @@ function difficultyColor(d: number) {
             border="none"
             cursor="pointer"
             :style="{
-              background:
-                localGridLayout === m.k ? 'var(--bew-theme-color)' : '',
+              background: localGridLayout === m.k ? 'var(--bew-theme-color)' : '',
               color: localGridLayout === m.k ? 'white' : 'var(--bew-text-2)',
             }"
             @click="localGridLayout = m.k as any"
           >
-            <span
-              style="display: contents"
-              v-html="renderIcon(`mingcute:${m.i}`, 16)"
-            />
+            <span style="display: contents" v-html="renderIcon(`mingcute:${m.i}`, 16)" />
           </button>
         </div>
       </div>
@@ -288,10 +255,7 @@ function difficultyColor(d: number) {
       border="1 $bew-border-color"
       text="center $bew-text-2"
     >
-      <span
-        style="display: contents"
-        v-html="renderIcon('mingcute:warning-line', 32)"
-      />
+      <span style="display: contents" v-html="renderIcon('mingcute:warning-line', 32)" />
       <p mt-2>
         {{ errorMsg }}
       </p>
@@ -316,13 +280,9 @@ function difficultyColor(d: number) {
           @click="openProblem(p.pid)"
         >
           <div flex="~ items-center justify-between" mb-2>
-            <span
-              style="
-                font-size: var(--bew-base-font-size);
-                color: var(--bew-text-3);
-                font-family: monospace;
-              "
-            >{{ p.pid }}</span>
+            <span style="font-size: var(--bew-base-font-size); color: var(--bew-text-3); font-family: monospace">{{
+              p.pid
+            }}</span>
             <span
               text="xs"
               fw-bold
@@ -334,23 +294,12 @@ function difficultyColor(d: number) {
               }"
             >{{ difficultyLabel(p.difficulty) }}</span>
           </div>
-          <h3
-            style="
-              font-size: var(--bew-base-font-size);
-              color: var(--bew-text-1);
-              font-weight: 600;
-            "
-            mb-3
-          >
+          <h3 style="font-size: var(--bew-base-font-size); color: var(--bew-text-1); font-weight: 600" mb-3>
             {{ p.title }}
           </h3>
           <div flex="~ items-center gap-1" text="xs $bew-text-3">
-            <span
-              style="display: contents"
-              v-html="renderIcon('mingcute:chart-bar-line', 14)"
-            />
-            <span>{{ p.totalSubmit.toLocaleString() }} 提交 /
-              {{ p.totalAccepted.toLocaleString() }} 通过</span>
+            <span style="display: contents" v-html="renderIcon('mingcute:chart-bar-line', 14)" />
+            <span>{{ p.totalSubmit.toLocaleString() }} 提交 / {{ p.totalAccepted.toLocaleString() }} 通过</span>
           </div>
         </div>
       </div>
@@ -362,22 +311,12 @@ function difficultyColor(d: number) {
     <div
       v-if="!loading && problems.length > 0 && currentPage < totalPages"
       ref="sentinelRef"
-      style="
-        height: 60px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-      "
+      style="height: 60px; display: flex; align-items: center; justify-content: center"
     >
       <Loading v-if="loadingMore" />
       <span v-else text="sm $bew-text-3">向下滚动加载更多...</span>
     </div>
-    <div
-      v-if="!loading && problems.length > 0 && currentPage >= totalPages"
-      text="sm $bew-text-3"
-      text-center
-      pb-8
-    >
+    <div v-if="!loading && problems.length > 0 && currentPage >= totalPages" text="sm $bew-text-3" text-center pb-8>
       已加载全部 {{ totalCount }} 道题目
     </div>
 
@@ -389,10 +328,7 @@ function difficultyColor(d: number) {
       border="1 $bew-border-color"
       text="center $bew-text-2"
     >
-      <span
-        style="display: contents"
-        v-html="renderIcon('mingcute:search-line', 32)"
-      />
+      <span style="display: contents" v-html="renderIcon('mingcute:search-line', 32)" />
       <p mt-2>
         没有找到符合条件的题目
       </p>

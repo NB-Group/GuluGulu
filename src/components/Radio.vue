@@ -12,10 +12,19 @@ const model = defineModel()
     <span>{{ label }}</span>
     <input v-model="model" type="checkbox" hidden>
     <span
-      inline-block w="$b-button-width" h="$b-button-height" bg="$bew-fill-1" rounded="[calc(var(--b-button-height)/2)]"
-      relative border="size-$b-border-width color-$bew-border-color"
-      after:content-empty after:inline-block after:bg-white after:rounded="[calc(var(--b-button-height)/2)]"
-      after:w="[calc(var(--b-button-height)-var(--b-border-width))]" after:h="[calc(var(--b-button-height)-var(--b-border-width))]"
+      inline-block
+      w="$b-button-width"
+      h="$b-button-height"
+      bg="$bew-fill-1"
+      rounded="[calc(var(--b-button-height)/2)]"
+      relative
+      border="size-$b-border-width color-$bew-border-color"
+      after:content-empty
+      after:inline-block
+      after:bg-white
+      after:rounded="[calc(var(--b-button-height)/2)]"
+      after:w="[calc(var(--b-button-height)-var(--b-border-width))]"
+      after:h="[calc(var(--b-button-height)-var(--b-border-width))]"
       after:border="size-$b-border-width color-$bew-border-color"
       after:pos="absolute top-[calc(0px-var(--b-border-width)/2)]"
     />

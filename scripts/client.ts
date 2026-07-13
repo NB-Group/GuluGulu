@@ -197,8 +197,8 @@ async function queueUpdate(p: Promise<(() => void) | undefined>) {
     await Promise.resolve()
     pending = false
     const loading = [...queued]
-    queued = [];
-    (await Promise.all(loading)).forEach(fn => fn && fn())
+    queued = []
+    ;(await Promise.all(loading)).forEach(fn => fn && fn())
   }
 }
 
@@ -271,9 +271,7 @@ export function removeStyle(id: string): void {
   if (style) {
     if (style instanceof CSSStyleSheet)
       document.adoptedStyleSheets = document.adoptedStyleSheets.filter((s: CSSStyleSheet) => s !== style)
-
-    else
-      document.head.removeChild(style)
+    else document.head.removeChild(style)
 
     sheetsMap.delete(id)
   }
@@ -397,7 +395,7 @@ export function createHotContext(ownerPath: string): ViteHotContext {
   const newListeners = new Map()
   ctxToListenersMap.set(ownerPath, newListeners)
 
-  function acceptDeps(deps: string[], callback: HotCallback['fn'] = () => { }) {
+  function acceptDeps(deps: string[], callback: HotCallback['fn'] = () => {}) {
     const mod: HotModule = hotModulesMap.get(ownerPath) || {
       id: ownerPath,
       callbacks: [],

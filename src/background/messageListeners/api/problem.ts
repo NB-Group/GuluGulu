@@ -1,24 +1,29 @@
 import browser from 'webextension-polyfill'
+
 import { AHS } from '../../utils'
+
+const process = import('node:process')
 
 async function doProblemSubmit(message: any, sender?: any, sendResponse?: Function) {
   const { pid, code, lang, enableO2, csrfToken } = message
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
-    'Accept': 'application/json',
+    Accept: 'application/json',
     'X-CSRF-TOKEN': csrfToken || '',
     'X-Requested-With': 'XMLHttpRequest',
   }
   if (process.env.FIREFOX && sender?.tab?.cookieStoreId) {
     const cookies = await browser.cookies.getAll({ storeId: sender.tab.cookieStoreId })
-    headers['Cookie'] = cookies.map((c: any) => `${c.name}=${c.value}`).join('; ')
+    headers.Cookie = cookies.map((c: any) => `${c.name}=${c.value}`).join('; ')
   }
   const res = await fetch(`https://www.luogu.com.cn/fe/api/problem/submit/${pid}`, {
-    method: 'POST', headers,
+    method: 'POST',
+    headers,
     body: JSON.stringify({ code, lang: Number(lang), enableO2: enableO2 ? 1 : 0 }),
   })
   const data = await res.json()
-  if (sendResponse) sendResponse(data)
+  if (sendResponse)
+    sendResponse(data)
   return data
 }
 
@@ -28,13 +33,18 @@ const API_PROBLEM = {
   'PROBLEM.getList': async (message: any) => {
     const { page = 1, difficulty = '', keyword = '', tag = '', type = '' } = message
     const params = new URLSearchParams()
-    if (Number(page) > 1) params.set('page', String(page))
-    if (difficulty) params.set('difficulty', String(difficulty))
-    if (keyword) params.set('keyword', keyword)
-    if (tag) params.set('tag', String(tag))
-    if (type) params.set('type', type)
+    if (Number(page) > 1)
+      params.set('page', String(page))
+    if (difficulty)
+      params.set('difficulty', String(difficulty))
+    if (keyword)
+      params.set('keyword', keyword)
+    if (tag)
+      params.set('tag', String(tag))
+    if (type)
+      params.set('type', type)
     const qs = params.toString()
-    const url = `https://www.luogu.com.cn/problem/list${qs ? '?' + qs : ''}`
+    const url = `https://www.luogu.com.cn/problem/list${qs ? `?${qs}` : ''}`
 
     console.log('[GuluGulu BG] fetching:', url)
     const res = await fetch(url)

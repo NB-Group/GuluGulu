@@ -9,12 +9,15 @@ export interface ContestInfo {
   rated: boolean
 }
 
-const props = withDefaults(defineProps<{
-  contest?: ContestInfo
-  skeleton?: boolean
-}>(), {
-  skeleton: false,
-})
+const props = withDefaults(
+  defineProps<{
+    contest?: ContestInfo
+    skeleton?: boolean
+  }>(),
+  {
+    skeleton: false,
+  },
+)
 
 const emit = defineEmits<{
   (e: 'click', contest: ContestInfo): void
@@ -30,6 +33,8 @@ const statusConfig = computed(() => {
       return { label: '未开始', color: '#1890ff', bg: '#1890ff20' }
     case 'ended':
       return { label: '已结束', color: '#ff4d4f', bg: '#ff4d4f20' }
+    default:
+      return {}
   }
 })
 
@@ -70,7 +75,8 @@ function handleClick() {
 
 <template>
   <div
-    duration-300 ease-in-out
+    duration-300
+    ease-in-out
     rounded="$bew-radius"
     ring="hover:8 hover:$bew-fill-2 active:8 active:$bew-fill-3"
     bg="hover:$bew-fill-2 active:$bew-fill-3"
@@ -81,11 +87,10 @@ function handleClick() {
     <div
       v-if="skeleton"
       class="contest-card-skeleton"
-      w-full rounded="$bew-radius" p-6
-      style="
-        box-shadow: var(--bew-shadow-edge-glow-1), var(--bew-shadow-1);
-        backdrop-filter: var(--bew-filter-glass-1);
-      "
+      w-full
+      rounded="$bew-radius"
+      p-6
+      style="box-shadow: var(--bew-shadow-edge-glow-1), var(--bew-shadow-1); backdrop-filter: var(--bew-filter-glass-1)"
       bg="$bew-content"
     >
       <div bg="$bew-skeleton" w="60%" h="24px" rounded="$bew-radius-half" mb-3 />
@@ -98,19 +103,15 @@ function handleClick() {
     </div>
 
     <!-- Actual card -->
-    <div
-      v-if="!skeleton && contest"
-      class="contest-card group"
-      w="full"
-      rounded="$bew-radius"
-    >
+    <div v-if="!skeleton && contest" class="contest-card group" w="full" rounded="$bew-radius">
       <div
         style="
           box-shadow: var(--bew-shadow-edge-glow-1), var(--bew-shadow-1);
           backdrop-filter: var(--bew-filter-glass-1);
         "
         bg="$bew-content"
-        p-6 rounded="$bew-radius"
+        p-6
+        rounded="$bew-radius"
         cursor="pointer"
         transform="~ translate-z-0"
         duration-300
@@ -121,7 +122,8 @@ function handleClick() {
         <!-- Status badge -->
         <div flex="~ items-center gap-2" mb-3>
           <span
-            text="xs" fw-bold
+            text="xs"
+            fw-bold
             p="x-2 y-0.5"
             rounded="$bew-radius-half"
             :style="{
@@ -135,9 +137,11 @@ function handleClick() {
 
         <!-- Contest name -->
         <h3
-          text="lg $bew-text-1" fw-bold
-          overflow-hidden text-ellipsis
-          style="display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;"
+          text="lg $bew-text-1"
+          fw-bold
+          overflow-hidden
+          text-ellipsis
+          style="display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical"
           mb-2
         >
           {{ contest.name }}
@@ -178,7 +182,9 @@ function handleClick() {
 
 <style lang="scss" scoped>
 .contest-card {
-  transition: transform 300ms ease, box-shadow 300ms ease;
+  transition:
+    transform 300ms ease,
+    box-shadow 300ms ease;
 }
 
 .contest-card-skeleton {
@@ -186,7 +192,8 @@ function handleClick() {
 }
 
 @keyframes pulse {
-  0%, 100% {
+  0%,
+  100% {
     opacity: 1;
   }
   50% {

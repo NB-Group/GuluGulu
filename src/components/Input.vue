@@ -23,10 +23,7 @@ function handleInput(event: Event) {
     :placeholder="placeholder"
     :disabled="disabled"
     :type="type ?? 'text'"
-    style="
-      backdrop-filter: var(--bew-filter-glass-1);
-      box-shadow: var(--bew-shadow-edge-glow-1), var(--bew-shadow-1);
-    "
+    style="backdrop-filter: var(--bew-filter-glass-1); box-shadow: var(--bew-shadow-edge-glow-1), var(--bew-shadow-1)"
     w-full
     p="x-4 y-2"
     rounded="$bew-radius"

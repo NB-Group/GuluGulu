@@ -1,11 +1,12 @@
 <script setup lang="ts">
 import { useThrottleFn } from '@vueuse/core'
 
-import Sidebar from './components/Sidebar.vue'
 import { useGulyApp } from '~/composables/useAppProvider'
 import { HomeSubPage } from '~/enums/appEnums'
 import type { HomeTab } from '~/stores/mainStore'
 import { useMainStore } from '~/stores/mainStore'
+
+import Sidebar from './components/Sidebar.vue'
 
 const mainStore = useMainStore()
 const { handleBackToTop, scrollbarRef } = useGulyApp()
@@ -18,8 +19,10 @@ onMounted(async () => {
     const res = await fetch('https://www.luogu.com.cn/', { credentials: 'same-origin' })
     const html = await res.text()
     const m = html.match(/<img[^>]+src="(https:\/\/ipic\.luogu\.com\.cn\/[^"]*(?:banner|Banner|hero)[^"]*)"/)
-    if (m) bannerUrl.value = m[1]
-  } catch {}
+    if (m)
+      bannerUrl.value = m[1]
+  }
+  catch {}
 })
 
 const activatedPage = ref<HomeSubPage>(HomeSubPage.Trending)
@@ -86,15 +89,17 @@ function toggleTabContentLoading(loading: boolean) {
     <main>
       <!-- Banner -->
       <div v-if="bannerUrl" mb-4 rounded="$bew-radius" overflow-hidden shadow="[var(--bew-shadow-1)]">
-        <img :src="bannerUrl" w-full style="max-height:200px;object-fit:cover;display:block" alt="banner" />
+        <img :src="bannerUrl" w-full style="max-height: 200px; object-fit: cover; display: block" alt="banner">
       </div>
 
       <header class="home-header">
         <section v-if="currentTabs.length > 1" class="tab-bar">
           <div class="tab-scroll">
             <button
-              v-for="tab in currentTabs" :key="tab.page"
-              :class="['tab-btn', { 'tab-btn--active': activatedPage === tab.page }]"
+              v-for="tab in currentTabs"
+              :key="tab.page"
+              class="tab-btn"
+              :class="[{ 'tab-btn--active': activatedPage === tab.page }]"
               @click="handleChangeTab(tab)"
             >
               {{ $t(tab.i18nKey) }}
@@ -108,7 +113,8 @@ function toggleTabContentLoading(loading: boolean) {
         <div flex="1" min-w-0>
           <Transition name="page-fade" mode="out-in">
             <Component
-              :is="pages[activatedPage]" :key="activatedPage"
+              :is="pages[activatedPage]"
+              :key="activatedPage"
               ref="tabPageRef"
               @before-loading="toggleTabContentLoading(true)"
               @after-loading="toggleTabContentLoading(false)"
@@ -152,7 +158,9 @@ function toggleTabContentLoading(loading: boolean) {
   overflow-x: auto;
   scrollbar-width: none;
 }
-.tab-scroll::-webkit-scrollbar { display: none; }
+.tab-scroll::-webkit-scrollbar {
+  display: none;
+}
 
 .tab-btn {
   padding: 0 12px;
@@ -165,7 +173,9 @@ function toggleTabContentLoading(loading: boolean) {
   border-radius: 9999px;
   cursor: pointer;
   white-space: nowrap;
-  transition: background 0.3s, color 0.3s;
+  transition:
+    background 0.3s,
+    color 0.3s;
   display: flex;
   align-items: center;
   flex-shrink: 0;

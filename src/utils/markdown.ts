@@ -1,13 +1,10 @@
+import hljs from 'highlight.js'
+import hljsLightCSS from 'highlight.js/styles/github.css?raw'
+import hljsDarkCSS from 'highlight.js/styles/github-dark.css?raw'
+import katex from 'katex'
+import katexCSS from 'katex/dist/katex.min.css?raw'
 import { marked } from 'marked'
 import { markedHighlight } from 'marked-highlight'
-import hljs from 'highlight.js'
-import katex from 'katex'
-// @ts-ignore
-import katexCSS from 'katex/dist/katex.min.css?raw'
-// @ts-ignore
-import hljsLightCSS from 'highlight.js/styles/github.css?raw'
-// @ts-ignore
-import hljsDarkCSS from 'highlight.js/styles/github-dark.css?raw'
 
 // ============================================================
 // Inject KaTeX CSS and Highlight.js CSS into Shadow DOM (once)
@@ -17,7 +14,8 @@ let hljsLightEl: HTMLStyleElement | null = null
 let hljsDarkEl: HTMLStyleElement | null = null
 
 export function injectKatexCSS() {
-  if (cssInjected) return
+  if (cssInjected)
+    return
   try {
     const host = document.querySelector('#guly')?.shadowRoot
     if (host) {
@@ -41,28 +39,33 @@ export function injectKatexCSS() {
       // Toggle on theme change
       const observer = new MutationObserver(() => {
         const isDark = document.querySelector('#guly')?.classList.contains('dark')
-        if (hljsLightEl) hljsLightEl.disabled = !!isDark
-        if (hljsDarkEl) hljsDarkEl.disabled = !isDark
+        if (hljsLightEl)
+          hljsLightEl.disabled = !!isDark
+        if (hljsDarkEl)
+          hljsDarkEl.disabled = !isDark
       })
       observer.observe(document.querySelector('#guly')!, { attributes: true, attributeFilter: ['class'] })
 
       cssInjected = true
     }
-  } catch {}
+  }
+  catch {}
 }
 
 // ============================================================
 // Configure marked with code highlighting (marked v18 API)
 // ============================================================
-marked.use(markedHighlight({
-  langPrefix: 'hljs language-',
-  highlight(code: string, lang: string) {
-    if (lang && hljs.getLanguage(lang)) {
-      return hljs.highlight(code, { language: lang }).value
-    }
-    return hljs.highlightAuto(code).value
-  },
-}))
+marked.use(
+  markedHighlight({
+    langPrefix: 'hljs language-',
+    highlight(code: string, lang: string) {
+      if (lang && hljs.getLanguage(lang)) {
+        return hljs.highlight(code, { language: lang }).value
+      }
+      return hljs.highlightAuto(code).value
+    },
+  }),
+)
 
 marked.setOptions({
   breaks: true,
@@ -77,13 +80,19 @@ function renderLatexRaw(text: string): string {
   text = text.replace(/\$\$([^$]+)\$\$/g, (_match, formula) => {
     try {
       return katex.renderToString(formula.trim(), { displayMode: true, throwOnError: false, trust: true })
-    } catch { return _match }
+    }
+    catch {
+      return _match
+    }
   })
   // Inline math: $...$ (single $ only)
-  text = text.replace(/\$([^$]+?)\$/g, (_match, formula) => {
+  text = text.replace(/\$([^$]+)\$/g, (_match, formula) => {
     try {
       return katex.renderToString(formula.trim(), { displayMode: false, throwOnError: false, trust: true })
-    } catch { return _match }
+    }
+    catch {
+      return _match
+    }
   })
   return text
 }
@@ -107,10 +116,14 @@ export function parseProblemMarkdown(raw: string): string {
  * Used by Blog and ContestDetail.
  */
 export function parseMarkdownContent(md: string): string {
-  if (!md) return ''
+  if (!md)
+    return ''
   injectKatexCSS()
   try {
     const withLatex = renderLatexRaw(md)
     return marked.parse(withLatex) as string
-  } catch { return md }
+  }
+  catch {
+    return md
+  }
 }

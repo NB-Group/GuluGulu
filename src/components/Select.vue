@@ -44,10 +44,14 @@ onMounted(() => {
     if (dropdownRef.value && !path.includes(dropdownRef.value))
       open.value = false
   })
-  window.addEventListener('scroll', () => {
-    if (open.value)
-      updatePosition()
-  }, true)
+  window.addEventListener(
+    'scroll',
+    () => {
+      if (open.value)
+        updatePosition()
+    },
+    true,
+  )
   window.addEventListener('resize', () => {
     if (open.value)
       updatePosition()
@@ -65,7 +69,7 @@ onMounted(() => {
       @click="toggleOpen"
     >
       <span v-if="modelValue" class="selected-text">
-        {{ options?.find(o => o.value === modelValue)?.label || modelValue }}
+        {{ options?.find((o) => o.value === modelValue)?.label || modelValue }}
       </span>
       <span v-else class="placeholder">{{ placeholder || '请选择' }}</span>
       <span class="arrow" v-html="'▾'" />

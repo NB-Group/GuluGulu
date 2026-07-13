@@ -4,7 +4,6 @@ import { setupApiMsgLstnrs } from './messageListeners/api'
 import { setupTabMsgLstnrs } from './messageListeners/tabs'
 
 browser.runtime.onInstalled.addListener(async () => {
-  // eslint-disable-next-line no-console
   console.log('GuluGulu extension installed')
 })
 
@@ -17,7 +16,8 @@ if (process.env.FIREFOX) {
   browser.webRequest.onBeforeSendHeaders.addListener(
     async (details: any) => {
       // Only modify requests from our extension, never from web pages
-      if (!details.documentUrl || !isExtensionUri(details.documentUrl)) return
+      if (!details.documentUrl || !isExtensionUri(details.documentUrl))
+        return
 
       const requestHeaders: browser.WebRequest.HttpHeaders = []
       details.requestHeaders = details.requestHeaders || []
@@ -25,7 +25,8 @@ if (process.env.FIREFOX) {
         const name = details.requestHeaders[i].name.toLowerCase()
         if (name === 'origin' || name === 'referer') {
           requestHeaders.push({ name: details.requestHeaders[i].name, value: 'https://www.luogu.com.cn' })
-        } else {
+        }
+        else {
           requestHeaders.push(details.requestHeaders[i])
         }
 

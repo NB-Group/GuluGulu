@@ -14,7 +14,7 @@ const modelValue = ref<number>(props.modelValue)
 const rangeRef = ref<HTMLInputElement>() as Ref<HTMLInputElement>
 
 function paint(el: HTMLInputElement, v: number) {
-  const progress = (v - props.min) / (props.max - props.min) * 100
+  const progress = ((v - props.min) / (props.max - props.min)) * 100
   el.style.background = `linear-gradient(to right, var(--bew-theme-color) ${progress}%, var(--bew-fill-1) ${progress}%) no-repeat`
 }
 
@@ -27,7 +27,8 @@ function onInput() {
 
 onMounted(() => {
   const el = rangeRef.value
-  if (!el) return
+  if (!el)
+    return
   modelValue.value = props.modelValue
   paint(el, props.modelValue)
 })
@@ -36,13 +37,8 @@ onMounted(() => {
 <template>
   <label cursor-pointer flex items-center gap-3 w="100%">
     <input
-      ref="rangeRef"
-      v-model="modelValue"
-      type="range"
-      :min="min"
-      :max="max"
-      class="slider"
-      @input="onInput"
+      ref="rangeRef" v-model="modelValue" type="range" :min="min" :max="max"
+      class="slider" @input="onInput"
     >
     <span text="sm $bew-text-2" shrink-0>{{ label }}</span>
   </label>
@@ -80,7 +76,7 @@ onMounted(() => {
     border-radius: 50%;
     box-shadow: 0 0 0 2px var(--bew-border-color);
     cursor: pointer;
-    transition: box-shadow .2s;
+    transition: box-shadow 0.2s;
   }
   &::-webkit-slider-thumb:hover {
     box-shadow: 0 0 0 2px var(--bew-theme-color);
@@ -101,7 +97,7 @@ onMounted(() => {
     box-shadow: 0 0 0 2px var(--bew-border-color);
     cursor: pointer;
     border: none;
-    transition: box-shadow .2s;
+    transition: box-shadow 0.2s;
   }
   &::-moz-range-thumb:hover {
     box-shadow: 0 0 0 2px var(--bew-theme-color);

@@ -53,7 +53,9 @@
     padding: 10px 14px !important;
     font-size: 0.95rem !important;
     outline: none !important;
-    transition: border-color 0.2s, box-shadow 0.2s !important;
+    transition:
+      border-color 0.2s,
+      box-shadow 0.2s !important;
 
     &:focus {
       border-color: var(--bew-theme-color) !important;
@@ -65,7 +67,8 @@
     }
   }
 
-  button.solid, button[class*="solid"] {
+  button.solid,
+  button[class*="solid"] {
     background: var(--bew-theme-color) !important;
     color: white !important;
     border: none !important;
@@ -74,7 +77,10 @@
     font-weight: 700 !important;
     font-size: 0.95rem !important;
     cursor: pointer !important;
-    transition: background 0.2s, transform 0.2s, box-shadow 0.2s !important;
+    transition:
+      background 0.2s,
+      transform 0.2s,
+      box-shadow 0.2s !important;
     box-shadow: 0 2px 8px var(--bew-theme-color-30) !important;
 
     &:hover {
@@ -112,7 +118,8 @@
     color: var(--bew-text-1) !important;
   }
 
-  .error, .lfe-error {
+  .error,
+  .lfe-error {
     color: var(--bew-error-color) !important;
     font-size: 0.85rem !important;
   }

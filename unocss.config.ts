@@ -6,25 +6,19 @@ const remRE = /(-?[.\d]+)rem/g
 export default defineConfig({
   content: {
     pipeline: {
-      include: [
-        '**/*.{js,ts}',
-        /\.(vue|svelte|[jt]sx|mdx?|astro|elm|php|phtml|html)($|\?)/,
-      ],
+      include: ['**/*.{js,ts}', /\.(vue|svelte|[jt]sx|mdx?|astro|elm|php|phtml|html)($|\?)/],
     },
   },
-  blocklist: [
-    'ps',
-    'container',
-  ],
+  blocklist: ['ps', 'container'],
   presets: [
     presetUno(),
     presetAttributify(),
     presetIcons({
       extraProperties: {
-        'display': 'inline-block',
+        display: 'inline-block',
         'vertical-align': 'middle',
-        'width': '1.2em',
-        'height': '1.2em',
+        width: '1.2em',
+        height: '1.2em',
       },
     }),
     presetTypography(),
@@ -44,7 +38,5 @@ export default defineConfig({
       },
     },
   ],
-  transformers: [
-    transformerDirectives(),
-  ],
+  transformers: [transformerDirectives()],
 })

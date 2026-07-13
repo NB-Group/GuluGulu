@@ -104,26 +104,24 @@ export const useMainStore = defineStore('main', () => {
     ]
   })
 
-  const homeTabs = shallowReadonly<HomeTab[]>(
-    [
-      {
-        i18nKey: 'home.trending',
-        page: HomeSubPage.Trending,
-      },
-      {
-        i18nKey: 'home.recent_contests',
-        page: HomeSubPage.RecentContests,
-      },
-      {
-        i18nKey: 'home.hot_problems',
-        page: HomeSubPage.HotProblems,
-      },
-      {
-        i18nKey: 'home.recent_discussions',
-        page: HomeSubPage.RecentDiscussions,
-      },
-    ],
-  )
+  const homeTabs = shallowReadonly<HomeTab[]>([
+    {
+      i18nKey: 'home.trending',
+      page: HomeSubPage.Trending,
+    },
+    {
+      i18nKey: 'home.recent_contests',
+      page: HomeSubPage.RecentContests,
+    },
+    {
+      i18nKey: 'home.hot_problems',
+      page: HomeSubPage.HotProblems,
+    },
+    {
+      i18nKey: 'home.recent_discussions',
+      page: HomeSubPage.RecentDiscussions,
+    },
+  ])
 
   function getLuoguWebPageURLByPage(page: AppPage): string {
     const dockItem = dockItems.value.find(e => e.page === page)

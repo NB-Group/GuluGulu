@@ -90,11 +90,13 @@ function doRequest(message: Message, api: API, sendResponse?: Function, cookies?
     const isGET = method.toLocaleLowerCase() === 'get'
 
     // EJS-style template substitution: replace <%= key %> in URL and param values
-    const templateReplace = (str: string) => str.replace(/<%= (\w+) %>/g, (_, key) => {
-      const val = rest[key]
-      if (val !== undefined) delete rest[key]
-      return val ?? ''
-    })
+    const templateReplace = (str: string) =>
+      str.replace(/<%= (\w+) %>/g, (_, key) => {
+        const val = rest[key]
+        if (val !== undefined)
+          delete rest[key]
+        return val ?? ''
+      })
     url = templateReplace(url)
     // Deep-copy params and process template variables in values
     const targetParams: Record<string, any> = {}
@@ -106,8 +108,7 @@ function doRequest(message: Message, api: API, sendResponse?: Function, cookies?
     Object.keys(rest).forEach((key) => {
       if (body && body[key] !== undefined)
         targetBody[key] = rest[key]
-      else
-        targetParams[key] = rest[key]
+      else targetParams[key] = rest[key]
     })
 
     // generate params
@@ -119,13 +120,15 @@ function doRequest(message: Message, api: API, sendResponse?: Function, cookies?
           urlParams.append(key, String(val))
       }
       const qs = urlParams.toString()
-      if (qs) url += `?${qs}`
+      if (qs)
+        url += `?${qs}`
     }
     // generate body
     if (!isGET) {
-      targetBody = (headers && headers['Content-Type'] && headers['Content-Type'].includes('application/x-www-form-urlencoded'))
-        ? new URLSearchParams(targetBody)
-        : JSON.stringify(targetBody)
+      targetBody
+        = headers && headers['Content-Type'] && headers['Content-Type'].includes('application/x-www-form-urlencoded')
+          ? new URLSearchParams(targetBody)
+          : JSON.stringify(targetBody)
     }
     // generate cookies
     if (cookies) {
@@ -134,7 +137,9 @@ function doRequest(message: Message, api: API, sendResponse?: Function, cookies?
     }
     // get cant take body
     const fetchOpt: Record<string, any> = { method, headers, credentials: 'omit' }
-    !isGET && Object.assign(fetchOpt, { body: targetBody })
+    if (!isGET) {
+      Object.assign(fetchOpt, { body: targetBody })
+    }
     // fetch and after handle
     let baseFunc = fetch(url, {
       ...fetchOpt,
@@ -143,8 +148,7 @@ function doRequest(message: Message, api: API, sendResponse?: Function, cookies?
       if (func.name === sendResponseHandler.name && sendResponse)
         // sendResponseHandler is a special post-processing function, needs sendResponse passed in
         baseFunc = baseFunc.then(sendResponseHandler(sendResponse))
-      else
-        baseFunc = baseFunc.then(func)
+      else baseFunc = baseFunc.then(func)
     })
     baseFunc.catch(console.error)
     return baseFunc

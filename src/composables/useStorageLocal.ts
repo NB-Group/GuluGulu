@@ -1,16 +1,9 @@
-import type {
-  MaybeRef,
-  RemovableRef,
-  StorageLikeAsync,
-  UseStorageAsyncOptions,
-} from '@vueuse/core'
-import {
-  useStorageAsync,
-} from '@vueuse/core'
+import type { MaybeRef, RemovableRef, StorageLikeAsync, UseStorageAsyncOptions } from '@vueuse/core'
+import { useStorageAsync } from '@vueuse/core'
 import { storage } from 'webextension-polyfill'
 
 // Track the last value we wrote so we can return it directly on re-read.
-const writeCache = new Map<string, { value: string; time: number }>()
+const writeCache = new Map<string, { value: string, time: number }>()
 
 const storageLocal: StorageLikeAsync = {
   removeItem(key: string) {
@@ -37,6 +30,10 @@ const storageLocal: StorageLikeAsync = {
   },
 }
 
-export function useStorageLocal<T>(key: string, initialValue: MaybeRef<T>, options?: UseStorageAsyncOptions<T>): RemovableRef<T> {
+export function useStorageLocal<T>(
+  key: string,
+  initialValue: MaybeRef<T>,
+  options?: UseStorageAsyncOptions<T>,
+): RemovableRef<T> {
   return useStorageAsync(key, initialValue, storageLocal, options)
 }

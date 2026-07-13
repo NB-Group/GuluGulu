@@ -23,7 +23,7 @@ export interface Settings {
   showTopBar: boolean
   topBarAutoHide: boolean
   searchBarMode: 'currentTab' | 'newTab'
-	  dockMessageBadge: boolean
+  dockMessageBadge: boolean
 
   // Wallpaper / background
   wallpaper: string
@@ -103,12 +103,20 @@ export interface GridLayout {
   home: GridLayoutType
 }
 
-export const gridLayout = useStorageLocal('gridLayout', ref<GridLayout>({
-  home: 'adaptive',
-}), { mergeDefaults: true })
+export const gridLayout = useStorageLocal(
+  'gridLayout',
+  ref<GridLayout>({
+    home: 'adaptive',
+  }),
+  { mergeDefaults: true },
+)
 
-export const sidePanel = useStorageLocal('sidePanel', ref<{
-  home: boolean
-}>({
-  home: true,
-}), { mergeDefaults: true })
+export const sidePanel = useStorageLocal(
+  'sidePanel',
+  ref<{
+    home: boolean
+  }>({
+    home: true,
+  }),
+  { mergeDefaults: true },
+)

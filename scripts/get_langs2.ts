@@ -12,7 +12,7 @@ async function main() {
   const langSection = configText.match(/"Languages":\{.*?\}(?=,\s*"[A-Z])/s)
   if (langSection) {
     // Parse as JSON to get clean data
-    const wrapped = '{' + langSection[0] + '}'
+    const wrapped = `{${langSection[0]}}`
     try {
       const parsed = JSON.parse(wrapped)
       const langs = parsed.Languages
@@ -21,14 +21,19 @@ async function main() {
       const sorted = Object.entries(langs).sort((a: any, b: any) => a[1].order - b[1].order)
       for (const [id, info] of sorted) {
         const l = info as any
-        if (l.disabled) continue
-        console.log(`  ${id}: ${l.name} (family: ${l.family}, canO2: ${l.canO2}, aceMode: ${l.aceMode}, type: ${l.type})`)
+        if (l.disabled)
+          continue
+        console.log(
+          `  ${id}: ${l.name} (family: ${l.family}, canO2: ${l.canO2}, aceMode: ${l.aceMode}, type: ${l.type})`,
+        )
       }
-    } catch(e) {
+    }
+    catch (e) {
       console.log('Parse error:', e)
       console.log('Raw:', langSection[0].slice(0, 3000))
     }
-  } else {
+  }
+  else {
     console.log('No language section found')
     // Try broader search
     const idx = configText.indexOf('"Languages"')

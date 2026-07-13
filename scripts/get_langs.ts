@@ -3,7 +3,8 @@ import { chromium } from 'playwright'
 async function main() {
   const browser = await chromium.launch({ headless: true })
   const context = await browser.newContext({
-    userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+    userAgent:
+      'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
   })
 
   const page = await context.newPage()
@@ -13,10 +14,14 @@ async function main() {
   // Extract lentille-context data
   const problemData = await page.evaluate(() => {
     const el = document.getElementById('lentille-context')
-    if (!el) return null
+    if (!el)
+      return null
     try {
       return JSON.parse(el.textContent || '{}')
-    } catch { return null }
+    }
+    catch {
+      return null
+    }
   })
   if (problemData) {
     console.log('Problem structure keys:', Object.keys(problemData.data.problem))

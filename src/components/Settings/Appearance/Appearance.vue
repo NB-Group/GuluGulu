@@ -30,7 +30,7 @@ const themeColorOptions = computed<Array<string>>(() => {
 const isCustomColor = computed<boolean>(() => {
   return !themeColorOptions.value.includes(settings.value.themeColor)
 })
-const themeOptions = computed<Array<{ value: string; label: string }>>(() => {
+const themeOptions = computed<Array<{ value: string, label: string }>>(() => {
   return [
     { label: '浅色', value: 'light' },
     { label: '深色', value: 'dark' },
@@ -38,9 +38,12 @@ const themeOptions = computed<Array<{ value: string; label: string }>>(() => {
   ]
 })
 
-watch(() => settings.value.wallpaper, (newValue) => {
-  changeWallpaper(newValue)
-})
+watch(
+  () => settings.value.wallpaper,
+  (newValue) => {
+    changeWallpaper(newValue)
+  },
+)
 
 function changeThemeColor(color: string) {
   settings.value.themeColor = color
@@ -50,8 +53,7 @@ const changeThemeColorThrottle = useThrottleFn((color: string) => changeThemeCol
 function changeWallpaper(url: string) {
   if (url)
     settings.value.enableWallpaperMasking = true
-  else
-    settings.value.enableWallpaperMasking = false
+  else settings.value.enableWallpaperMasking = false
   settings.value.wallpaper = url
 }
 
@@ -87,20 +89,32 @@ function handleRemoveCustomWallpaper() {
       <SettingsItem title="主题色" desc="选择你喜欢的主题色">
         <div flex="~ gap-2 wrap" justify-end>
           <div
-            v-for="color in themeColorOptions" :key="color"
-            w-20px h-20px rounded-8 cursor-pointer transition
-            duration-300 box-border
+            v-for="color in themeColorOptions"
+            :key="color"
+            w-20px
+            h-20px
+            rounded-8
+            cursor-pointer
+            transition
+            duration-300
+            box-border
             :style="{
               background: color,
               transform: color === settings.themeColor ? 'scale(1.3)' : 'scale(1)',
               border: color === settings.themeColor ? '2px solid white' : '2px solid transparent',
-              boxShadow: color === settings.themeColor ? '0 0 0 1px var(--bew-border-color), var(--bew-shadow-1)' : 'none',
+              boxShadow:
+                color === settings.themeColor ? '0 0 0 1px var(--bew-border-color), var(--bew-shadow-1)' : 'none',
             }"
             @click="changeThemeColor(color)"
           />
           <div
-            w-20px h-20px rounded-8 overflow-hidden
-            cursor-pointer transition duration-300
+            w-20px
+            h-20px
+            rounded-8
+            overflow-hidden
+            cursor-pointer
+            transition
+            duration-300
             flex="~ items-center justify-center"
             :style="{
               transform: isCustomColor ? 'scale(1.3)' : 'scale(1)',
@@ -115,8 +129,15 @@ function handleRemoveCustomWallpaper() {
             <input
               :value="settings.themeColor"
               type="color"
-              w-30px h-30px p-0 m-0 block
-              shrink-0 rounded-8 border-none cursor-pointer
+              w-30px
+              h-30px
+              p-0
+              m-0
+              block
+              shrink-0
+              rounded-8
+              border-none
+              cursor-pointer
               @input="(e) => changeThemeColorThrottle((e.target as HTMLInputElement)?.value)"
             >
           </div>
@@ -134,37 +155,34 @@ function handleRemoveCustomWallpaper() {
           <div flex items-center gap-4>
             <picture
               v-if="settings.wallpaper"
-              aspect-video bg="$bew-fill-1" rounded="$bew-radius" overflow-hidden
-              cursor-pointer shrink-0 w="xl:1/5 lg:1/4 md:1/3"
+              aspect-video
+              bg="$bew-fill-1"
+              rounded="$bew-radius"
+              overflow-hidden
+              cursor-pointer
+              shrink-0
+              w="xl:1/5 lg:1/4 md:1/3"
             >
               <img
                 :src="settings.wallpaper"
                 alt="壁纸预览"
-                w-full h-full object-cover
-                onerror="this.style.display='none'; this.onerror=null;"
+                w-full
+                h-full
+                object-cover
+                onerror="
+                  this.style.display = 'none'
+                  this.onerror = null
+                "
               >
             </picture>
             <div flex-1 flex="~ col gap-2">
               <Input v-model="settings.wallpaper" w-full placeholder="输入图片 URL 或上传本地图片" />
               <div flex="~ gap-2">
-                <input
-                  ref="uploadInputRef"
-                  type="file" accept="image/*"
-                  hidden
-                  @change="handleUploadWallpaper"
-                >
-                <Button
-                  v-if="!settings.wallpaper"
-                  type="default"
-                  @click="triggerUpload"
-                >
+                <input ref="uploadInputRef" type="file" accept="image/*" hidden @change="handleUploadWallpaper">
+                <Button v-if="!settings.wallpaper" type="default" @click="triggerUpload">
                   上传本地图片
                 </Button>
-                <Button
-                  v-if="settings.wallpaper"
-                  type="error"
-                  @click="handleRemoveCustomWallpaper"
-                >
+                <Button v-if="settings.wallpaper" type="error" @click="handleRemoveCustomWallpaper">
                   移除壁纸
                 </Button>
               </div>
@@ -180,7 +198,12 @@ function handleRemoveCustomWallpaper() {
         <Slider v-model="settings.wallpaperMaskOpacity" :label="`${settings.wallpaperMaskOpacity}%`" />
       </SettingsItem>
       <SettingsItem v-if="settings.enableWallpaperMasking" title="壁纸模糊强度">
-        <Slider v-model="settings.wallpaperBlurIntensity" :min="0" :max="60" :label="`${settings.wallpaperBlurIntensity}px`" />
+        <Slider
+          v-model="settings.wallpaperBlurIntensity"
+          :min="0"
+          :max="60"
+          :label="`${settings.wallpaperBlurIntensity}px`"
+        />
       </SettingsItem>
     </SettingsItemGroup>
 
@@ -190,8 +213,13 @@ function handleRemoveCustomWallpaper() {
         <template v-if="settings.customizeCSS" #bottom>
           <textarea
             v-model="settings.customizeCSSContent"
-            w-full h-200px p-4 font-mono text-sm
-            bg="$bew-fill-1" border="1 $bew-border-color"
+            w-full
+            h-200px
+            p-4
+            font-mono
+            text-sm
+            bg="$bew-fill-1"
+            border="1 $bew-border-color"
             rounded="$bew-radius"
             text="$bew-text-1"
             outline-none

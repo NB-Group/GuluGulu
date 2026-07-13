@@ -1,6 +1,9 @@
 import type { App, Plugin } from 'vue'
 
-const paths: Record<string, { default: Component }> = import.meta.glob(['./*/*.vue', './*.vue', './OverlayScrollbarsComponent.ts'], { eager: true })
+const paths: Record<string, { default: Component }> = import.meta.glob(
+  ['./*/*.vue', './*.vue', './OverlayScrollbarsComponent.ts'],
+  { eager: true },
+)
 
 export default {
   install: (app: App) => {

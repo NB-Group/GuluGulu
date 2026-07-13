@@ -7,14 +7,16 @@ type CamelCase<S extends string> = S extends `${infer P1}_${infer P2}${infer P3}
 type APIFunction<T = typeof API_COLLECTION> = {
   [K in keyof T as CamelCase<string & K>]: {
     // @ts-expect-error allow params
-    [P in keyof T[K]]: T[K][P] extends Function ? T[K][P] : Lowercase<T[K][P]['_fetch']['method']> extends 'get' ? (options?: Partial<T[K][P]['params']>) => Promise<any> : (options?: Partial<T[K][P]['params'] & T[K][P]['_fetch']['body']>) => Promise<any>
+    [P in keyof T[K]]: T[K][P] extends Function
+      ? T[K][P]
+      : Lowercase<T[K][P]['_fetch']['method']> extends 'get'
+        ? (options?: Partial<T[K][P]['params']>) => Promise<any>
+        : (options?: Partial<T[K][P]['params'] & T[K][P]['_fetch']['body']>) => Promise<any>
   }
 }
 
 // eslint-disable-next-line ts/no-unsafe-declaration-merging
-export interface APIClient extends APIFunction<typeof API_COLLECTION> {
-
-}
+export interface APIClient extends APIFunction<typeof API_COLLECTION> {}
 
 // eslint-disable-next-line ts/no-unsafe-declaration-merging
 export class APIClient {
@@ -22,27 +24,34 @@ export class APIClient {
 
   constructor() {
     // @ts-expect-error ignore
-    return new Proxy({}, {
-      get: (_, namespace) => { // namespace
-        if (this.cache.has(namespace)) {
-          return this.cache.get(namespace)
-        }
-        else {
-          const api = new Proxy({}, {
-            get(_, p) {
-              return (options?: object) => {
-                return browser.runtime.sendMessage({
-                  contentScriptQuery: p,
-                  ...options,
-                })
-              }
-            },
-          })
-          this.cache.set(namespace, api)
-          return api
-        }
+    return new Proxy(
+      {},
+      {
+        get: (_, namespace) => {
+          // namespace
+          if (this.cache.has(namespace)) {
+            return this.cache.get(namespace)
+          }
+          else {
+            const api = new Proxy(
+              {},
+              {
+                get(_, p) {
+                  return (options?: object) => {
+                    return browser.runtime.sendMessage({
+                      contentScriptQuery: p,
+                      ...options,
+                    })
+                  }
+                },
+              },
+            )
+            this.cache.set(namespace, api)
+            return api
+          }
+        },
       },
-    })
+    )
   }
 }
 

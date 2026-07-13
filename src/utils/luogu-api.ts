@@ -53,7 +53,8 @@ export const LUOGU_LANGUAGES: LuoguLanguage[] = [
 export function getCsrfToken(): string {
   // Try the meta tag first (may have been re-injected)
   const meta = document.querySelector('meta[name="csrf-token"]')
-  if (meta) return meta.getAttribute('content') || ''
+  if (meta)
+    return meta.getAttribute('content') || ''
   // Fallback to saved token
   return (window as any).__guly_user?.csrfToken || ''
 }
@@ -71,7 +72,8 @@ export function isLoggedIn(): boolean {
  */
 export function getCurrentUser(): { uid: string } | null {
   const uid = (window as any).__guly_user?.uid
-  if (uid && uid !== '0') return { uid }
+  if (uid && uid !== '0')
+    return { uid }
   return null
 }
 
@@ -81,7 +83,8 @@ export function getCurrentUser(): { uid: string } | null {
  */
 export function extractProblemData(): any {
   const el = document.getElementById('lentille-context')
-  if (!el?.textContent || !el.textContent.trim()) return null
+  if (!el?.textContent || !el.textContent.trim())
+    return null
   try {
     return JSON.parse(el.textContent)
   }
@@ -119,7 +122,7 @@ export async function submitCode(payload: SubmitPayload): Promise<SubmitResult> 
         'Content-Type': 'application/json',
         'X-CSRF-TOKEN': csrf,
         'X-Requested-With': 'XMLHttpRequest',
-        'Accept': 'application/json',
+        Accept: 'application/json',
       },
       credentials: 'same-origin',
       body: JSON.stringify({
@@ -133,12 +136,23 @@ export async function submitCode(payload: SubmitPayload): Promise<SubmitResult> 
     const text = await res.text()
 
     // Cloudflare challenge returns HTML
-    if (contentType.includes('text/html') || text.includes('cf-browser-verify') || text.includes('Just a moment') || text.includes('__cf')) {
-      return { status: 503, errorMessage: '洛谷要求完成人机验证。请先在洛谷任意页面手动刷新一次以完成验证，再返回提交代码。' }
+    if (
+      contentType.includes('text/html')
+      || text.includes('cf-browser-verify')
+      || text.includes('Just a moment')
+      || text.includes('__cf')
+    ) {
+      return {
+        status: 503,
+        errorMessage: '洛谷要求完成人机验证。请先在洛谷任意页面手动刷新一次以完成验证，再返回提交代码。',
+      }
     }
 
     let data: any
-    try { data = JSON.parse(text) } catch {
+    try {
+      data = JSON.parse(text)
+    }
+    catch {
       return { status: 0, errorMessage: '提交失败：洛谷返回了非预期的响应' }
     }
 
@@ -149,7 +163,11 @@ export async function submitCode(payload: SubmitPayload): Promise<SubmitResult> 
 
     // Luogu captcha required (InvalidCaptchaException) — Cloudflare Turnstile was destroyed when we cleared body
     if (data.errorType?.includes('Captcha') || data.data?.includes('验证码') || data.errorMessage?.includes('验证码')) {
-      return { status: 403, errorMessage: '需要人机验证。点击下方按钮打开洛谷验证窗口，完成后关闭即可提交。', needCaptcha: true }
+      return {
+        status: 403,
+        errorMessage: '需要人机验证。点击下方按钮打开洛谷验证窗口，完成后关闭即可提交。',
+        needCaptcha: true,
+      }
     }
 
     // "不合法的来源" — origin/referer check failed
@@ -205,11 +223,16 @@ export async function fetchLentilleContext(url: string, opts?: { fetcher?: typeo
     const res = await f(url, { credentials: 'same-origin' })
     const html = await res.text()
     const m = html.match(/<script\s+id="lentille-context"\s+type="application\/json"[^>]*>([^<]*)<\/script>/)
-    if (m?.[1]) return JSON.parse(m[1])
+    if (m?.[1])
+      return JSON.parse(m[1])
     // Check if it's a login page — no lentille-context means we're probably not logged in
-    if (html.includes('login-form') || html.includes('请先登录') || html.includes('user-login')) return { __needLogin: true }
+    if (html.includes('login-form') || html.includes('请先登录') || html.includes('user-login'))
+      return { __needLogin: true }
     return null
-  } catch { return null }
+  }
+  catch {
+    return null
+  }
 }
 
 /**
@@ -224,10 +247,13 @@ export function needLogin(ctx: any): boolean {
  * Avoids showing raw `e.message` on the page.
  */
 export function friendlyError(e: any): string {
-  if (!e) return '未知错误'
-  if (typeof e === 'string') return e
+  if (!e)
+    return '未知错误'
+  if (typeof e === 'string')
+    return e
   const msg = e.message || String(e)
-  if (msg.includes('Failed to fetch') || msg.includes('NetworkError')) return '网络连接失败，请检查网络'
+  if (msg.includes('Failed to fetch') || msg.includes('NetworkError'))
+    return '网络连接失败，请检查网络'
   if (msg.includes('JSON') || msg.includes('Unexpected token') || msg.includes('is not valid JSON'))
     return '请先登录洛谷后再使用 GuluGuly'
   return '加载失败，请先登录洛谷后刷新重试'

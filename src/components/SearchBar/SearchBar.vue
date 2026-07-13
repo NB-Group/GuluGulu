@@ -2,7 +2,6 @@
 import { onKeyStroke } from '@vueuse/core'
 import { ref } from 'vue'
 
-import { settings } from '~/logic'
 import { renderIcon } from '~/utils/icons'
 import { searchKeyword } from '~/utils/luogu-api'
 
@@ -29,11 +28,15 @@ onKeyStroke('/', (e: KeyboardEvent) => {
   keywordRef.value?.focus()
 })
 
-onKeyStroke('Escape', (e: KeyboardEvent) => {
-  e.preventDefault()
-  keywordRef.value?.blur()
-  isFocus.value = false
-}, { target: keywordRef })
+onKeyStroke(
+  'Escape',
+  (e: KeyboardEvent) => {
+    e.preventDefault()
+    keywordRef.value?.blur()
+    isFocus.value = false
+  },
+  { target: keywordRef },
+)
 
 function doSearch() {
   if (keyword.value.trim()) {
@@ -62,24 +65,28 @@ function handleKeyEnter(e: KeyboardEvent) {
     />
     <Transition name="mask">
       <div
-        v-if="darkenOnFocus && isFocus" pos="fixed top-0 left-0" w-full h-full bg="black opacity-60"
+        v-if="darkenOnFocus && isFocus"
+        pos="fixed top-0 left-0"
+        w-full
+        h-full
+        bg="black opacity-60"
         @click="isFocus = false"
       />
     </Transition>
 
     <div
       v-if="blurredOnFocus"
-      pos="fixed top-0 left-0" w-full h-full duration-500 pointer-events-none
-      ease-out transform-gpu
+      pos="fixed top-0 left-0"
+      w-full
+      h-full
+      duration-500
+      pointer-events-none
+      ease-out
+      transform-gpu
       :style="{ backdropFilter: isFocus ? 'blur(15px)' : 'blur(0)' }"
     />
 
-    <div
-      class="search-bar group"
-      :class="isFocus ? 'focus' : ''"
-      flex="~ items-center" pos="relative"
-      h-inherit
-    >
+    <div class="search-bar group" :class="isFocus ? 'focus' : ''" flex="~ items-center" pos="relative" h-inherit>
       <input
         ref="keywordRef"
         v-model="keyword"
@@ -91,19 +98,22 @@ function handleKeyEnter(e: KeyboardEvent) {
         un-border="1 solid $bew-border-color focus:$bew-theme-color"
         transition="all duration-300"
         type="text"
-        :placeholder="'搜索题目...'"
+        placeholder="搜索题目..."
         @focus="isFocus = true"
         @keydown.enter.prevent="doSearch"
       >
       <button
         v-if="isFocus && keyword"
         type="button"
-        pos="absolute right-12" bg="$bew-fill-1 hover:$bew-fill-2" text="xs" rounded-10
+        pos="absolute right-12"
+        bg="$bew-fill-1 hover:$bew-fill-2"
+        text="xs"
+        rounded-10
         p-1
         flex="~ items-center justify-between"
         @click="keyword = ''"
       >
-        <span v-html="renderIcon('mingcute:close-line', 14)" style="display:contents" />
+        <span style="display: contents" v-html="renderIcon('mingcute:close-line', 14)" />
       </button>
 
       <button
@@ -120,7 +130,7 @@ function handleKeyEnter(e: KeyboardEvent) {
         style="--un-drop-shadow: drop-shadow(0 0 6px var(--bew-theme-color))"
         @click="doSearch"
       >
-        <span v-html="renderIcon('mingcute:search-line', 20)" style="display:contents" />
+        <span style="display: contents" v-html="renderIcon('mingcute:search-line', 20)" />
       </button>
     </div>
   </div>

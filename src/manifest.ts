@@ -5,7 +5,7 @@ import type PkgType from '../package.json'
 import { isDev, isFirefox, isSafari, port, r } from '../scripts/utils'
 
 export async function getManifest() {
-  const pkg = await fs.readJSON(r('package.json')) as typeof PkgType
+  const pkg = (await fs.readJSON(r('package.json'))) as typeof PkgType
 
   const manifest: Manifest.WebExtensionManifest = {
     manifest_version: 3,
@@ -14,9 +14,10 @@ export async function getManifest() {
     description: pkg.description,
     homepage_url: pkg.homepage,
 
-    background: (isFirefox || isSafari)
-      ? { scripts: ['./dist/background/index.js'], persistent: isFirefox ? undefined : false }
-      : { service_worker: './dist/background/index.js' },
+    background:
+      isFirefox || isSafari
+        ? { scripts: ['./dist/background/index.js'], persistent: isFirefox ? undefined : false }
+        : { service_worker: './dist/background/index.js' },
 
     icons: {
       16: './assets/icon-512.png',
@@ -28,15 +29,9 @@ export async function getManifest() {
       'declarativeNetRequest',
       'tabs',
       'notifications',
-      ...isFirefox
-        ? ['webRequest', 'webRequestBlocking', 'cookies']
-        : [],
+      ...(isFirefox ? ['webRequest', 'webRequestBlocking', 'cookies'] : []),
     ],
-    host_permissions: [
-      '*://*.luogu.com.cn/*',
-      '*://*.luogu.com/*',
-      '*://*.luogu.org/*',
-    ],
+    host_permissions: ['*://*.luogu.com.cn/*', '*://*.luogu.com/*', '*://*.luogu.org/*'],
     content_scripts: [
       {
         matches: [
@@ -68,7 +63,7 @@ export async function getManifest() {
             ? `script-src 'self' http://localhost:${port}; object-src 'self' http://localhost:${port}`
             : 'script-src \'self\'; object-src \'self\'',
         },
-    ...isFirefox
+    ...(isFirefox
       ? {}
       : {
           declarative_net_request: {
@@ -80,7 +75,7 @@ export async function getManifest() {
               },
             ],
           },
-        },
+        }),
   }
 
   if (isDev)
