@@ -229,41 +229,39 @@ function copyText(text: string) {
 }
 
 async function _runTest() {
-  if (!codeContent.value)
+  if (!codeContent.value.trim()) {
+    testVerdict.value = '无代码'
     return
+  }
+  if (!isLoggedIn.value) {
+    testVerdict.value = '请先登录'
+    return
+  }
   testRunning.value = true
   testVerdict.value = ''
   testActualOutput.value = ''
-  try {
-    if (!isLoggedIn.value) {
-      testVerdict.value = '请先登录'
-      testRunning.value = false
-      return
-    }
-    const csrf = (window as any).__guly_user?.csrfToken || ''
-    const res = await fetch(`https://www.luogu.com.cn/fe/api/problem/submit/${problemId.value}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrf, 'X-Requested-With': 'XMLHttpRequest' },
-      credentials: 'same-origin',
-      body: JSON.stringify({ code: codeContent.value, lang: selectedLang.value.id, enableO2: enableO2.value ? 1 : 0 }),
-    })
-    const json = await res.json()
-    if (json.rid) {
-      testActualOutput.value = `RID: ${json.rid} — 提交成功，查看评测结果`
-      testVerdict.value = '提交成功'
-    }
-    else {
-      testActualOutput.value = json.data || json.errorMessage || '未知错误'
-      testVerdict.value = '提交失败'
-    }
-  }
-  catch (e: any) {
-    testVerdict.value = 'CE'
-    testActualOutput.value = e.message
-  }
-  testRunning.value = false
-}
 
+  const result = await submitCode({
+    pid: problemId.value,
+    code: codeContent.value,
+    lang: selectedLang.value.id,
+    enableO2: enableO2.value && selectedLang.value.canO2,
+  })
+
+  testRunning.value = false
+
+  if (result.status === 200 && result.rid) {
+    testActualOutput.value = `提交成功 RID #${result.rid}`
+    testVerdict.value = testExpectedOutput.value.trim() ? '已提交' : '提交成功'
+    window.open(`https://www.luogu.com.cn/record/${result.rid}`, '_blank')
+  } else if (result.needCaptcha) {
+    testVerdict.value = '需验证'
+    testActualOutput.value = '请打开洛谷页面完成人机验证后重试'
+  } else {
+    testVerdict.value = '失败'
+    testActualOutput.value = result.errorMessage || '提交失败'
+  }
+}
 const contestProblems = ref<Array<{ no: string, pid: string, title: string, score: number }>>([])
 const showProblemSwitcher = ref(false)
 
@@ -775,8 +773,14 @@ onUnmounted(() => {
             <!-- Test Panels -->
             <div v-if="showTestPanel" style="flex-shrink:0;display:flex;gap:6px;min-height:120px">
               <div bg="$bew-content" rounded="$bew-radius" style="backdrop-filter:var(--bew-filter-glass-1);display:flex;flex-direction:column;flex:1;overflow:hidden;border:1px solid var(--bew-border-color)">
-                <div style="padding:6px 10px 2px;font-size:.75em;color:var(--bew-text-3);border-bottom:1px solid var(--bew-border-color)">
-                  自测输入
+                <div style="display:flex;align-items:center;justify-content:space-between;padding:6px 10px 2px;font-size:.75em;color:var(--bew-text-3);border-bottom:1px solid var(--bew-border-color)">
+                  <span>自测输入</span>
+                  <span flex="~ items-center gap-1">
+                    <span v-if="testVerdict" style="padding:0 6px;border-radius:999px;font-size:.75em;font-weight:700;line-height:1.5" :style="{ background: testVerdict === '提交成功' || testVerdict === 'AC' || testVerdict === '已提交' ? 'var(--bew-success-color-20)' : 'var(--bew-error-color-20)', color: testVerdict === '提交成功' || testVerdict === 'AC' || testVerdict === '已提交' ? 'var(--bew-success-color)' : 'var(--bew-error-color)' }">{{ testVerdict }}</span>
+                    <button :disabled="testRunning" style="background:var(--bew-theme-color);color:#fff;border:none;border-radius:4px;padding:2px 8px;cursor:pointer;font-size:.82em;font-weight:600;white-space:nowrap" @click="_runTest">
+                      {{ testRunning ? '…' : '运行测试' }}
+                    </button>
+                  </span>
                 </div>
                 <textarea v-model="testInput" style="flex:1;width:100%;background:var(--bew-fill-1);color:var(--bew-text-1);border:none;padding:8px 10px;font-family:Consolas,monospace;font-size:.78em;resize:none;outline:none" placeholder="输入…" />
               </div>
@@ -788,20 +792,13 @@ onUnmounted(() => {
                   <textarea v-model="testExpectedOutput" style="flex:1;width:100%;background:var(--bew-fill-1);color:var(--bew-text-1);border:none;padding:8px 10px;font-family:Consolas,monospace;font-size:.78em;resize:none;outline:none" placeholder="手动填入" />
                 </div>
                 <div style="flex:1;display:flex;flex-direction:column">
-                  <div style="display:flex;align-items:center;justify-content:space-between;padding:6px 10px 2px;font-size:.75em;color:var(--bew-text-3)">
-                    <span>自测输出</span>
-                    <span flex="~ items-center gap-1">
-                      <span v-if="testVerdict" style="padding:0 6px;border-radius:999px;font-size:.75em;font-weight:700;line-height:1.5" :style="{ background: testVerdict === 'AC' ? 'var(--bew-success-color-20)' : 'var(--bew-error-color-20)', color: testVerdict === 'AC' ? 'var(--bew-success-color)' : 'var(--bew-error-color)' }">{{ testVerdict }}</span>
-                      <button :disabled="testRunning" style="background:var(--bew-theme-color);color:#fff;border:none;border-radius:4px;padding:2px 8px;cursor:pointer;font-size:.82em;font-weight:600;white-space:nowrap" @click="_runTest">
-                        {{ testRunning ? '…' : '运行测试' }}
-                      </button>
-                    </span>
+                  <div style="padding:6px 10px 2px;font-size:.75em;color:var(--bew-text-3)">
+                    自测输出
                   </div>
                   <textarea v-model="testActualOutput" style="flex:1;width:100%;background:var(--bew-fill-1);color:var(--bew-text-1);border:none;padding:8px 10px;font-family:Consolas,monospace;font-size:.78em;resize:none;outline:none" placeholder="—" readonly />
                 </div>
               </div>
-            </div>
-          </div>
+            </div>          </div>
         </div>
 
         <!-- ============================================================ -->
