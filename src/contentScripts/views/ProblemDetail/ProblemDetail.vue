@@ -5,7 +5,7 @@ import { useGulyApp } from '~/composables/useAppProvider'
 import { AppPage } from '~/enums/appEnums'
 import { renderIcon } from '~/utils/icons'
 import type { LuoguLanguage } from '~/utils/luogu-api'
-import { extractProblemData, isLoggedIn as checkLuoguLogin, LUOGU_LANGUAGES, runIdeCode, submitCode } from '~/utils/luogu-api'
+import { extractProblemData, isLoggedIn as checkLuoguLogin, LUOGU_LANGUAGES, submitCode } from '~/utils/luogu-api'
 import { timeAgo } from '~/utils/main'
 import { injectKatexCSS, parseProblemMarkdown } from '~/utils/markdown'
 
@@ -248,46 +248,100 @@ function copyText(text: string) {
 }
 
 async function _runTest() {
-  if (!codeContent.value.trim()) { testVerdict.value = 无代码; return }
-  if (!isLoggedIn.value) { testVerdict.value = 请先登录; return }
+  if (!codeContent.value.trim()) { testVerdict.value = "无代码"; return }
+  if (!isLoggedIn.value) { testVerdict.value = "请先登录"; return }
   testRunning.value = true
   testVerdict.value = ""
   testActualOutput.value = "编译运行中…"
-  const result = await runIdeCode({
-    code: codeContent.value, lang: selectedLang.value.id,
-    input: testInput.value, o2: enableO2.value,
-  })
-  if (result.error || !result.rid) {
-    testRunning.value = false; testVerdict.value = "失败"
-    testActualOutput.value = result.error || "IDE 提交失败"; return
-  }
+
+  // Step 1: Open WebSocket FIRST (before submit, like the real IDE page)
   let resolved = false
+  let rid = ""
   const ws = new WebSocket("wss://ws.luogu.com.cn/ws")
   const timeout = setTimeout(() => {
     if (!resolved) { resolved = true; ws.close(); testRunning.value = false
     testVerdict.value = "超时"; testActualOutput.value = "评测超时，请重试" }
-  }, 15000)
-  ws.onopen = () => ws.send(JSON.stringify({
-    type: "join_channel", channel: "ide.track", channel_param: result.rid,
-  }))
+  }, 20000)
+
+  ws.onopen = async () => {
+    // Step 2: Submit via XHR (matching IDE page pattern)
+    try {
+      const csrf = (window as any).__guly_user?.csrfToken || ""
+      const params = new URLSearchParams({
+        code: codeContent.value,
+        lang: String(selectedLang.value.id),
+        input: testInput.value,
+        o2: enableO2.value ? "1" : "0",
+        "csrf-token": csrf,
+      })
+      const xhr = new XMLHttpRequest()
+      xhr.open("POST", "https://www.luogu.com.cn/api/ide_submit")
+      xhr.setRequestHeader("Content-Type", "application/x-www-form-urlencoded")
+      xhr.setRequestHeader("X-CSRF-TOKEN", csrf)
+      xhr.setRequestHeader("X-Requested-With", "XMLHttpRequest")
+      xhr.withCredentials = true
+      xhr.onload = () => {
+        try {
+          const json = JSON.parse(xhr.responseText)
+          rid = json?.data?.rid || ""
+          if (rid) {
+            // Step 3: Join WS channel with the RID
+            ws.send(JSON.stringify({ type: "join_channel", channel: "ide.track", channel_param: rid }))
+          } else {
+            resolved = true; clearTimeout(timeout); ws.close(); testRunning.value = false
+            testVerdict.value = "失败"; testActualOutput.value = json?.errorMessage || "IDE 提交失败"
+          }
+        } catch {
+          resolved = true; clearTimeout(timeout); ws.close(); testRunning.value = false
+          testVerdict.value = "失败"; testActualOutput.value = "IDE 返回异常"
+        }
+      }
+      xhr.onerror = () => {
+        if (!resolved) { resolved = true; clearTimeout(timeout); ws.close(); testRunning.value = false
+        testVerdict.value = "失败"; testActualOutput.value = "提交请求失败" }
+      }
+      xhr.send(params.toString())
+    } catch {
+      resolved = true; clearTimeout(timeout); ws.close(); testRunning.value = false
+      testVerdict.value = "错误"; testActualOutput.value = "提交异常"
+    }
+  }
+
   ws.onmessage = (event) => {
     if (resolved) return
     try {
       const msg = JSON.parse(event.data)
-      if (msg._ws_type === "heartbeat" || msg._ws_type === "join_result") return
-      resolved = true; clearTimeout(timeout); ws.close(); testRunning.value = false
-      const data = msg.result || msg.data || msg
-      if (data?.compileError || data?.compile?.message) {
-        testVerdict.value = "CE"; testActualOutput.value = data.compileError || data.compile?.message || "编译错误"
-      } else if (data?.output !== undefined) {
-        testActualOutput.value = String(data.output)
-        const exp = testExpectedOutput.value.trim()
-        testVerdict.value = exp ? (String(data.output).trim() === exp ? "AC" : "WA") : "运行完成"
-      } else {
-        testVerdict.value = "完成"; testActualOutput.value = JSON.stringify(data, null, 2)
+      // Skip heartbeat and join_result
+      if (msg._ws_type === "heartbeat") return
+      if (msg._ws_type === "join_result") return
+      // The result comes as server_broadcast with type=execute
+      if (msg._ws_type === "server_broadcast" && msg.type === "execute") {
+        resolved = true; clearTimeout(timeout); ws.close(); testRunning.value = false
+        const exec = msg.execute || {}
+        if (exec.error) {
+          testVerdict.value = "RE"
+          testActualOutput.value = exec.error
+        } else if (exec.exit_code !== 0) {
+          testVerdict.value = "RE"
+          testActualOutput.value = "exit code: " + exec.exit_code + "\n" + (msg.output || "")
+        } else {
+          testActualOutput.value = msg.output || "(no output)"
+          const exp = testExpectedOutput.value.trim()
+          testVerdict.value = exp
+            ? (String(msg.output).trim() === exp ? "AC" : "WA")
+            : "运行完成"
+        }
+        return
+      }
+      // Catch any other result-bearing message
+      if (msg.output !== undefined || msg.execute || msg.result) {
+        resolved = true; clearTimeout(timeout); ws.close(); testRunning.value = false
+        testActualOutput.value = msg.output || JSON.stringify(msg)
+        testVerdict.value = "运行完成"
       }
     } catch {}
   }
+
   ws.onerror = () => {
     if (!resolved) { resolved = true; clearTimeout(timeout); testRunning.value = false
     testVerdict.value = "错误"; testActualOutput.value = "WebSocket 连接失败" }
