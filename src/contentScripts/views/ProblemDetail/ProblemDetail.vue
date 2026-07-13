@@ -335,22 +335,40 @@ function syncScroll(e: Event) {
 
 // Default code templates per language
 function getDefaultCode(lang: number): string {
-  const templates: Record<number, string> = {
-    2: '#include <stdio.h>\n\nint main() {\n    \n    return 0;\n}\n',
-    3: '#include <iostream>\nusing namespace std;\n\nint main() {\n    \n    return 0;\n}\n',
-    4: '#include <iostream>\nusing namespace std;\n\nint main() {\n    \n    return 0;\n}\n',
-    28: '#include <iostream>\nusing namespace std;\n\nint main() {\n    \n    return 0;\n}\n',
-    11: '#include <iostream>\nusing namespace std;\n\nint main() {\n    \n    return 0;\n}\n',
-    12: '#include <iostream>\nusing namespace std;\n\nint main() {\n    \n    return 0;\n}\n',
-    7: 'import sys\n\ndef main():\n    pass\n\nif __name__ == \'__main__\':\n    main()\n',
-    25: 'import sys\n\ndef main():\n    pass\n\nif __name__ == \'__main__\':\n    main()\n',
-    8: 'import java.util.*;\n\npublic class Main {\n    public static void main(String[] args) {\n        \n    }\n}\n',
-    9: 'const readline = require(\'readline\');\n\nconst rl = readline.createInterface({\n    input: process.stdin,\n    output: process.stdout\n});\n\nrl.on(\'line\', (line) => {\n    \n});\n',
-    15: 'use std::io;\n\nfn main() {\n    \n}\n',
+  const t: Record<number, string> = {
+    1: "program APlusB;\nvar a, b: longint;\nbegin\n    readln(a, b);\n    writeln(a + b);\nend.\n",
+    2: "#include <stdio.h>\n\nint main() {\n    int a, b;\n    scanf(\"%d%d\", &a, &b);\n    printf(\"%d\\n\", a + b);\n    return 0;\n}\n",
+    3: "#include <iostream>\nusing namespace std;\n\nint main() {\n    int a, b;\n    cin >> a >> b;\n    cout << a + b << endl;\n    return 0;\n}\n",
+    4: "#include <iostream>\nusing namespace std;\n\nint main() {\n    int a, b;\n    cin >> a >> b;\n    cout << a + b << endl;\n    return 0;\n}\n",
+    5: "",
+    7: "s = input().split()\nprint(int(s[0]) + int(s[1]))\n",
+    8: "import java.util.*;\n\npublic class Main {\n    public static void main(String[] args) {\n        Scanner cin = new Scanner(System.in);\n        int a = cin.nextInt(), b = cin.nextInt();\n        System.out.println(a + b);\n    }\n}\n",
+    9: "const fs = require(\"fs\");\nconst data = fs.readFileSync(\"/dev/stdin\");\nconst result = data.toString(\"ascii\").trim().split(\" \").map(x => parseInt(x)).reduce((a, b) => a + b, 0);\nconsole.log(result);\nprocess.exit();\n",
+    10: "a = io.read(\"*n\")\nb = io.read(\"*n\")\nprint(a + b)\n",
+    11: "#include <iostream>\nusing namespace std;\n\nint main() {\n    int a, b;\n    cin >> a >> b;\n    cout << a + b << endl;\n    return 0;\n}\n",
+    12: "#include <iostream>\nusing namespace std;\n\nint main() {\n    int a, b;\n    cin >> a >> b;\n    cout << a + b << endl;\n    return 0;\n}\n",
+    13: "Scanf.scanf \"%i %i\\n\" (fun a b -> print_int (a + b))\n",
+    14: "package main\n\nimport \"fmt\"\n\nfunc main() {\n    var a, b int\n    fmt.Scanf(\"%d%d\", &a, &b)\n    fmt.Println(a + b)\n}\n",
+    15: "use std::io;\n\nfn main() {\n    let mut input = String::new();\n    io::stdin().read_line(&mut input).unwrap();\n    let mut s = input.trim().split(\" \");\n    let a: i32 = s.next().unwrap().parse().unwrap();\n    let b: i32 = s.next().unwrap().parse().unwrap();\n    println!(\"{}\", a + b);\n}\n",
+    16: "<?php\n$input = trim(file_get_contents(\"php://stdin\"));\nlist($a, $b) = explode(\" \", $input);\necho $a + $b;\n",
+    17: "using System;\n\npublic class APlusB {\n    private static void Main() {\n        string[] input = Console.ReadLine().Split(\" \");\n        Console.WriteLine(int.Parse(input[0]) + int.Parse(input[1]));\n    }\n}\n",
+    18: "a, b = gets.split.map(&:to_i)\nprint a + b\n",
+    19: "main = do\n    [a, b] <- (map read . words) \x60fmap\x60 getLine\n    print (a + b)\n",
+    20: "fun main(args: Array<String>) {\n    val (a, b) = readLine()!!.split(\" \").map(String::toInt)\n    println(a + b)\n}\n",
+    21: "import java.util.*;\n\npublic class Main {\n    public static void main(String[] args) {\n        Scanner cin = new Scanner(System.in);\n        int a = cin.nextInt(), b = cin.nextInt();\n        System.out.println(a + b);\n    }\n}\n",
+    22: "import java.util.Scanner\n\nobject Main {\n    def main(args: Array[String]): Unit = {\n        val cin = new Scanner(System.in)\n        val a = cin.nextInt()\n        val b = cin.nextInt()\n        println(a + b)\n    }\n}\n",
+    23: "nums = map(x -> parse(Int, x), split(readline(), \" \"))\nprintln(nums[1] + nums[2])\n",
+    24: "s = raw_input().split()\nprint int(s[0]) + int(s[1])\n",
+    25: "s = input().split()\nprint(int(s[0]) + int(s[1]))\n",
+    26: "my \\$in = <STDIN>;\nchomp \\$in;\n\\$in = [split /[\\\\s,]+/, \\$in];\nmy \\$c = \\$in->[0] + \\$in->[1];\nprint \"\\$c\\\\n\";\n",
+    27: "#include <iostream>\nusing namespace std;\n\nint main() {\n    int a, b;\n    cin >> a >> b;\n    cout << a + b << endl;\n    return 0;\n}\n",
+    28: "#include <iostream>\nusing namespace std;\n\nint main() {\n    int a, b;\n    cin >> a >> b;\n    cout << a + b << endl;\n    return 0;\n}\n",
+    29: "open System\n\n[<EntryPoint>]\nlet main argv =\n    let input = Console.ReadLine().Split(\" \")\n    let a = int input.[0]\n    let b = int input.[1]\n    printfn \"%d\" (a + b)\n    0\n",
+    31: "import std.stdio;\n\nvoid main() {\n    int a, b;\n    readf(\"%d %d\", &a, &b);\n    writeln(a + b);\n}\n",
+    34: "#include <iostream>\nusing namespace std;\n\nint main() {\n    int a, b;\n    cin >> a >> b;\n    cout << a + b << endl;\n    return 0;\n}\n",
   }
-  return templates[lang] || ''
+  return t[lang] || ""
 }
-
 function onLangChange(lang: LuoguLanguage) {
   selectedLang.value = lang
   if (!codeContent.value) {
