@@ -172,6 +172,30 @@ export async function submitCode(payload: SubmitPayload): Promise<SubmitResult> 
   }
 }
 
+export async function runIdeCode(opts: {
+  code: string; lang: number; input: string; o2: boolean
+}): Promise<{ rid?: string; error?: string }> {
+  const csrf = getCsrfToken()
+  const params = new URLSearchParams({
+    code: opts.code, lang: String(opts.lang), input: opts.input,
+    o2: opts.o2 ? '1' : '0', 'csrf-token': csrf,
+  })
+  try {
+    const res = await fetch('https://www.luogu.com.cn/api/ide_submit', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+        'X-CSRF-TOKEN': csrf, 'X-Requested-With': 'XMLHttpRequest',
+      },
+      credentials: 'same-origin',
+      body: params.toString(),
+    })
+    const json = await res.json()
+    if (json?.data?.rid) return { rid: String(json.data.rid) }
+    return { error: json?.errorMessage || 'IDE 提交失败' }
+  } catch (e: any) { return { error: e.message || 'IDE 请求失败' } }
+}
+
 /**
  * Fetch problem data via Luogu's _contentOnly=1 endpoint.
  * Returns raw HTML which can be parsed for lentille-context JSON.

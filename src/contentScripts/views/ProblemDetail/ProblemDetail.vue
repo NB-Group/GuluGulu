@@ -5,7 +5,7 @@ import { useGulyApp } from '~/composables/useAppProvider'
 import { AppPage } from '~/enums/appEnums'
 import { renderIcon } from '~/utils/icons'
 import type { LuoguLanguage } from '~/utils/luogu-api'
-import { extractProblemData, isLoggedIn as checkLuoguLogin, LUOGU_LANGUAGES, submitCode } from '~/utils/luogu-api'
+import { extractProblemData, isLoggedIn as checkLuoguLogin, LUOGU_LANGUAGES, runIdeCode, submitCode } from '~/utils/luogu-api'
 import { timeAgo } from '~/utils/main'
 import { injectKatexCSS, parseProblemMarkdown } from '~/utils/markdown'
 
@@ -229,37 +229,49 @@ function copyText(text: string) {
 }
 
 async function _runTest() {
-  if (!codeContent.value.trim()) {
-    testVerdict.value = '无代码'
-    return
-  }
-  if (!isLoggedIn.value) {
-    testVerdict.value = '请先登录'
-    return
-  }
+  if (!codeContent.value.trim()) { testVerdict.value = 无代码; return }
+  if (!isLoggedIn.value) { testVerdict.value = 请先登录; return }
   testRunning.value = true
-  testVerdict.value = ''
-  testActualOutput.value = ''
-
-  const result = await submitCode({
-    pid: problemId.value,
-    code: codeContent.value,
-    lang: selectedLang.value.id,
-    enableO2: enableO2.value && selectedLang.value.canO2,
+  testVerdict.value = ""
+  testActualOutput.value = "编译运行中…"
+  const result = await runIdeCode({
+    code: codeContent.value, lang: selectedLang.value.id,
+    input: testInput.value, o2: enableO2.value,
   })
-
-  testRunning.value = false
-
-  if (result.status === 200 && result.rid) {
-    testActualOutput.value = `提交成功 RID #${result.rid}`
-    testVerdict.value = testExpectedOutput.value.trim() ? '已提交' : '提交成功'
-    window.open(`https://www.luogu.com.cn/record/${result.rid}`, '_blank')
-  } else if (result.needCaptcha) {
-    testVerdict.value = '需验证'
-    testActualOutput.value = '请打开洛谷页面完成人机验证后重试'
-  } else {
-    testVerdict.value = '失败'
-    testActualOutput.value = result.errorMessage || '提交失败'
+  if (result.error || !result.rid) {
+    testRunning.value = false; testVerdict.value = "失败"
+    testActualOutput.value = result.error || "IDE 提交失败"; return
+  }
+  let resolved = false
+  const ws = new WebSocket("wss://ws.luogu.com.cn/ws")
+  const timeout = setTimeout(() => {
+    if (!resolved) { resolved = true; ws.close(); testRunning.value = false
+    testVerdict.value = "超时"; testActualOutput.value = "评测超时，请重试" }
+  }, 15000)
+  ws.onopen = () => ws.send(JSON.stringify({
+    type: "join_channel", channel: "ide.track", channel_param: result.rid,
+  }))
+  ws.onmessage = (event) => {
+    if (resolved) return
+    try {
+      const msg = JSON.parse(event.data)
+      if (msg._ws_type === "heartbeat" || msg._ws_type === "join_result") return
+      resolved = true; clearTimeout(timeout); ws.close(); testRunning.value = false
+      const data = msg.result || msg.data || msg
+      if (data?.compileError || data?.compile?.message) {
+        testVerdict.value = "CE"; testActualOutput.value = data.compileError || data.compile?.message || "编译错误"
+      } else if (data?.output !== undefined) {
+        testActualOutput.value = String(data.output)
+        const exp = testExpectedOutput.value.trim()
+        testVerdict.value = exp ? (String(data.output).trim() === exp ? "AC" : "WA") : "运行完成"
+      } else {
+        testVerdict.value = "完成"; testActualOutput.value = JSON.stringify(data, null, 2)
+      }
+    } catch {}
+  }
+  ws.onerror = () => {
+    if (!resolved) { resolved = true; clearTimeout(timeout); testRunning.value = false
+    testVerdict.value = "错误"; testActualOutput.value = "WebSocket 连接失败" }
   }
 }
 const contestProblems = ref<Array<{ no: string, pid: string, title: string, score: number }>>([])
