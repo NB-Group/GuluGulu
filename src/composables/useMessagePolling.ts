@@ -29,7 +29,7 @@ async function poll() {
   try {
     const res = await fetch('https://www.luogu.com.cn/chat?_contentOnly=1', { credentials: 'same-origin' })
     const json = await res.json()
-    const raw = json?.currentData?.unreadMessageCount
+    const raw = json?.data?.unreadMessageCount || json?.currentData?.unreadMessageCount
     const currentUnread: Record<number, number> = {}
     if (raw && typeof raw === 'object' && !Array.isArray(raw)) {
       for (const [k, v] of Object.entries(raw)) currentUnread[Number(k)] = Number(v) || 0
@@ -38,7 +38,7 @@ async function poll() {
 
     if (notifyEnabled.value && total > prevUnreadCount.value
       && 'Notification' in window && Notification.permission === 'granted') {
-      const msgs: any[] = json?.currentData?.latestMessages?.result || []
+      const msgs: any[] = json?.data?.latestMessages?.result || json?.currentData?.latestMessages?.result || []
       for (const [uidStr, count] of Object.entries(currentUnread)) {
         if (count === 0) continue
         const nuid = Number(uidStr)

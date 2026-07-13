@@ -115,7 +115,7 @@ async function fetchRecords(append = false) {
   try {
     const res = await fetch(`https://www.luogu.com.cn/record/list?_contentOnly=1&page=${listPage.value}`, { credentials: 'same-origin' })
     const json = await res.json()
-    const recs = json?.currentData?.records
+    const recs = json?.data?.records || json?.currentData?.records
     if (recs) {
       const items = (recs.result || []).map((rc: any) => ({
         rid: rc.id || 0, problem: { pid: rc.problem?.pid || '', name: rc.problem?.title || '' },
@@ -146,7 +146,7 @@ async function fetchDetail(id: number) {
   try {
     const res = await fetch(`https://www.luogu.com.cn/record/${id}?_contentOnly=1`, { credentials: 'same-origin' })
     const json = await res.json()
-    detail.value = json?.currentData?.record || null
+    detail.value = json?.data?.record || json?.currentData?.record || null
   } catch {}
   detailLoading.value = false
 }

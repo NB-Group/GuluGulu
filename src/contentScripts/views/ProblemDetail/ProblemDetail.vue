@@ -106,8 +106,8 @@ function loadRealData() {
 
     // Parse samples
     const samples: ProblemData['samples'] = []
-    if (Array.isArray(p.samples)) {
-      for (const s of p.samples) {
+    if (Array.isArray(raw.data.samples || p.samples)) {
+      for (const s of (raw.data.samples || p.samples)) {
         samples.push({ input: s[0] || '', output: s[1] || '', explanation: s[2] || '' })
       }
     }

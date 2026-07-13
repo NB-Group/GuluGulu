@@ -239,7 +239,7 @@ async function onDOMLoaded() {
     try {
       const res = await fetch('https://www.luogu.com.cn/record/list?_contentOnly=1', { credentials: 'same-origin' })
       const json = await res.json()
-      const user = json?.currentUser
+      const user = json?.user || json?.currentUser
       if (user?.uid) {
         userIdCookie = String(user.uid)
         userName = user.name || ''
