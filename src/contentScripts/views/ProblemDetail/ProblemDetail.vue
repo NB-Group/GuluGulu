@@ -266,6 +266,8 @@ async function _runTest() {
   activeWs = new WebSocket("wss://ws.luogu.com.cn/ws")
   const ws = activeWs
   activeWsTimeout = setTimeout(() => { if (!resolved) { resolved = true; cleanupWs(); testRunning.value = false; testVerdict.value = "超时"; testActualOutput.value = "评测超时，请重试" } }, 25000)
+  ws.onerror = () => { if (!resolved) { resolved = true; cleanupWs(); testRunning.value = false; testVerdict.value = "错误"; testActualOutput.value = "WebSocket 连接失败" } }
+
   ws.onopen = () => {
     const xhr = new XMLHttpRequest()
     xhr.open("POST", "https://www.luogu.com.cn/api/ide_submit")
@@ -280,7 +282,7 @@ async function _runTest() {
         else { resolved = true; cleanupWs(); testRunning.value = false; testVerdict.value = "失败"; testActualOutput.value = j?.errorMessage || "IDE 提交失败" }
       } catch { resolved = true; cleanupWs(); testRunning.value = false; testVerdict.value = "失败"; testActualOutput.value = "IDE 返回异常" }
     }
-    xhr.onerror = () => { if (!resolved) { resolved = true; cleanupWs(); testRunning.value = false; testVerdict.value = "失败"; testActualOutput.value = "请求失败" } }
+    xhr.onerror = () => { if (!resolved) { resolved = true; cleanupWs(); testRunning.value = false; testVerdict.value = "失败"; testActualOutput.value = "请求失败，请先打开洛谷页面完成验证后重试" } }
     xhr.send(JSON.stringify({ lang: selectedLang.value.id, code: codeContent.value, input: testInput.value, o2: enableO2.value ? "true" : "false" }))
   }
   ws.onmessage = (event) => {

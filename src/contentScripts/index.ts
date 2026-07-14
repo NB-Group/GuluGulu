@@ -265,6 +265,17 @@ async function onDOMLoaded() {
       '.lfe-header, header.lfe-header, .header, nav.header, .navbar, #app > header, .top-nav',
     )
 
+    // Preserve Cloudflare Turnstile scripts before clearing body.
+    // Clearing body destroys the Turnstile widget, making subsequent
+    // API calls fail with captcha errors. Save and re-inject later.
+    const cfScripts = document.querySelectorAll(
+      'script[src*="challenges.cloudflare.com"], script[src*="turnstile"]',
+    )
+    const savedCfScripts: string[] = []
+    cfScripts.forEach((s) => {
+      savedCfScripts.push((s as HTMLScriptElement).src)
+    })
+
     // Clear the original Luogu content — GuluGulu takes over the full page
     document.body.innerHTML = ''
 
@@ -282,6 +293,16 @@ async function onDOMLoaded() {
       name: userName,
       csrfToken,
       color: '',
+    }
+
+    // Re-inject Cloudflare Turnstile scripts so captcha challenges work
+    if (savedCfScripts.length > 0) {
+      savedCfScripts.forEach((src) => {
+        const s = document.createElement('script')
+        s.src = src
+        s.async = true
+        document.head.appendChild(s)
+      })
     }
 
     // Hide the original Luogu top bar — GuluGulu has its own TopBar + Dock
