@@ -256,7 +256,7 @@ watch(() => currentUrl.value, () => loadContent())
                     <span v-else style="color:var(--bew-success-color);margin-left:4px">(进行中)</span>
                   </div>
                 </div>
-                <span style="font-size:.8em;color:var(--bew-text-3);flex-shrink:0;margin-left:8px">{{ item.ruleType === 1 ? 'ACM' : item.ruleType === 2 ? 'OI' : item.ruleType === 4 ? 'IOI' : item.ruleType === 5 ? '乐多' : '' }}</span>
+                <span style="font-size:.8em;color:var(--bew-text-3);flex-shrink:0;margin-left:8px">{{ item.method === 1 ? 'OI' : item.method === 2 ? 'ICPC' : item.method === 3 ? '乐多' : item.method === 4 ? 'IOI' : '' }}</span>
               </div>
             </template>
 
