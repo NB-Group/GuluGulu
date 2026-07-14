@@ -96,6 +96,7 @@ export interface SubmitPayload {
   code: string
   lang: number
   enableO2?: boolean
+  captcha?: string
 }
 
 export interface SubmitResult {
@@ -126,6 +127,7 @@ export async function submitCode(payload: SubmitPayload): Promise<SubmitResult> 
         code: payload.code,
         lang: payload.lang,
         enableO2: payload.enableO2 ? 1 : 0,
+        ...(payload.captcha ? { captcha: payload.captcha } : {}),
       }),
     })
 

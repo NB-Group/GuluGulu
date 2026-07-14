@@ -342,6 +342,16 @@ const copiedSample = ref<string | null>(null)
 const submitResult = ref('')
 const lastRid = ref<number | null>(null)
 const submitHistory = ref<Array<{ rid: number; pid: string; time: number }>>([])
+const captchaSrc = ref("")
+const captchaCode = ref("")
+async function loadCaptcha() {
+  try {
+    const r = await fetch("https://www.luogu.com.cn/api/verify/captcha", { credentials: "same-origin" })
+    if (r.ok) {
+      captchaSrc.value = URL.createObjectURL(await r.blob())
+    }
+  } catch {}
+}
 
 const highlightPre = ref<HTMLPreElement>()
 const hljsMap: Record<string, string> = { c_cpp: 'cpp', python: 'python', java: 'java', plain_text: 'plaintext' }
@@ -466,6 +476,7 @@ async function handleSubmit() {
     code: codeContent.value,
     lang: selectedLang.value.id,
     enableO2: enableO2.value && selectedLang.value.canO2,
+    captcha: captchaCode.value || undefined,
   })
 
   submitting.value = false
@@ -480,16 +491,11 @@ async function handleSubmit() {
     return
   }
 
-  // --- Captcha needed (Cloudflare Turnstile) ---
+  // --- Captcha needed ---
   if (result.needCaptcha) {
     submitResult.value = ''
-    submitError.value = '需要人机验证 — 弹窗已打开，完成验证后点下方按钮重试。'
-    const w = 600
-    window.open(
-      `https://www.luogu.com.cn/problem/${problemId.value}`,
-      'luogu-verify',
-      `width=${w},height=500,left=${(screen.width - w) / 2},top=${(screen.height - 500) / 2}`,
-    )
+    submitError.value = '需要输入验证码才能提交'
+    loadCaptcha()
     return
   }
 
@@ -1039,6 +1045,17 @@ onUnmounted(() => {
                 </span>
               </div>
 
+              <!-- Captcha -->
+              <div v-if="captchaSrc" flex="~ col gap-2" mb-4 p-4 bg="$bew-fill-1" rounded="$bew-radius" border="1 $bew-border-color">
+                <img :src="captchaSrc" style="max-width:200px;border-radius:4px" alt="验证码" />
+                <div flex="~ items-center gap-2">
+                  <input v-model="captchaCode" placeholder="输入验证码" style="flex:1;padding:6px 10px;background:var(--bew-bg);color:var(--bew-text-1);border:1px solid var(--bew-border-color);border-radius:4px;font-size:.85em;outline:none" @keydown.enter="handleSubmit" />
+                  <button :disabled="!captchaCode" @click="handleSubmit" style="background:var(--bew-theme-color);color:#fff;border:none;border-radius:4px;padding:6px 12px;cursor:pointer;font-size:.85em;font-weight:600;white-space:nowrap">
+                    提交
+                  </button>
+                </div>
+                <button @click="captchaSrc='';captchaCode.value='';submitError.value=''" style="background:none;border:none;color:var(--bew-text-3);cursor:pointer;font-size:.7em">取消</button>
+              </div>
               <div
                 v-if="submitError"
                 bg="$bew-error-color-20" border="1 $bew-error-color" rounded="$bew-radius-half" p="x-4 y-3"
@@ -1047,10 +1064,10 @@ onUnmounted(() => {
               >
                 <div flex="~ items-center justify-between gap-2">
                   <span>{{ submitError }}</span>
-                  <button v-if="submitError.includes('人机验证')"
+                  <button v-if="submitError.includes('验证码')"
                     style="background:var(--bew-theme-color);color:#fff;border:none;border-radius:4px;padding:3px 10px;cursor:pointer;font-size:.82em;font-weight:600;white-space:nowrap;flex-shrink:0"
-                    @click="handleSubmit">
-                    重试提交
+                    @click="loadCaptcha()">
+                    刷新验证码
                   </button>
                 </div>
               </div>
