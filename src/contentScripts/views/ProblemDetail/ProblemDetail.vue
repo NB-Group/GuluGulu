@@ -250,28 +250,42 @@ function copyText(text: string) {
 async function _runTest() {
   if (!codeContent.value.trim()) { testVerdict.value = "无代码"; return }
   if (!isLoggedIn.value) { testVerdict.value = "请先登录"; return }
-  testRunning.value = true; testVerdict.value = ""; testActualOutput.value = "运行中…"
-  try {
-    const csrf = (window as any).__guly_user?.csrfToken || ""
-    const r = await fetch("https://www.luogu.com.cn/api/ide_submit", {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "X-CSRF-TOKEN": csrf, "X-Requested-With": "XMLHttpRequest" },
-      credentials: "same-origin",
-      body: JSON.stringify({ lang: selectedLang.value.id, code: codeContent.value, input: testInput.value, o2: enableO2.value ? "true" : "false" }),
-    })
-    const j = await r.json()
-    testRunning.value = false
-    if (j?.data?.rid) {
-      testActualOutput.value = "RID #" + j.data.rid
-      testVerdict.value = testExpectedOutput.value.trim() ? "已提交" : "运行成功"
-      window.open("https://www.luogu.com.cn/record/" + j.data.rid, "_blank")
-    } else {
-      testVerdict.value = "失败"
-      testActualOutput.value = j?.errorMessage || "IDE 提交失败"
+  testRunning.value = true; testVerdict.value = ""; testActualOutput.value = "编译运行中…"
+  const csrf = (window as any).__guly_user?.csrfToken || ""
+  let resolved = false
+  const ws = new WebSocket("wss://ws.luogu.com.cn/ws")
+  const timeout = setTimeout(() => { if (!resolved) { resolved = true; ws.close(); testRunning.value = false; testVerdict.value = "超时"; testActualOutput.value = "评测超时，请重试" } }, 25000)
+  ws.onopen = () => {
+    const xhr = new XMLHttpRequest()
+    xhr.open("POST", "https://www.luogu.com.cn/api/ide_submit")
+    xhr.setRequestHeader("Content-Type", "application/json")
+    xhr.setRequestHeader("X-CSRF-TOKEN", csrf)
+    xhr.withCredentials = true
+    xhr.onload = () => {
+      try {
+        const j = JSON.parse(xhr.responseText)
+        const rid = String(j?.data?.rid || "")
+        if (rid) ws.send(JSON.stringify({ type: "join_channel", channel: "ide.track", channel_param: rid }))
+        else { resolved = true; clearTimeout(timeout); ws.close(); testRunning.value = false; testVerdict.value = "失败"; testActualOutput.value = j?.errorMessage || "IDE 提交失败" }
+      } catch { resolved = true; clearTimeout(timeout); ws.close(); testRunning.value = false; testVerdict.value = "失败"; testActualOutput.value = "IDE 返回异常" }
     }
-  } catch (e) {
-    testRunning.value = false; testVerdict.value = "错误"; testActualOutput.value = (e as any).message || "请求失败"
+    xhr.onerror = () => { resolved = true; clearTimeout(timeout); ws.close(); testRunning.value = false; testVerdict.value = "失败"; testActualOutput.value = "请求失败" }
+    xhr.send(JSON.stringify({ lang: selectedLang.value.id, code: codeContent.value, input: testInput.value, o2: enableO2.value ? "true" : "false" }))
   }
+  ws.onmessage = (event) => {
+    if (resolved) return
+    try {
+      const msg = JSON.parse(event.data)
+      if (msg._ws_type === "server_broadcast" && msg.type === "execute") {
+        resolved = true; clearTimeout(timeout); ws.close(); testRunning.value = false
+        const exec = msg.execute || {}
+        if (exec.error) { testVerdict.value = "RE"; testActualOutput.value = exec.error }
+        else if (exec.exit_code !== 0) { testVerdict.value = "RE (exit " + exec.exit_code + ")"; testActualOutput.value = msg.output || "" }
+        else { testActualOutput.value = msg.output || "(no output)"; const exp = testExpectedOutput.value.trim(); testVerdict.value = exp ? (String(msg.output || "").trim() === exp ? "AC" : "WA") : "运行完成 (" + (exec.cpu_time || 0) + "ms, " + (exec.memory || 0) + "KB)" }
+      }
+    } catch {}
+  }
+  ws.onerror = () => { if (!resolved) { resolved = true; clearTimeout(timeout); testRunning.value = false; testVerdict.value = "错误"; testActualOutput.value = "WebSocket 连接失败" } }
 }
 const contestProblems = ref<Array<{ no: string, pid: string, title: string, score: number }>>([])
 const showProblemSwitcher = ref(false)
