@@ -121,6 +121,7 @@ export async function submitCode(payload: SubmitPayload): Promise<SubmitResult> 
         'X-CSRF-TOKEN': csrf,
         'X-Requested-With': 'XMLHttpRequest',
         'Accept': 'application/json',
+        ...(payload.captcha ? { 'X-Captcha': payload.captcha } : {}),
       },
       credentials: 'same-origin',
       body: JSON.stringify({
