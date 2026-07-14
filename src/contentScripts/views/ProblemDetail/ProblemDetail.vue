@@ -344,13 +344,8 @@ const lastRid = ref<number | null>(null)
 const submitHistory = ref<Array<{ rid: number; pid: string; time: number }>>([])
 const captchaSrc = ref("")
 const captchaCode = ref("")
-async function loadCaptcha() {
-  try {
-    const r = await fetch("https://www.luogu.com.cn/api/verify/captcha", { credentials: "same-origin" })
-    if (r.ok) {
-      captchaSrc.value = URL.createObjectURL(await r.blob())
-    }
-  } catch {}
+function loadCaptcha() {
+  captchaSrc.value = "https://www.luogu.com.cn/api/verify/captcha?_t=" + Date.now()
 }
 
 const highlightPre = ref<HTMLPreElement>()
