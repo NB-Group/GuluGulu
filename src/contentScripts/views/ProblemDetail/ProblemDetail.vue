@@ -277,12 +277,6 @@ async function _runTest() {
         const j = JSON.parse(xhr.responseText)
         const rid = String(j?.data?.rid ?? "")
         if (rid) { ws.send(JSON.stringify({ type: "join_channel", channel: "ide.track", channel_param: rid })) }
-        else if (j?.errorType?.includes("Captcha") || j?.errorMessage?.includes("验证码")) {
-          // Need captcha — open popup for user to complete Turnstile
-          resolved = true; cleanupWs(); testRunning.value = false
-          testVerdict.value = "需验证"; testActualOutput.value = "弹窗已打开，完成验证后重试"
-          window.open("https://www.luogu.com.cn/problem/" + problemId.value, "luogu-verify", "width=800,height=600,left=" + ((screen.width - 800) / 2) + ",top=" + ((screen.height - 600) / 2))
-        }
         else { resolved = true; cleanupWs(); testRunning.value = false; testVerdict.value = "失败"; testActualOutput.value = j?.errorMessage || "IDE 提交失败" }
       } catch { resolved = true; cleanupWs(); testRunning.value = false; testVerdict.value = "失败"; testActualOutput.value = "IDE 返回异常" }
     }
