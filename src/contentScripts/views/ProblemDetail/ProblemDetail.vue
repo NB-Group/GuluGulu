@@ -266,8 +266,6 @@ async function _runTest() {
   activeWs = new WebSocket("wss://ws.luogu.com.cn/ws")
   const ws = activeWs
   activeWsTimeout = setTimeout(() => { if (!resolved) { resolved = true; cleanupWs(); testRunning.value = false; testVerdict.value = "超时"; testActualOutput.value = "评测超时，请重试" } }, 25000)
-  ws.onerror = () => { if (!resolved) { resolved = true; cleanupWs(); testRunning.value = false; testVerdict.value = "错误"; testActualOutput.value = "WebSocket 连接失败" } }
-
   ws.onopen = () => {
     const xhr = new XMLHttpRequest()
     xhr.open("POST", "https://www.luogu.com.cn/api/ide_submit")
@@ -278,11 +276,17 @@ async function _runTest() {
       try {
         const j = JSON.parse(xhr.responseText)
         const rid = String(j?.data?.rid ?? "")
-        if (rid) ws.send(JSON.stringify({ type: "join_channel", channel: "ide.track", channel_param: rid }))
+        if (rid) { ws.send(JSON.stringify({ type: "join_channel", channel: "ide.track", channel_param: rid })) }
+        else if (j?.errorType?.includes("Captcha") || j?.errorMessage?.includes("验证码")) {
+          // Need captcha — open popup for user to complete Turnstile
+          resolved = true; cleanupWs(); testRunning.value = false
+          testVerdict.value = "需验证"; testActualOutput.value = "弹窗已打开，完成验证后重试"
+          window.open("https://www.luogu.com.cn/problem/" + problemId.value, "luogu-verify", "width=800,height=600,left=" + ((screen.width - 800) / 2) + ",top=" + ((screen.height - 600) / 2))
+        }
         else { resolved = true; cleanupWs(); testRunning.value = false; testVerdict.value = "失败"; testActualOutput.value = j?.errorMessage || "IDE 提交失败" }
       } catch { resolved = true; cleanupWs(); testRunning.value = false; testVerdict.value = "失败"; testActualOutput.value = "IDE 返回异常" }
     }
-    xhr.onerror = () => { if (!resolved) { resolved = true; cleanupWs(); testRunning.value = false; testVerdict.value = "失败"; testActualOutput.value = "请求失败，请先打开洛谷页面完成验证后重试" } }
+    xhr.onerror = () => { if (!resolved) { resolved = true; cleanupWs(); testRunning.value = false; testVerdict.value = "失败"; testActualOutput.value = "请求失败，请检查网络连接或洛谷状态" } }
     xhr.send(JSON.stringify({ lang: selectedLang.value.id, code: codeContent.value, input: testInput.value, o2: enableO2.value ? "true" : "false" }))
   }
   ws.onmessage = (event) => {
