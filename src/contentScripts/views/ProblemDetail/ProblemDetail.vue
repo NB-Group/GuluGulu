@@ -247,14 +247,25 @@ function copyText(text: string) {
   document.body.removeChild(el)
 }
 
+let activeWs: WebSocket | null = null
+let activeWsTimeout: ReturnType<typeof setTimeout> | null = null
+
+function cleanupWs() {
+  if (activeWsTimeout) { clearTimeout(activeWsTimeout); activeWsTimeout = null }
+  if (activeWs) { try { activeWs.close() } catch {}; activeWs = null }
+}
+
 async function _runTest() {
   if (!codeContent.value.trim()) { testVerdict.value = "无代码"; return }
   if (!isLoggedIn.value) { testVerdict.value = "请先登录"; return }
+  if (testRunning.value) return
   testRunning.value = true; testVerdict.value = ""; testActualOutput.value = "编译运行中…"
+  cleanupWs()
   const csrf = (window as any).__guly_user?.csrfToken || ""
   let resolved = false
-  const ws = new WebSocket("wss://ws.luogu.com.cn/ws")
-  const timeout = setTimeout(() => { if (!resolved) { resolved = true; ws.close(); testRunning.value = false; testVerdict.value = "超时"; testActualOutput.value = "评测超时，请重试" } }, 25000)
+  activeWs = new WebSocket("wss://ws.luogu.com.cn/ws")
+  const ws = activeWs
+  activeWsTimeout = setTimeout(() => { if (!resolved) { resolved = true; cleanupWs(); testRunning.value = false; testVerdict.value = "超时"; testActualOutput.value = "评测超时，请重试" } }, 25000)
   ws.onopen = () => {
     const xhr = new XMLHttpRequest()
     xhr.open("POST", "https://www.luogu.com.cn/api/ide_submit")
@@ -264,12 +275,12 @@ async function _runTest() {
     xhr.onload = () => {
       try {
         const j = JSON.parse(xhr.responseText)
-        const rid = String(j?.data?.rid || "")
+        const rid = String(j?.data?.rid ?? "")
         if (rid) ws.send(JSON.stringify({ type: "join_channel", channel: "ide.track", channel_param: rid }))
-        else { resolved = true; clearTimeout(timeout); ws.close(); testRunning.value = false; testVerdict.value = "失败"; testActualOutput.value = j?.errorMessage || "IDE 提交失败" }
-      } catch { resolved = true; clearTimeout(timeout); ws.close(); testRunning.value = false; testVerdict.value = "失败"; testActualOutput.value = "IDE 返回异常" }
+        else { resolved = true; cleanupWs(); testRunning.value = false; testVerdict.value = "失败"; testActualOutput.value = j?.errorMessage || "IDE 提交失败" }
+      } catch { resolved = true; cleanupWs(); testRunning.value = false; testVerdict.value = "失败"; testActualOutput.value = "IDE 返回异常" }
     }
-    xhr.onerror = () => { resolved = true; clearTimeout(timeout); ws.close(); testRunning.value = false; testVerdict.value = "失败"; testActualOutput.value = "请求失败" }
+    xhr.onerror = () => { if (!resolved) { resolved = true; cleanupWs(); testRunning.value = false; testVerdict.value = "失败"; testActualOutput.value = "请求失败" } }
     xhr.send(JSON.stringify({ lang: selectedLang.value.id, code: codeContent.value, input: testInput.value, o2: enableO2.value ? "true" : "false" }))
   }
   ws.onmessage = (event) => {
@@ -277,15 +288,20 @@ async function _runTest() {
     try {
       const msg = JSON.parse(event.data)
       if (msg._ws_type === "server_broadcast" && msg.type === "execute") {
-        resolved = true; clearTimeout(timeout); ws.close(); testRunning.value = false
+        resolved = true; cleanupWs(); testRunning.value = false
         const exec = msg.execute || {}
         if (exec.error) { testVerdict.value = "RE"; testActualOutput.value = exec.error }
-        else if (exec.exit_code !== 0) { testVerdict.value = "RE (exit " + exec.exit_code + ")"; testActualOutput.value = msg.output || "" }
-        else { testActualOutput.value = msg.output || "(no output)"; const exp = testExpectedOutput.value.trim(); testVerdict.value = exp ? (String(msg.output || "").trim() === exp ? "AC" : "WA") : "运行完成 (" + (exec.cpu_time || 0) + "ms, " + (exec.memory || 0) + "KB)" }
+        else if (exec.exit_code !== 0) { testVerdict.value = "RE (exit " + exec.exit_code + ")"; testActualOutput.value = msg.output ?? "(no output)" }
+        else {
+          const out = msg.output ?? ""
+          testActualOutput.value = out || "(no output)"
+          const exp = testExpectedOutput.value.trim()
+          testVerdict.value = exp ? (out.trim() === exp ? "AC" : "WA") : "运行完成 (" + (exec.cpu_time ?? 0) + "ms, " + (exec.memory ?? 0) + "KB)"
+        }
       }
     } catch {}
   }
-  ws.onerror = () => { if (!resolved) { resolved = true; clearTimeout(timeout); testRunning.value = false; testVerdict.value = "错误"; testActualOutput.value = "WebSocket 连接失败" } }
+  ws.onerror = () => { if (!resolved) { resolved = true; cleanupWs(); testRunning.value = false; testVerdict.value = "错误"; testActualOutput.value = "WebSocket 连接失败" } }
 }
 const contestProblems = ref<Array<{ no: string, pid: string, title: string, score: number }>>([])
 const showProblemSwitcher = ref(false)
@@ -578,6 +594,7 @@ onUnmounted(() => {
   if (loadingTimer)
     clearTimeout(loadingTimer)
   cleanupResize?.()
+  cleanupWs()
 })
 </script>
 
