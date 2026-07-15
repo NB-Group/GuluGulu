@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { fetchLentilleContext, friendlyError, needLogin } from '~/utils/luogu-api'
+
 const props = defineProps<{
   query?: string
 }>()
@@ -15,17 +17,23 @@ interface SearchResultItem {
 const searchQuery = ref(props.query || '')
 const loading = ref(false)
 const hasSearched = ref(false)
+const errorMsg = ref('')
+const needLoginFlag = ref(false)
+const results = ref<SearchResultItem[]>([])
+const totalCount = ref(0)
 
-const mockResults: SearchResultItem[] = [
-  { type: 'problem', title: 'P1001 A+B Problem', subtitle: '入门 | 通过率 80%', id: 'P1001', tags: ['模拟', '字符串'], extra: '123456 次提交' },
-  { type: 'problem', title: 'P1002 过河卒', subtitle: '普及- | 通过率 49%', id: 'P1002', tags: ['动态规划', 'DP'], extra: '87654 次提交' },
-  { type: 'problem', title: 'P1003 铺设道路', subtitle: '入门 | 通过率 61%', id: 'P1003', tags: ['贪心'], extra: '56789 次提交' },
-  { type: 'blog', title: '动态规划从入门到精通——斜率优化详解', subtitle: 'NaCly_Fish · 5 小时前', id: '2', tags: ['DP', '算法'], extra: '89 评论' },
-  { type: 'contest', title: '洛谷 2024 七月月赛 Div.1', subtitle: '已结束 · OI · Rated', id: '1', tags: ['月赛', 'Div.1'], extra: 'Rank 5' },
-  { type: 'user', title: 'NaCly_Fish', subtitle: 'Rating: 3241 · Rank #1', id: '1', tags: ['NOI 巨佬'], extra: '1847 通过' },
-  { type: 'blog', title: '关于 CSP-J/S 2024 第二轮认证的若干说明', subtitle: '洛谷官方 · 2 小时前', id: '1', tags: ['CSP', '公告'], extra: '156 评论' },
-  { type: 'problem', title: 'P2001 线段树模板', subtitle: '提高 | 通过率 35%', id: 'P2001', tags: ['线段树', '数据结构'], extra: '23456 次提交' },
-]
+// Difficulty labels mirror ProblemList.vue (Luogu's numeric difficulty scale)
+const difficultyMap: Record<number, { label: string, color: string }> = {
+  0: { label: '暂无评定', color: '#909399' },
+  1: { label: '入门', color: '#FE4D61' },
+  2: { label: '普及−', color: '#F39B18' },
+  3: { label: '普及', color: '#FFBF1C' },
+  4: { label: '普及+/提高-', color: '#54C320' },
+  5: { label: '提高', color: '#1AC1C1' },
+  6: { label: '提高+/省选−', color: '#3797DA' },
+  7: { label: '省选/NOI−', color: '#9A3FCE' },
+  8: { label: 'NOI/NOI+/CTS', color: '#162369' },
+}
 
 const typeConfig: Record<string, { label: string; color: string; bg: string; icon: string }> = {
   problem: { label: '题目', color: '#1890ff', bg: '#1890ff20', icon: 'i-mingcute:code-line' },
@@ -34,22 +42,58 @@ const typeConfig: Record<string, { label: string; color: string; bg: string; ico
   user: { label: '用户', color: '#faad14', bg: '#faad1420', icon: 'i-mingcute:user-4-line' },
 }
 
-const filteredResults = computed(() => {
-  if (!searchQuery.value)
-    return []
-  const q = searchQuery.value.toLowerCase()
-  return mockResults.filter(r =>
-    r.title.toLowerCase().includes(q) || r.subtitle.toLowerCase().includes(q),
-  )
-})
+function difficultyLabel(d: number) {
+  return difficultyMap[d]?.label || '未知'
+}
 
-function handleSearch(keyword: string) {
-  searchQuery.value = keyword
-  loading.value = true
+async function handleSearch(keyword: string) {
+  const kw = keyword.trim()
+  if (!kw)
+    return
+  searchQuery.value = kw
   hasSearched.value = true
-  setTimeout(() => {
+  loading.value = true
+  errorMsg.value = ''
+  needLoginFlag.value = false
+  results.value = []
+  totalCount.value = 0
+
+  try {
+    // Real Luogu problem search — same endpoint as ProblemList.vue / PROBLEM.getList
+    const url = `https://www.luogu.com.cn/problem/list?keyword=${encodeURIComponent(kw)}`
+    const ctx = await fetchLentilleContext(url)
+
+    if (!ctx) {
+      errorMsg.value = friendlyError(new Error('Failed to fetch'))
+    }
+    else if (needLogin(ctx)) {
+      needLoginFlag.value = true
+    }
+    else {
+      // Lentille-context path: data.problems.result[] — confirmed via ProblemList.vue
+      const problemSet = ctx?.data?.problems
+      const list = problemSet?.result || []
+      totalCount.value = problemSet?.count || list.length
+      results.value = list.map((p: any) => {
+        const submit = p.totalSubmit || 0
+        const accepted = p.totalAccepted || 0
+        const rate = submit > 0 ? Math.round((accepted / submit) * 100) : 0
+        return {
+          type: 'problem',
+          title: `${p.pid} ${p.name || p.title || ''}`,
+          subtitle: `${difficultyLabel(p.difficulty || 0)} | 通过率 ${rate}%`,
+          id: p.pid,
+          extra: `${submit.toLocaleString()} 次提交`,
+        } as SearchResultItem
+      })
+    }
+  }
+  catch (e: any) {
+    errorMsg.value = friendlyError(e)
+  }
+  finally {
     loading.value = false
-  }, 600)
+  }
 }
 
 function openResult(item: SearchResultItem) {
@@ -64,6 +108,10 @@ function openResult(item: SearchResultItem) {
 
 function openLuoguSearch() {
   window.open(`https://www.luogu.com.cn/problem/list?keyword=${encodeURIComponent(searchQuery.value)}`, '_blank')
+}
+
+function openLogin() {
+  window.open('https://www.luogu.com.cn/auth/login', '_blank')
 }
 </script>
 
@@ -86,13 +134,13 @@ function openLuoguSearch() {
 
     <!-- Search query indicator -->
     <div
-      v-if="hasSearched && searchQuery"
+      v-if="hasSearched && searchQuery && !loading && !errorMsg && !needLoginFlag"
       text="sm $bew-text-2" mb-4
       flex="~ items-center gap-2"
     >
       <span>搜索: </span>
       <span fw-bold text="$bew-theme-color">"{{ searchQuery }}"</span>
-      <span>找到 {{ filteredResults.length }} 个结果</span>
+      <span>找到 {{ totalCount }} 个结果</span>
     </div>
 
     <!-- Loading -->
@@ -101,7 +149,7 @@ function openLuoguSearch() {
     <!-- Results List -->
     <Transition name="content-reveal">
       <div
-        v-if="!loading && hasSearched && filteredResults.length > 0"
+        v-if="!loading && hasSearched && results.length > 0"
         bg="$bew-content" rounded="$bew-radius"
         shadow="[var(--bew-shadow-1),var(--bew-shadow-edge-glow-1)]"
         border="1 $bew-border-color"
@@ -109,7 +157,7 @@ function openLuoguSearch() {
         overflow="hidden"
       >
         <div
-          v-for="(item, index) in filteredResults"
+          v-for="(item, index) in results"
           :key="`${item.type}-${item.id}`"
           class="stagger-row hover:bg-$bew-fill-2"
           :style="{ '--row-index': index }"
@@ -117,7 +165,7 @@ function openLuoguSearch() {
           cursor="pointer"
           duration-200
           border="b-1 $bew-border-color"
-          :class="index === filteredResults.length - 1 ? 'border-b-0' : ''"
+          :class="index === results.length - 1 ? 'border-b-0' : ''"
           @click="openResult(item)"
         >
         <!-- Type icon -->
@@ -171,8 +219,42 @@ function openLuoguSearch() {
     </div>
     </Transition>
 
+    <!-- Need Login State -->
+    <div
+      v-if="!loading && needLoginFlag"
+      bg="$bew-content" rounded="$bew-radius" p-8
+      shadow="[var(--bew-shadow-1),var(--bew-shadow-edge-glow-1)]"
+      border="1 $bew-border-color"
+      style="backdrop-filter: var(--bew-filter-glass-1)"
+      flex="~ col" items="center" text="center $bew-text-2"
+    >
+      <div i-mingcute:lock-line text="3xl $bew-text-3" mb-3 />
+      <p mb-1>
+        请先登录洛谷后再使用搜索
+      </p>
+      <Button type="primary" mt-4 @click="openLogin">
+        前往登录
+      </Button>
+    </div>
+
+    <!-- Error State -->
+    <div
+      v-if="!loading && errorMsg"
+      bg="$bew-content" rounded="$bew-radius" p-8
+      shadow="[var(--bew-shadow-1),var(--bew-shadow-edge-glow-1)]"
+      border="1 $bew-border-color"
+      style="backdrop-filter: var(--bew-filter-glass-1)"
+      flex="~ col" items="center" text="center $bew-text-2"
+    >
+      <div i-mingcute:warning-line text="3xl $bew-text-3" mb-3 />
+      <p>{{ errorMsg }}</p>
+      <Button type="primary" mt-4 @click="handleSearch(searchQuery)">
+        重试
+      </Button>
+    </div>
+
     <!-- Empty State -->
-    <Empty v-if="!loading && hasSearched && filteredResults.length === 0" description="未找到相关结果">
+    <Empty v-if="!loading && hasSearched && !errorMsg && !needLoginFlag && results.length === 0" description="未找到相关结果">
       <Button type="primary" mt-4 @click="openLuoguSearch">
         前往洛谷搜索
       </Button>
@@ -184,7 +266,7 @@ function openLuoguSearch() {
       flex="~ col" items="center" justify="center" py-16
     >
       <div i-mingcute:search-line text="6xl $bew-text-3" mb-4 />
-      <p text="lg $bew-text-2">输入关键词搜索题目、比赛、讨论或用户</p>
+      <p text="lg $bew-text-2">输入关键词搜索题目</p>
     </div>
   </div>
 </template>
