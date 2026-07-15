@@ -44,7 +44,7 @@ const API_PROBLEM = {
     }
     const html = await res.text()
     console.log('[GuluGulu BG] html len:', html.length)
-    const match = html.match(/<script\s+id="lentille-context"\s+type="application\/json">([^<]+)<\/script>/)
+    const match = html.match(/<script\s+id="lentille-context"\s+type="application\/json"[^>]*>([^<]+)<\/script>/)
     if (match?.[1]) {
       const data = JSON.parse(match[1])
       console.log('[GuluGulu BG] parsed OK, count:', data?.data?.problems?.count)
