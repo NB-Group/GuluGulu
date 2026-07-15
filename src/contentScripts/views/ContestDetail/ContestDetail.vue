@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { renderIcon } from '~/utils/icons'
-import { getCsrfToken, LUOGU_LANGUAGES, friendlyError } from '~/utils/luogu-api'
+import { getCsrfToken, isLoggedIn as checkLuoguLogin, LUOGU_LANGUAGES, submitCode, friendlyError } from '~/utils/luogu-api'
 import { parseMarkdownContent } from '~/utils/markdown'
 import { useGulyApp } from '~/composables/useAppProvider'
 
@@ -46,6 +46,9 @@ const enableO2 = ref(false)
 const submitLoading = ref(false)
 const submitResult = ref<any>(null)
 const submitError = ref('')
+const captchaSrc = ref('')
+const captchaCode = ref('')
+const isLoggedIn = computed(() => checkLuoguLogin())
 
 // Problem statement
 const problemStatement = ref<any>(null)
@@ -142,26 +145,60 @@ async function loadProblem(pid: string) {
 // ============================================================
 // Code submission (contest)
 // ============================================================
+function loadCaptcha() {
+  captchaCode.value = ''
+  captchaSrc.value = 'https://www.luogu.com.cn/api/verify/captcha?_t=' + Date.now()
+}
+
 async function handleSubmit() {
   if (!selectedPid.value) { submitError.value = '请先选择题目'; return }
   if (!code.value.trim()) { submitError.value = '请先输入代码'; return }
-  submitLoading.value = true; submitError.value = ''; submitResult.value = null
-  try {
-    const csrf = getCsrfToken()
-    const res = await fetch(`https://www.luogu.com.cn/fe/api/contest/submit/${contestId.value}/${selectedPid.value}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrf, 'X-Requested-With': 'XMLHttpRequest' },
-      credentials: 'same-origin',
-      body: JSON.stringify({ code: code.value, lang: lang.value, enableO2: enableO2.value ? 1 : 0 }),
-    })
-    const json = await res.json()
-    if (json?.code === 200) {
-      submitResult.value = { success: true, rid: json.rid || json.data?.rid }
-    } else {
-      submitError.value = json?.data || json?.msg || '提交失败'
-    }
-  } catch (e: any) { submitError.value = '提交失败：' + (e.message || '网络错误') }
+  if (!isLoggedIn.value) { submitError.value = '请先登录洛谷'; return }
+
+  submitLoading.value = true
+  submitError.value = ''
+  submitResult.value = null
+
+  const result = await submitCode({
+    contestId: contestId.value!,
+    pid: selectedPid.value,
+    code: code.value,
+    lang: lang.value,
+    enableO2: enableO2.value,
+    captcha: captchaCode.value || undefined,
+  })
+
   submitLoading.value = false
+
+  // --- Success ---
+  if (result.status === 200 && result.rid) {
+    captchaSrc.value = ''; captchaCode.value = ''
+    submitResult.value = { success: true, rid: result.rid }
+    return
+  }
+
+  // --- Captcha needed ---
+  if (result.needCaptcha) {
+    submitResult.value = null
+    submitError.value = '需要输入验证码才能提交'
+    loadCaptcha()
+    return
+  }
+
+  // --- Cloudflare / network errors ---
+  if (result.status === 503 || result.status === 0) {
+    submitError.value = result.errorMessage || '网络异常，请检查洛谷是否可访问'
+    return
+  }
+
+  // --- Auth / permission errors ---
+  if (result.status === 403) {
+    submitError.value = result.errorMessage || '请先登录洛谷'
+    return
+  }
+
+  // --- Unknown error ---
+  submitError.value = result.errorMessage || `提交失败 (${result.status})`
 }
 
 // ============================================================
@@ -370,7 +407,21 @@ watch(activeTab, (t) => { if (t === 'ranking' && scoreboard.value.length === 0) 
             <textarea v-model="code" style="width:100%;height:300px;background:var(--bew-fill-1);color:var(--bew-text-1);border:1px solid var(--bew-border-color);border-radius:var(--bew-radius);padding:12px;font-family:'Cascadia Code','Fira Code',monospace;font-size:var(--bew-base-font-size);resize:vertical;tab-size:4" placeholder="在此输入代码..." spellcheck="false" />
 
             <!-- Submit button -->
-            <div v-if="submitError" mt-3 p-3 rounded="$bew-radius" style="background:var(--bew-error-color-20);color:var(--bew-error-color);font-size:var(--bew-base-font-size)">{{ submitError }}</div>
+            <!-- Captcha -->
+            <div v-if="captchaSrc" mt-3 flex="~ col gap-2" p-3 bg="$bew-fill-1" rounded="$bew-radius" border="1 $bew-border-color">
+              <img :src="captchaSrc" style="max-width:200px;border-radius:4px" alt="验证码" />
+              <div flex="~ items-center gap-2">
+                <input v-model="captchaCode" placeholder="输入验证码" style="flex:1;padding:6px 10px;background:var(--bew-bg);color:var(--bew-text-1);border:1px solid var(--bew-border-color);border-radius:4px;font-size:.85em;outline:none" @keydown.enter="handleSubmit" />
+                <button :disabled="!captchaCode" @click="handleSubmit" style="background:var(--bew-theme-color);color:#fff;border:none;border-radius:4px;padding:6px 12px;cursor:pointer;font-size:.85em;font-weight:600;white-space:nowrap">
+                  提交
+                </button>
+              </div>
+              <button @click="captchaSrc='';captchaCode='';submitError=''" style="background:none;border:none;color:var(--bew-text-3);cursor:pointer;font-size:.7em;align-self:flex-start">取消</button>
+            </div>
+            <div v-if="submitError" mt-3 p-3 rounded="$bew-radius" flex="~ items-center justify-between gap-2" style="background:var(--bew-error-color-20);color:var(--bew-error-color);font-size:var(--bew-base-font-size)">
+              <span>{{ submitError }}</span>
+              <button v-if="submitError.includes('验证码')" @click="loadCaptcha()" style="background:var(--bew-theme-color);color:#fff;border:none;border-radius:4px;padding:3px 10px;cursor:pointer;font-size:.82em;font-weight:600;white-space:nowrap;flex-shrink:0">刷新验证码</button>
+            </div>
             <div v-if="submitResult?.success" mt-3 p-3 rounded="$bew-radius" style="background:var(--bew-success-color-20);color:var(--bew-success-color);font-size:var(--bew-base-font-size)">
               提交成功！
               <span v-if="submitResult.rid" style="color:var(--bew-theme-color);cursor:pointer;font-weight:600" @click="openRecord(submitResult.rid)">查看记录 #{{ submitResult.rid }}</span>

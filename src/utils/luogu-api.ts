@@ -97,6 +97,8 @@ export interface SubmitPayload {
   lang: number
   enableO2?: boolean
   captcha?: string
+  /** When set, submits to the contest endpoint /fe/api/contest/submit/{contestId}/{pid}. */
+  contestId?: string | number
 }
 
 export interface SubmitResult {
@@ -113,8 +115,12 @@ export interface SubmitResult {
 export async function submitCode(payload: SubmitPayload): Promise<SubmitResult> {
   const csrf = getCsrfToken()
 
+  const url = payload.contestId != null
+    ? `https://www.luogu.com.cn/fe/api/contest/submit/${payload.contestId}/${payload.pid}`
+    : `https://www.luogu.com.cn/fe/api/problem/submit/${payload.pid}`
+
   try {
-    const res = await fetch(`https://www.luogu.com.cn/fe/api/problem/submit/${payload.pid}`, {
+    const res = await fetch(url, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
