@@ -45,7 +45,7 @@ npm run build:
 Luogu pages embed server data in `<script id="lentille-context" type="application/json">`. This contains `data.problem`, `data.contest`, `data.team`, etc. plus `data.lastCode`/`data.lastLanguage` (saved user code) and `user.*` (login info).
 
 - **Content script** fetches from Luogu pages (`credentials:'same-origin'` → sends cookies), parses HTML for `lentille-context` JSON.
-- **Background** fetches public endpoints (`credentials:'omit'`) via `doRequest()` in `background/utils.ts` with EJS-style `<%= key %>` template substitution.
+- **Background** service worker proxies list endpoints (`PROBLEM.getList` / `RANKING.getList` / `CONTEST.getList` / `HOME.logout` ...) via `apiListenerFactory` in `background/utils.ts` (the old `doRequest()` + EJS template infra was removed). The SW origin is `chrome-extension://<id>`, so `fetch` is cross-origin → handlers MUST use `credentials: 'include'` to send the `C3VK` WAF cookie (manifest declares `cookies` + luogu host perms); without it Luogu returns 302 and no `lentille-context`.
 
 ### Key Patterns
 
@@ -74,3 +74,7 @@ The largest component (~900 lines). Key features:
 - **Contest problems**: `contestProblems` array in lentille-context: `{score, problem: {pid, name, difficulty}, no: "A"}`.
 - **Team homework**: Stored under `data.trainings` key. Items: `{id, name, type, deadline, problemCount, markCount}`.
 - **Team usages**: `usages.training` covers both training + homework; no separate `usages.homework`.
+- **C3VK WAF (2026-07)**: list pages (`/problem/list`, `/ranking`, `/contest/list`) are gated by an nginx WAF — no `C3VK` cookie ⇒ HTTP 302, no `lentille-context`. Background SW fetch needs `credentials:'include'`; content-script fetch is same-origin so `credentials:'same-origin'` is enough. `home.ts` already preserves `C3VK`.
+- **Submit endpoints (2026-07)**: problem submit = `POST /fe/api/problem/submit/{pid}`; **contest submit is a different endpoint** = `POST /fe/api/contest/submit/{contestId}/{pid}`. `submitCode()` in `src/utils/luogu-api.ts` routes between them via an optional `contestId` arg and shares captcha / Cloudflare(503) / auth(403) / network(0) handling for both.
+- **lentille-context paths (new format `{instance,template,data,user,time}`)**: problem list → `data.problems.result[]`, count → `data.problems.count`; problem detail → `data.problem`; `fetchLentilleContext()` returns the raw ctx, so front-end reads `ctx.data.*`.
+- **`src/utils/luogu-api.ts` is content-script only**: it has module-level Vue refs and `document`/`window` references, so it CANNOT be imported in the background SW — keep hand-written `fetch` in background handlers.
