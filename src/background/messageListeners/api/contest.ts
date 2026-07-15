@@ -3,11 +3,13 @@ const API_CONTEST = {
     const { page = 1 } = message
     const qs = Number(page) > 1 ? `?page=${page}` : ''
     try {
-      const res = await fetch(`https://www.luogu.com.cn/contest/list${qs}`)
+      // credentials:'include' — see problem.ts. SW origin ≠ luogu, default sends no cookies.
+      const res = await fetch(`https://www.luogu.com.cn/contest/list${qs}`, { credentials: 'include' })
       if (!res.ok) return { error: `HTTP ${res.status}` }
       const html = await res.text()
       const match = html.match(/<script\s+id="lentille-context"\s+type="application\/json"[^>]*>([^<]+)<\/script>/)
       if (match?.[1]) return JSON.parse(match[1])
+      if (html.includes('login-form') || html.includes('请先登录') || html.includes('user-login')) return { __needLogin: true }
       return { error: 'No data' }
     } catch (e: any) { return { error: e.message } }
   },
