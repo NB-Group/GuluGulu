@@ -211,7 +211,7 @@ export async function fetchProblemData(pid: string): Promise<any> {
     const html = await res.text()
 
     // Parse out the lentille-context script
-    const match = html.match(/<script\s+id="lentille-context"\s+type="application\/json">([^<]+)<\/script>/)
+    const match = html.match(/<script\s+id="lentille-context"\s+type="application\/json"[^>]*>([^<]+)<\/script>/)
     if (match?.[1]) {
       return JSON.parse(match[1])
     }

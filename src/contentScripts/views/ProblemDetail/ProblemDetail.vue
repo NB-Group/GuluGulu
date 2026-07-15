@@ -171,25 +171,24 @@ async function loadRealData() {
       }))
     }
 
-    // Load saved code from Luogu (lastCode / lastLanguage)
-    const savedCode = rd.lastCode || ''
-    const savedLang = rd.lastLanguage
-    if (savedCode)
-      codeContent.value = savedCode
+    // Load saved code from Luogu (lastCode / lastLanguage), or reset to default
+    const savedCode: string = rd.lastCode || ''
+    const savedLang: number | undefined = rd.lastLanguage
+    codeContent.value = savedCode || getDefaultCode(savedLang || 28)
     if (savedLang) {
       const found = LUOGU_LANGUAGES.find(l => l.id === savedLang)
       if (found)
         selectedLang.value = found
     }
 
+    if (loadingPid !== pid) return  // stale result from SPA race
     document.title = `${problem.value.pid} ${problem.value.title} - GuluGulu`
     loading.value = false
     loadingPid = null
   }
   catch (e) {
     console.error('[GuluGulu] Failed to load problem data:', e)
-    if (loadingPid === pid) { loadError.value = true; loading.value = false }
-    loadingPid = null
+    if (loadingPid === pid) { loadError.value = true; loading.value = false; loadingPid = null }
   }
 }
 
@@ -197,7 +196,7 @@ async function loadRealData() {
 // Submission state
 // ============================================================
 const activeTab = ref<'statement' | 'submit' | 'solutions' | 'discussions'>('statement')
-const contestId = computed(() => new URLSearchParams(window.location.search).get('contestId') || '')
+const contestId = computed(() => { const m = (currentUrl.value || window.location.href).match(/[?&]contestId=(\d+)/); return m ? m[1] : '' })
 const inContestMode = computed(() => !!contestId.value)
 const ideMode = ref(inContestMode.value || window.location.hash === '#ide')
 const isSplitView = computed(() => ideMode.value || inContestMode.value)
@@ -280,6 +279,7 @@ async function _runTest() {
     xhr.open("POST", "https://www.luogu.com.cn/api/ide_submit")
     xhr.setRequestHeader("Content-Type", "application/x-www-form-urlencoded")
     xhr.setRequestHeader("X-CSRF-TOKEN", csrf)
+    xhr.setRequestHeader("X-Requested-With", "XMLHttpRequest")
     xhr.withCredentials = true
     xhr.onload = () => {
       if (resolved) return
@@ -302,17 +302,20 @@ async function _runTest() {
         resolved = true; cleanupWs(); testRunning.value = false
         const exec = msg.execute || {}
         if (exec.error) { testVerdict.value = "RE"; testActualOutput.value = exec.error }
-        else if (exec.exit_code !== 0) { testVerdict.value = "RE (exit " + exec.exit_code + ")"; testActualOutput.value = msg.output ?? "(no output)" }
-        else {
-          const out = msg.output ?? ""
-          testActualOutput.value = out || "(no output)"
-          const exp = testExpectedOutput.value.trim()
-          testVerdict.value = exp ? (out.trim() === exp ? "AC" : "WA") : "运行完成 (" + (exec.cpu_time ?? 0) + "ms, " + (exec.memory ?? 0) + "KB)"
+        else if (exec.exit_code != null) {
+          if (exec.exit_code !== 0) { testVerdict.value = "RE (exit " + exec.exit_code + ")"; testActualOutput.value = msg.output ?? "(no output)" }
+          else {
+            const out = msg.output ?? ""
+            testActualOutput.value = out || "(no output)"
+            const exp = testExpectedOutput.value.trim()
+            testVerdict.value = exp ? (out.trim() === exp ? "AC" : "WA") : "运行完成 (" + (exec.cpu_time ?? 0) + "ms, " + (exec.memory ?? 0) + "KB)"
+          }
         }
       }
     } catch {}
   }
   ws.onerror = () => { if (!resolved) { resolved = true; cleanupWs(); testRunning.value = false; testVerdict.value = "错误"; testActualOutput.value = "WebSocket 连接失败" } }
+  ws.onclose = () => { if (!resolved) { resolved = true; cleanupWs(); testRunning.value = false; testVerdict.value = "错误"; testActualOutput.value = "WebSocket 连接关闭" } }
 }
 const contestProblems = ref<Array<{ no: string, pid: string, title: string, score: number }>>([])
 const showProblemSwitcher = ref(false)
@@ -344,8 +347,10 @@ function switchToProblem(pid: string) {
     navigateTo(AppPage.ProblemDetail, `https://www.luogu.com.cn/problem/${pid}?contestId=${contestId.value}`)
 }
 
+// Initial load + SPA navigation: re-fetch when contestId changes
 if (inContestMode.value)
   fetchContestProblems()
+watch(contestId, (newId) => { if (newId) fetchContestProblems() })
 const submitting = ref(false)
 const submitError = ref('')
 const copiedMarkdown = ref(false)
@@ -490,6 +495,7 @@ async function handleSubmit() {
 
   // --- Success ---
   if (result.status === 200 && result.rid) {
+    captchaSrc.value = ''; captchaCode.value = ''
     lastRid.value = result.rid
     submitResult.value = `提交成功！评测记录 #${result.rid}`
     submitHistory.value.unshift({ rid: result.rid, pid: problemId.value, time: Date.now() })
@@ -608,8 +614,11 @@ watch(problemId, (newPid, oldPid) => {
   if (newPid !== oldPid) {
     loadError.value = false
     loading.value = true
+    submitError.value = ''
+    submitResult.value = ''
     testVerdict.value = ''
     testActualOutput.value = ''
+    submitHistory.value = []
     cleanupWs()
     loadRealData()
   }
