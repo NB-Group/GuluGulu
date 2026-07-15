@@ -242,11 +242,12 @@ function navigateTo(pageName: AppPage, url?: string) {
 
   // Guard: prevent historyChange from pre-setting activatedPage
   navigatingFromUs = true
-  if (urlChanged) {
-    history.pushState({ page: pageName }, '', targetUrl)
-    currentUrl.value = targetUrl
-  }
-  navigatingFromUs = false
+  try {
+    if (urlChanged) {
+      history.pushState({ page: pageName }, '', targetUrl)
+      currentUrl.value = targetUrl
+    }
+  } finally { navigatingFromUs = false }
 
   // Same page AND same URL → just refresh, don't re-mount
   if (!urlChanged && activatedPage.value === pageName) {
