@@ -115,24 +115,26 @@ async function loadRealData() {
   try {
     let raw = extractProblemData()
     // If DOM data is stale (SPA navigation), fetch via _contentOnly=1 API
-    if (!raw?.data?.problem)
+    if (!raw?.data?.problem && !raw?.currentData?.problem)
       raw = await fetchProblemData(pid)
-    if (!raw?.data?.problem) {
+    // Normalize: _contentOnly=1 uses currentData, HTML pages use data
+    const rd: any = raw?.data || raw?.currentData || {}
+    if (!rd.problem) {
       if (loadingPid === pid) {
         loadingTimer = setTimeout(() => { loading.value = false }, 400)
       }
       return
     }
 
-    const p = raw.data.problem
+    const p = rd.problem
     const limits = p.limits || {}
     const timeMs = limits.time?.[0] || 1000
     const memKb = limits.memory?.[0] || 125000
 
     // Parse samples
     const samples: ProblemData['samples'] = []
-    if (Array.isArray(raw.data.samples || p.samples)) {
-      for (const s of (raw.data.samples || p.samples)) {
+    if (Array.isArray(rd.samples || p.samples)) {
+      for (const s of (rd.samples || p.samples)) {
         samples.push({ input: s[0] || '', output: s[1] || '', explanation: s[2] || '' })
       }
     }
@@ -158,7 +160,7 @@ async function loadRealData() {
     }
 
     // Extract discussions from the same lentille-context
-    const discList = raw?.data?.discussions
+    const discList = rd.discussions
     if (Array.isArray(discList)) {
       discussions.value = discList.map((d: any) => ({
         id: d.id || 0,
@@ -170,8 +172,8 @@ async function loadRealData() {
     }
 
     // Load saved code from Luogu (lastCode / lastLanguage)
-    const savedCode = raw?.data?.lastCode || raw?.currentData?.lastCode || ''
-    const savedLang = raw?.data?.lastLanguage || raw?.currentData?.lastLanguage
+    const savedCode = rd.lastCode || ''
+    const savedLang = rd.lastLanguage
     if (savedCode)
       codeContent.value = savedCode
     if (savedLang) {
