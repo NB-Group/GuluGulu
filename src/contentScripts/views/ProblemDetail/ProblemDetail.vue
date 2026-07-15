@@ -5,7 +5,7 @@ import { useGulyApp } from '~/composables/useAppProvider'
 import { AppPage } from '~/enums/appEnums'
 import { renderIcon } from '~/utils/icons'
 import type { LuoguLanguage } from '~/utils/luogu-api'
-import { extractProblemData, isLoggedIn as checkLuoguLogin, LUOGU_LANGUAGES, submitCode } from '~/utils/luogu-api'
+import { extractProblemData, fetchProblemData, isLoggedIn as checkLuoguLogin, LUOGU_LANGUAGES, submitCode } from '~/utils/luogu-api'
 import { timeAgo } from '~/utils/main'
 import { injectKatexCSS, parseProblemMarkdown } from '~/utils/markdown'
 
@@ -13,13 +13,13 @@ const props = defineProps<{
   pid?: string
 }>()
 
-const { navigateTo } = useGulyApp()
+const { currentUrl, navigateTo } = useGulyApp()
 
 // ============================================================
 // Problem ID — from URL or props
 // ============================================================
 function extractPidFromUrl(): string {
-  const match = document.URL.match(/\/problem\/([A-Z]?\d+)/i)
+  const match = (currentUrl.value || document.URL).match(/\/problem\/([A-Z]?\d+)/i)
   return match?.[1] || 'P1001'
 }
 const problemId = computed(() => props.pid || extractPidFromUrl())
@@ -107,14 +107,20 @@ const selectedLang = ref(LUOGU_LANGUAGES.find(l => l.id === 28) || LUOGU_LANGUAG
 const enableO2 = ref(true)
 const codeContent = ref('')
 
-function loadRealData() {
+let loadingPid: string | null = null  // guard against concurrent loads
+async function loadRealData() {
+  const pid = problemId.value
+  if (loadingPid === pid) return  // already loading this problem
+  loadingPid = pid
   try {
-    const raw = extractProblemData()
+    let raw = extractProblemData()
+    // If DOM data is stale (SPA navigation), fetch via _contentOnly=1 API
+    if (!raw?.data?.problem)
+      raw = await fetchProblemData(pid)
     if (!raw?.data?.problem) {
-      // No real data on page, keep mock
-      loadingTimer = setTimeout(() => {
-        loading.value = false
-      }, 400)
+      if (loadingPid === pid) {
+        loadingTimer = setTimeout(() => { loading.value = false }, 400)
+      }
       return
     }
 
@@ -176,11 +182,12 @@ function loadRealData() {
 
     document.title = `${problem.value.pid} ${problem.value.title} - GuluGulu`
     loading.value = false
+    loadingPid = null
   }
   catch (e) {
     console.error('[GuluGulu] Failed to load problem data:', e)
-    loadError.value = true
-    loading.value = false
+    if (loadingPid === pid) { loadError.value = true; loading.value = false }
+    loadingPid = null
   }
 }
 
@@ -347,6 +354,7 @@ const submitHistory = ref<Array<{ rid: number; pid: string; time: number }>>([])
 const captchaSrc = ref("")
 const captchaCode = ref("")
 function loadCaptcha() {
+  captchaCode.value = ""
   captchaSrc.value = "https://www.luogu.com.cn/api/verify/captcha?_t=" + Date.now()
 }
 
@@ -591,6 +599,18 @@ function handleTabChange(tab: string) {
 onMounted(() => {
   loadRealData()
   injectKatexCSS()
+})
+
+// Reload data on SPA navigation to a different problem
+watch(problemId, (newPid, oldPid) => {
+  if (newPid !== oldPid) {
+    loadError.value = false
+    loading.value = true
+    testVerdict.value = ''
+    testActualOutput.value = ''
+    cleanupWs()
+    loadRealData()
+  }
 })
 
 onUnmounted(() => {
