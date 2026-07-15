@@ -19,7 +19,11 @@ const { currentUrl, navigateTo } = useGulyApp()
 // Problem ID — from URL or props
 // ============================================================
 function extractPidFromUrl(): string {
-  const match = (currentUrl.value || document.URL).match(/\/problem\/([A-Z]?\d+)/i)
+  // Capture the full pid segment, including external-OJ prefixes that Luogu
+  // aggregates (CF1234A, AT_arc123, SP8377, UVA12345, ...). The old [A-Z]?\d+
+  // truncated these (CF1234A -> F1234, AT_arc123 -> 123), so the problem failed
+  // to load and the UI silently fell back to the A+B (P1001) default.
+  const match = (currentUrl.value || document.URL).match(/\/problem\/([A-Za-z0-9_]+)/)
   return match?.[1] || 'P1001'
 }
 const problemId = computed(() => props.pid || extractPidFromUrl())
@@ -120,8 +124,13 @@ async function loadRealData() {
     // Normalize: _contentOnly=1 uses currentData, HTML pages use data
     const rd: any = raw?.data || raw?.currentData || {}
     if (!rd.problem) {
+      // Problem data couldn't be loaded (e.g. external-OJ pid Luogu doesn't
+      // host, or not logged in). Show the error UI instead of silently leaving
+      // the A+B (P1001) default problem object on screen.
       if (loadingPid === pid) {
-        loadingTimer = setTimeout(() => { loading.value = false }, 400)
+        loadError.value = true
+        loading.value = false
+        loadingPid = null
       }
       return
     }

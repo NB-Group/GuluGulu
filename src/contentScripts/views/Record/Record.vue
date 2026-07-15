@@ -188,6 +188,12 @@ function showTcTooltip(e: MouseEvent, key: string, desc: string) {
 function hideTcTooltip() {
   tcHideTimer = setTimeout(() => { hoveredTc.value = null }, 150)
 }
+// Cancel a pending hide so hovering the tooltip itself keeps it visible.
+// Must live in <script setup> — Vue templates don't expose `clearTimeout` as a
+// global, so calling it inline in the template resolves to undefined and throws.
+function cancelTcHide() {
+  if (tcHideTimer) { clearTimeout(tcHideTimer); tcHideTimer = null }
+}
 
 function openRecord(rid: number) { navigateTo(AppPage.Record, `https://www.luogu.com.cn/record/${rid}`) }
 function backToList() { navigateTo(AppPage.Record, 'https://www.luogu.com.cn/record/list') }
@@ -331,7 +337,7 @@ onUnmounted(() => {
         v-if="hoveredTc"
         class="tc-tooltip"
         :style="{ left: hoveredTc.x + 'px', top: hoveredTc.y + 'px' }"
-        @mouseenter="() => { if (tcHideTimer) { clearTimeout(tcHideTimer); tcHideTimer = null } }"
+        @mouseenter="cancelTcHide"
         @mouseleave="hideTcTooltip"
       >{{ hoveredTc.desc }}</div>
     </Transition>
