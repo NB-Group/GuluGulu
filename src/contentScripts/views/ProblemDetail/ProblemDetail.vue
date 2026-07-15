@@ -856,7 +856,7 @@ onUnmounted(() => {
                     {{ l.name }}
                   </option>
                 </select>
-                <label style="display:flex;align-items:center;gap:3px;color:var(--bew-text-2);cursor:pointer;white-space:nowrap;font-size:.85em">
+                <label v-if="selectedLang.canO2" style="display:flex;align-items:center;gap:3px;color:var(--bew-text-2);cursor:pointer;white-space:nowrap;font-size:.85em">
                   <input v-model="enableO2" type="checkbox" style="width:13px;height:13px;cursor:pointer"> O2
                 </label>
                 <span style="flex:1" />

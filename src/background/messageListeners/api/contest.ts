@@ -6,7 +6,7 @@ const API_CONTEST = {
       const res = await fetch(`https://www.luogu.com.cn/contest/list${qs}`)
       if (!res.ok) return { error: `HTTP ${res.status}` }
       const html = await res.text()
-      const match = html.match(/<script\s+id="lentille-context"\s+type="application\/json">([^<]+)<\/script>/)
+      const match = html.match(/<script\s+id="lentille-context"\s+type="application\/json"[^>]*>([^<]+)<\/script>/)
       if (match?.[1]) return JSON.parse(match[1])
       return { error: 'No data' }
     } catch (e: any) { return { error: e.message } }
@@ -16,7 +16,7 @@ const API_CONTEST = {
       const res = await fetch(`https://www.luogu.com.cn/contest/${message.id}`)
       if (!res.ok) return { error: `HTTP ${res.status}` }
       const html = await res.text()
-      const match = html.match(/<script\s+id="lentille-context"\s+type="application\/json">([^<]+)<\/script>/)
+      const match = html.match(/<script\s+id="lentille-context"\s+type="application\/json"[^>]*>([^<]+)<\/script>/)
       if (match?.[1]) return JSON.parse(match[1])
       return { error: 'No data' }
     } catch (e: any) { return { error: e.message } }
