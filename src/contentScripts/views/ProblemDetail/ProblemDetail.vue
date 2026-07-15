@@ -637,6 +637,11 @@ onUnmounted(() => {
 <template>
   <div class="page-container" w-full h-full p="x-4 md:x-8 lg:x-16" pos="relative">
     <Loading v-if="loading" />
+    <div v-if="!loading && loadError" bg="$bew-content" rounded="$bew-radius" p-8 text="center" border="1 $bew-border-color" style="backdrop-filter:var(--bew-filter-glass-1);color:var(--bew-error-color)" flex="~ col" items="center" gap-2 mt-4>
+      <span style="display:contents" v-html="renderIcon('mingcute:warning-line', 32)" />
+      <p fw-bold>题目数据加载失败</p>
+      <p text="sm" style="color:var(--bew-text-3)">请确认已登录洛谷并刷新页面重试</p>
+    </div>
 
     <Transition name="content-reveal">
       <div v-if="!loading" w-full>
