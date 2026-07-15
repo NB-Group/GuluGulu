@@ -1,168 +1,21 @@
-// For common post-processing of fetch
-// 1. Return data directly
-// 2. Return data after JSON parsing
-
-import type Browser from 'webextension-polyfill'
-
-type FetchAfterHandler = ((data: Response) => Promise<any>) | ((data: any) => any)
-
-function toJsonHandler(data: Response): Promise<any> {
-  return data.json()
-}
-function toData(data: Promise<any>): Promise<any> {
-  return data
-}
-
-// if need sendResponse, use this
-// return a FetchAfterHandler function
-function sendResponseHandler(sendResponse: Function) {
-  return (data: any) => sendResponse(data)
-}
-
-// Define post-processing pipelines
-const AHS: {
-  J_D: FetchAfterHandler[]
-  J_S: FetchAfterHandler[]
-  S: FetchAfterHandler[]
-} = {
-  J_D: [toJsonHandler, toData],
-  J_S: [toJsonHandler, sendResponseHandler],
-  S: [sendResponseHandler],
-}
-
 interface Message {
   contentScriptQuery: string
   [key: string]: any
 }
 
-interface _FETCH {
-  method: string
-  headers?: {
-    [key: string]: any
-  }
-  body?: any
-}
-
-interface API {
-  url: string
-  _fetch: _FETCH
-  params?: {
-    [key: string]: any
-  }
-  afterHandle: ((response: Response) => Response | Promise<Response>)[]
-}
-// Overload API - can be a function
 type APIFunction = (message: Message, sender?: any, sendResponse?: Function) => any
-export type APIType = API | APIFunction
-interface APIMAP {
+export type APIType = APIFunction
+export interface APIMAP {
   [key: string]: APIType
 }
-// Factory function API_LISTENER_FACTORY
+
 function apiListenerFactory(API_MAP: APIMAP) {
-  return async (message: Message, sender?: Browser.Runtime.MessageSender, sendResponse?: Function) => {
+  return async (message: Message) => {
     const contentScriptQuery = message.contentScriptQuery
-    // Check if contentScriptQuery exists
     if (!contentScriptQuery || !API_MAP[contentScriptQuery])
       return console.error(`Cannot find this contentScriptQuery: ${contentScriptQuery}`)
-    if (API_MAP[contentScriptQuery] instanceof Function)
-      return (API_MAP[contentScriptQuery] as APIFunction)(message, sender, sendResponse)
-
-    const api = API_MAP[contentScriptQuery] as API
-
-    // eslint-disable-next-line node/prefer-global/process
-    if (process.env.FIREFOX && sender && sender.tab && sender.tab.cookieStoreId) {
-      const cookies = await browser.cookies.getAll({ storeId: sender.tab.cookieStoreId })
-      return doRequest(message, api, sendResponse, cookies)
-    }
-
-    return doRequest(message, api, sendResponse)
+    return (API_MAP[contentScriptQuery] as APIFunction)(message)
   }
 }
 
-function doRequest(message: Message, api: API, sendResponse?: Function, cookies?: Browser.Cookies.Cookie[]) {
-  try {
-    let { contentScriptQuery, ...rest } = message
-    // rest above two part body or params
-    rest = rest || {}
-
-    let { _fetch, url, params = {}, afterHandle } = api
-    const { method, headers = {}, body } = _fetch as _FETCH
-    const isGET = method.toLocaleLowerCase() === 'get'
-
-    // EJS-style template substitution: replace <%= key %> in URL and param values
-    const templateReplace = (str: string) => str.replace(/<%= (\w+) %>/g, (_, key) => {
-      const val = rest[key]
-      if (val !== undefined) delete rest[key]
-      return val ?? ''
-    })
-    url = templateReplace(url)
-    // Deep-copy params and process template variables in values
-    const targetParams: Record<string, any> = {}
-    for (const [key, val] of Object.entries(params)) {
-      targetParams[key] = typeof val === 'string' ? templateReplace(val) : val
-    }
-    // merge rest into params or body
-    let targetBody = Object.assign({}, body)
-    Object.keys(rest).forEach((key) => {
-      if (body && body[key] !== undefined)
-        targetBody[key] = rest[key]
-      else
-        targetParams[key] = rest[key]
-    })
-
-    // generate params
-    if (Object.keys(targetParams).length) {
-      const urlParams = new URLSearchParams()
-      for (const key in targetParams) {
-        const val = targetParams[key]
-        if (val !== undefined && val !== null && val !== '')
-          urlParams.append(key, String(val))
-      }
-      const qs = urlParams.toString()
-      if (qs) url += `?${qs}`
-    }
-    // generate body
-    if (!isGET) {
-      targetBody = (headers && headers['Content-Type'] && headers['Content-Type'].includes('application/x-www-form-urlencoded'))
-        ? new URLSearchParams(targetBody)
-        : JSON.stringify(targetBody)
-    }
-    // generate cookies
-    if (cookies) {
-      const cookieStr = cookies.map(cookie => `${cookie.name}=${cookie.value}`).join('; ')
-      headers['firefox-multi-account-cookie'] = cookieStr
-    }
-    // get cant take body
-    const fetchOpt: Record<string, any> = { method, headers, credentials: 'omit' }
-    !isGET && Object.assign(fetchOpt, { body: targetBody })
-    // fetch and after handle
-    let baseFunc = fetch(url, {
-      ...fetchOpt,
-    })
-    afterHandle.forEach((func) => {
-      if (func.name === sendResponseHandler.name && sendResponse)
-        // sendResponseHandler is a special post-processing function, needs sendResponse passed in
-        baseFunc = baseFunc.then(sendResponseHandler(sendResponse))
-      else
-        baseFunc = baseFunc.then(func)
-    })
-    baseFunc.catch(console.error)
-    return baseFunc
-  }
-  catch (e) {
-    console.error(e)
-  }
-}
-
-export {
-  type _FETCH,
-  AHS,
-  type API,
-  apiListenerFactory,
-  type APIMAP,
-  type FetchAfterHandler,
-  type Message,
-  sendResponseHandler,
-  toData,
-  toJsonHandler,
-}
+export { apiListenerFactory, type Message }
