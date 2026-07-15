@@ -883,6 +883,31 @@ onUnmounted(() => {
               </div>
             </div>
 
+            <!-- Submit feedback (IDE/contest split view — was missing: result/captcha/error) -->
+            <div v-if="submitResult || submitError || captchaSrc" style="flex-shrink:0;display:flex;flex-direction:column;gap:6px;margin-top:6px;padding:8px 10px;background:var(--bew-content);border:1px solid var(--bew-border-color);border-radius:var(--bew-radius);font-size:.82em">
+              <div v-if="submitResult" style="color:var(--bew-success-color);font-weight:600">
+                {{ submitResult }}
+              </div>
+              <div v-if="captchaSrc" style="display:flex;flex-direction:column;gap:6px">
+                <img :src="captchaSrc" style="max-width:180px;border-radius:4px" alt="验证码">
+                <div style="display:flex;align-items:center;gap:6px">
+                  <input v-model="captchaCode" placeholder="输入验证码" style="flex:1;padding:5px 8px;background:var(--bew-fill-1);color:var(--bew-text-1);border:1px solid var(--bew-border-color);border-radius:4px;font-size:.85em;outline:none" @keydown.enter="handleSubmit">
+                  <button :disabled="!captchaCode" style="background:var(--bew-theme-color);color:#fff;border:none;border-radius:4px;padding:5px 10px;cursor:pointer;font-weight:600;white-space:nowrap" @click="handleSubmit">
+                    提交
+                  </button>
+                </div>
+                <button style="background:none;border:none;color:var(--bew-text-3);cursor:pointer;font-size:.75em;align-self:flex-start" @click="captchaSrc = ''; captchaCode = ''; submitError = ''">
+                  取消
+                </button>
+              </div>
+              <div v-if="submitError" style="display:flex;align-items:center;justify-content:space-between;gap:8px;color:var(--bew-error-color)">
+                <span>{{ submitError }}</span>
+                <button v-if="submitError.includes('验证码')" style="background:var(--bew-theme-color);color:#fff;border:none;border-radius:4px;padding:3px 8px;cursor:pointer;font-size:.82em;font-weight:600;white-space:nowrap;flex-shrink:0" @click="loadCaptcha()">
+                  刷新验证码
+                </button>
+              </div>
+            </div>
+
             <!-- Test Panels -->
             <div v-if="showTestPanel" style="flex-shrink:0;display:flex;gap:6px;min-height:120px">
               <div bg="$bew-content" rounded="$bew-radius" style="backdrop-filter:var(--bew-filter-glass-1);display:flex;flex-direction:column;flex:1;overflow:hidden;border:1px solid var(--bew-border-color)">
@@ -1089,7 +1114,7 @@ onUnmounted(() => {
                     提交
                   </button>
                 </div>
-                <button @click="captchaSrc='';captchaCode.value='';submitError.value=''" style="background:none;border:none;color:var(--bew-text-3);cursor:pointer;font-size:.7em">取消</button>
+                <button @click="captchaSrc='';captchaCode='';submitError=''" style="background:none;border:none;color:var(--bew-text-3);cursor:pointer;font-size:.7em">取消</button>
               </div>
               <div
                 v-if="submitError"
