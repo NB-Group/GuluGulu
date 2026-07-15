@@ -25,11 +25,12 @@ export async function getManifest() {
     },
     permissions: [
       'storage',
+      'cookies',
       'declarativeNetRequest',
       'tabs',
       'notifications',
       ...isFirefox
-        ? ['webRequest', 'webRequestBlocking', 'cookies']
+        ? ['webRequest', 'webRequestBlocking']
         : [],
     ],
     host_permissions: [
