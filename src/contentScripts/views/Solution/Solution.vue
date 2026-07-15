@@ -48,7 +48,7 @@ async function fetchSolutions(page = 1) {
       loading.value = false; return
     }
 
-    const cd = ctx?.currentData || ctx?.data || {}
+    const cd = ctx?.data || ctx?.currentData || {}
     problemTitle.value = cd.problem?.title || cd.problem?.name || pid.value
     solTotal.value = cd.solutions?.count || 0
 

@@ -69,7 +69,7 @@ async function fetchContestData() {
     const m = html.match(/<script\s+id="lentille-context"\s+type="application\/json"[^>]*>([^<]+)<\/script>/)
     if (m?.[1]) {
       const ctx = JSON.parse(m[1])
-      const cd = ctx?.currentData || ctx?.data || {}
+      const cd = ctx?.data || ctx?.currentData || {}
       contest.value = cd?.contest || cd || null
       if (contest.value) {
         const allProblems = cd?.contestProblems || contest.value.problems || []
@@ -133,7 +133,7 @@ async function loadProblem(pid: string) {
     const m = html.match(/<script\s+id="lentille-context"\s+type="application\/json"[^>]*>([^<]+)<\/script>/)
     if (m?.[1]) {
       const ctx = JSON.parse(m[1])
-      problemStatement.value = ctx?.currentData?.problem || ctx?.data?.problem || null
+      problemStatement.value = ctx?.data?.problem || ctx?.currentData?.problem || null
     }
   } catch { statementLoading.value = false }
   statementLoading.value = false
@@ -172,7 +172,7 @@ async function fetchScoreboard(page = 1) {
   try {
     const res = await fetch(`https://www.luogu.com.cn/fe/api/contest/scoreboard/${contestId.value}?page=${page}`, { credentials: 'same-origin' })
     const json = await res.json()
-    const data = json?.currentData || json?.data || json
+    const data = json?.data || json?.currentData || json
     if (data?.scoreboard?.result) {
       scoreboard.value = data.scoreboard.result.map((r: any) => ({
         rank: r.rank || r.idx,

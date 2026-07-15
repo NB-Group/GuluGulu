@@ -71,6 +71,7 @@ function start() {
 function stop() {
   pollCount = Math.max(0, pollCount - 1)
   if (pollCount > 0) return
+  if (timer) { clearInterval(timer); timer = null }
 }
 
 function resetUnread() {

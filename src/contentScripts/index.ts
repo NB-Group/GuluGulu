@@ -260,6 +260,13 @@ async function onDOMLoaded() {
       await new Promise(r => setTimeout(r, 100))
     }
 
+    // Extract lentille-context JSON BEFORE clearing body (Vue app reads it after mount)
+    try {
+      const lcEl = document.getElementById('lentille-context')
+      if (lcEl?.textContent?.trim())
+        ;(window as any).__guly_lentille = JSON.parse(lcEl.textContent)
+    } catch {}
+
     // Try to find and preserve the Luogu top bar
     originalTopBar = document.querySelector<HTMLElement>(
       '.lfe-header, header.lfe-header, .header, nav.header, .navbar, #app > header, .top-nav',

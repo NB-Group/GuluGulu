@@ -81,14 +81,14 @@ export function getCurrentUser(): { uid: string } | null {
  */
 export function extractProblemData(): any {
   const el = document.getElementById('lentille-context')
-  if (!el?.textContent || !el.textContent.trim()) return null
-  try {
-    return JSON.parse(el.textContent)
+  if (el?.textContent?.trim()) {
+    try { return JSON.parse(el.textContent) }
+    catch (e) { console.warn('[GuluGulu] Failed to parse lentille-context:', e) }
   }
-  catch (e) {
-    console.warn('[GuluGulu] Failed to parse lentille-context:', e)
-    return null
-  }
+  // Fallback: data was saved before body clear by content script
+  const saved = (window as any).__guly_lentille
+  if (saved) return saved
+  return null
 }
 
 export interface SubmitPayload {

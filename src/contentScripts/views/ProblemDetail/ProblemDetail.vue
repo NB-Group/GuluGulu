@@ -269,10 +269,11 @@ async function _runTest() {
   ws.onopen = () => {
     const xhr = new XMLHttpRequest()
     xhr.open("POST", "https://www.luogu.com.cn/api/ide_submit")
-    xhr.setRequestHeader("Content-Type", "application/json")
+    xhr.setRequestHeader("Content-Type", "application/x-www-form-urlencoded")
     xhr.setRequestHeader("X-CSRF-TOKEN", csrf)
     xhr.withCredentials = true
     xhr.onload = () => {
+      if (resolved) return
       try {
         const j = JSON.parse(xhr.responseText)
         const rid = String(j?.data?.rid ?? "")
@@ -281,7 +282,8 @@ async function _runTest() {
       } catch { resolved = true; cleanupWs(); testRunning.value = false; testVerdict.value = "失败"; testActualOutput.value = "IDE 返回异常" }
     }
     xhr.onerror = () => { if (!resolved) { resolved = true; cleanupWs(); testRunning.value = false; testVerdict.value = "失败"; testActualOutput.value = "请求失败，请检查网络连接或洛谷状态" } }
-    xhr.send(JSON.stringify({ lang: selectedLang.value.id, code: codeContent.value, input: testInput.value, o2: enableO2.value ? "true" : "false" }))
+    const body = new URLSearchParams({ lang: String(selectedLang.value.id), code: codeContent.value, input: testInput.value, o2: enableO2.value ? "1" : "0" })
+    xhr.send(body.toString())
   }
   ws.onmessage = (event) => {
     if (resolved) return
@@ -315,7 +317,7 @@ async function fetchContestProblems() {
     const m = html.match(/<script\s+id="lentille-context"\s+type="application\/json"[^>]*>([^<]+)<\/script>/)
     if (m?.[1]) {
       const ctx = JSON.parse(m[1])
-      const cd = ctx?.currentData || ctx?.data || {}
+      const cd = ctx?.data || ctx?.currentData || {}
       const all = cd?.contestProblems || []
       contestProblems.value = all.map((p: any) => ({
         no: p.no || '',
@@ -849,7 +851,7 @@ onUnmounted(() => {
                 <div style="display:flex;align-items:center;justify-content:space-between;padding:6px 10px 2px;font-size:.75em;color:var(--bew-text-3);border-bottom:1px solid var(--bew-border-color)">
                   <span>自测输入</span>
                   <span flex="~ items-center gap-1">
-                    <span v-if="testVerdict" style="padding:0 6px;border-radius:999px;font-size:.75em;font-weight:700;line-height:1.5" :style="{ background: testVerdict === '提交成功' || testVerdict === 'AC' || testVerdict === '已提交' ? 'var(--bew-success-color-20)' : 'var(--bew-error-color-20)', color: testVerdict === '提交成功' || testVerdict === 'AC' || testVerdict === '已提交' ? 'var(--bew-success-color)' : 'var(--bew-error-color)' }">{{ testVerdict }}</span>
+                    <span v-if="testVerdict" style="padding:0 6px;border-radius:999px;font-size:.75em;font-weight:700;line-height:1.5" :style="{ background: testVerdict.startsWith('AC') || testVerdict.startsWith('运行完成') ? 'var(--bew-success-color-20)' : 'var(--bew-error-color-20)', color: testVerdict.startsWith('AC') || testVerdict.startsWith('运行完成') ? 'var(--bew-success-color)' : 'var(--bew-error-color)' }">{{ testVerdict }}</span>
                     <button :disabled="testRunning" style="background:var(--bew-theme-color);color:#fff;border:none;border-radius:4px;padding:2px 8px;cursor:pointer;font-size:.82em;font-weight:600;white-space:nowrap" @click="_runTest">
                       {{ testRunning ? '…' : '运行测试' }}
                     </button>
