@@ -291,7 +291,7 @@ async function _runTest() {
       } catch { resolved = true; cleanupWs(); testRunning.value = false; testVerdict.value = "失败"; testActualOutput.value = "IDE 返回异常" }
     }
     xhr.onerror = () => { if (!resolved) { resolved = true; cleanupWs(); testRunning.value = false; testVerdict.value = "失败"; testActualOutput.value = "请求失败，请检查网络连接或洛谷状态" } }
-    const body = new URLSearchParams({ lang: String(selectedLang.value.id), code: codeContent.value, input: testInput.value, o2: enableO2.value ? "1" : "0" })
+    const body = new URLSearchParams({ lang: String(selectedLang.value.id), code: codeContent.value, input: testInput.value, o2: enableO2.value ? "1" : "0", 'csrf-token': csrf })
     xhr.send(body.toString())
   }
   ws.onmessage = (event) => {
