@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { AppPage } from '~/enums/appEnums'
+import { useGulyApp } from '~/composables/useAppProvider'
 import { renderIcon } from '~/utils/icons'
 import { friendlyError } from '~/utils/luogu-api'
 
@@ -7,6 +9,7 @@ interface Contest {
   type: string; rated: boolean; host?: { name: string }
 }
 
+const { navigateTo } = useGulyApp()
 const contests = ref<Contest[]>([])
 const loading = ref(true); const errorMsg = ref('')
 const totalCount = ref(0)
@@ -29,7 +32,7 @@ async function fetchContests() {
   finally { loading.value = false }
 }
 
-function openContest(id: number) { window.open(`https://www.luogu.com.cn/contest/${id}`, '_blank') }
+function openContest(id: number) { navigateTo(AppPage.ContestDetail, `https://www.luogu.com.cn/contest/${id}`) }
 function getContestStatus(c: any): { label: string; color: string } {
   const now = Math.floor(Date.now() / 1000)
   if (c.startTime && now < c.startTime) return { label: '即将开始', color: 'var(--bew-success-color)' }

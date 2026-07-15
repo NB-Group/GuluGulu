@@ -1,6 +1,10 @@
 <script setup lang="ts">
+import { AppPage } from '~/enums/appEnums'
+import { useGulyApp } from '~/composables/useAppProvider'
 import { renderIcon } from '~/utils/icons'
 import { friendlyError } from '~/utils/luogu-api'
+
+const { navigateTo } = useGulyApp()
 
 const items = ref<any[]>([])
 const loading = ref(true); const errorMsg = ref('')
@@ -18,7 +22,7 @@ onMounted(async () => {
   loading.value = false
 })
 
-function openTraining(id: number) { window.open('https://www.luogu.com.cn/training/'+id, '_blank') }
+function openTraining(id: number) { navigateTo(AppPage.Training, 'https://www.luogu.com.cn/training/'+id) }
 </script>
 
 <template>

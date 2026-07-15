@@ -1,7 +1,11 @@
 <script setup lang="ts">
+import { AppPage } from '~/enums/appEnums'
+import { useGulyApp } from '~/composables/useAppProvider'
 import { renderIcon } from '~/utils/icons'
 import { timeAgo } from '~/utils/main'
 import { friendlyError } from '~/utils/luogu-api'
+
+const { navigateTo } = useGulyApp()
 
 interface ProblemItem {
   pid: string; title: string; difficulty: number; passedCount: number; submittedCount: number
@@ -27,7 +31,7 @@ onMounted(async () => {
 
 const diffColors: Record<number,string> = {0:'#909399',1:'#bfbfbf',2:'#52c41a',3:'#3498db',4:'#f39c12',5:'#e74c3c',6:'#9b59b6',7:'#262626'}
 const diffLabels: Record<number,string> = {0:'暂无评定',1:'入门',2:'普及−',3:'普及/提高−',4:'普及+/提高',5:'提高+/省选−',6:'省选/NOI−',7:'NOI/NOI+/CTSC'}
-function openProblem(pid: string) { window.open('https://www.luogu.com.cn/problem/'+pid, '_blank') }
+function openProblem(pid: string) { navigateTo(AppPage.ProblemDetail, 'https://www.luogu.com.cn/problem/'+pid) }
 </script>
 
 <template>

@@ -1,9 +1,9 @@
 <script setup lang="ts">
+import { useGulyApp } from '~/composables/useAppProvider'
 import { renderIcon } from '~/utils/icons'
 import { timeAgo } from '~/utils/main'
 import { LUOGU_LANGUAGES, friendlyError } from '~/utils/luogu-api'
 import { AppPage } from '~/enums/appEnums'
-import { useGulyApp } from '~/composables/useAppProvider'
 
 import hljs from 'highlight.js/lib/core'
 import cpp from 'highlight.js/lib/languages/cpp'
@@ -16,6 +16,7 @@ hljs.registerLanguage('python', python)
 hljs.registerLanguage('java', java)
 
 const { currentUrl, navigateTo } = useGulyApp()
+
 
 function highlightCode(code: string, lang: string): string {
   try {
@@ -190,7 +191,7 @@ function hideTcTooltip() {
 
 function openRecord(rid: number) { navigateTo(AppPage.Record, `https://www.luogu.com.cn/record/${rid}`) }
 function backToList() { navigateTo(AppPage.Record, 'https://www.luogu.com.cn/record/list') }
-function openProblem(pid: string) { window.open(`https://www.luogu.com.cn/problem/${pid}`, '_blank') }
+function openProblem(pid: string) { navigateTo(AppPage.ProblemDetail, `https://www.luogu.com.cn/problem/${pid}`) }
 function langName(id: number | string): string {
   const lang = LUOGU_LANGUAGES.find(l => l.id === Number(id))
   return lang?.name || String(id)

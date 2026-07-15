@@ -1,6 +1,10 @@
 <script setup lang="ts">
+import { AppPage } from '~/enums/appEnums'
+import { useGulyApp } from '~/composables/useAppProvider'
 import { renderIcon } from '~/utils/icons'
 import { friendlyError } from '~/utils/luogu-api'
+
+const { navigateTo } = useGulyApp()
 
 const contests = ref<any[]>([])
 const loading = ref(true); const errorMsg = ref('')
@@ -19,7 +23,7 @@ onMounted(async () => {
   loading.value = false
 })
 
-function openContest(id: number) { window.open('https://www.luogu.com.cn/contest/'+id, '_blank') }
+function openContest(id: number) { navigateTo(AppPage.ContestDetail, 'https://www.luogu.com.cn/contest/'+id) }
 function timeStr(ts: number) { return new Date(ts*1000).toLocaleDateString('zh-CN') }
 </script>
 

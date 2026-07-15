@@ -1,4 +1,8 @@
 <script setup lang="ts">
+import { AppPage } from '~/enums/appEnums'
+import { useGulyApp } from '~/composables/useAppProvider'
+
+const { navigateTo } = useGulyApp()
 const problemId = ref('')
 
 function normalizeProblemId(input: string): string {
@@ -14,11 +18,11 @@ function handleGo() {
   const pid = normalizeProblemId(problemId.value)
   if (!pid)
     return
-  window.open(`https://www.luogu.com.cn/problem/${pid}`, '_blank')
+  navigateTo(AppPage.ProblemDetail, `https://www.luogu.com.cn/problem/${pid}`)
 }
 
 function handleRandom() {
-  window.open('https://www.luogu.com.cn/problem/random', '_blank')
+  navigateTo(AppPage.ProblemDetail, 'https://www.luogu.com.cn/problem/random')
 }
 
 function handleKeyup(event: KeyboardEvent) {

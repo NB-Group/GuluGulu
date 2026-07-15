@@ -1,6 +1,10 @@
 <script setup lang="ts">
+import { AppPage } from '~/enums/appEnums'
+import { useGulyApp } from '~/composables/useAppProvider'
 import { renderIcon } from '~/utils/icons'
 import { diffLabel, diffColor } from '~/utils/difficulty'
+
+const { navigateTo } = useGulyApp()
 
 const uid = computed(() => {
   const m = document.URL.match(/\/user\/(\d+)\/practice/)
@@ -10,7 +14,7 @@ const passed = ref<any[]>([])
 const submitted = ref<any[]>([])
 const loading = ref(true)
 
-function openProblem(pid: string) { window.open('https://www.luogu.com.cn/problem/' + pid, '_blank') }
+function openProblem(pid: string) { navigateTo(AppPage.ProblemDetail, 'https://www.luogu.com.cn/problem/' + pid) }
 
 onMounted(async () => {
   if (!uid.value) { loading.value = false; return }

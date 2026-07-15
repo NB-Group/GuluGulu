@@ -1,6 +1,10 @@
 <script setup lang="ts">
 import { renderIcon } from '~/utils/icons'
 import { timeAgo } from '~/utils/main'
+import { AppPage } from '~/enums/appEnums'
+import { useGulyApp } from '~/composables/useAppProvider'
+
+const { navigateTo } = useGulyApp()
 
 interface Item {
   id: string; type: 'contest' | 'discuss'
@@ -55,7 +59,13 @@ function typeIcon(t: string): string {
 function typeColor(t: string): string {
   return { contest: '#1890ff', discuss: '#722ed1' }[t] || 'var(--bew-text-3)'
 }
-function openItem(url: string) { if (url) window.open(url, url.includes('/discuss/') ? '_self' : '_blank') }
+function openItem(url: string) {
+  if (!url) return
+  if (url.includes('/discuss/'))
+    navigateTo(AppPage.Blog, url)
+  else
+    window.open(url, '_blank')
+}
 
 onMounted(fetchData)
 </script>

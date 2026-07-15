@@ -1,5 +1,9 @@
 <script setup lang="ts">
 import { renderIcon } from '~/utils/icons'
+import { AppPage } from '~/enums/appEnums'
+import { useGulyApp } from '~/composables/useAppProvider'
+
+const { navigateTo } = useGulyApp()
 
 interface Problem {
   pid: string; title: string; difficulty: number
@@ -30,7 +34,7 @@ async function fetchProblems() {
 }
 
 function passRate(a: number, s: number) { return s > 0 ? Math.round((a / s) * 100) : 0 }
-function openProblem(pid: string) { window.open(`https://www.luogu.com.cn/problem/${pid}`, '_blank') }
+function openProblem(pid: string) { navigateTo(AppPage.ProblemDetail, `https://www.luogu.com.cn/problem/${pid}`) }
 
 onMounted(fetchProblems)
 </script>

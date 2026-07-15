@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { AppPage } from '~/enums/appEnums'
+import { useGulyApp } from '~/composables/useAppProvider'
 import type { GridLayoutType } from '~/logic'
 import { renderIcon } from '~/utils/icons'
 import { searchKeyword } from '~/utils/luogu-api'
@@ -16,6 +18,7 @@ interface ProblemItem {
   totalAccepted: number
 }
 
+const { navigateTo } = useGulyApp()
 const localGridLayout = ref<GridLayoutType>('adaptive')
 const currentPage = ref(1)
 const pageSize = 50
@@ -181,7 +184,7 @@ function handleSearch(keyword: string) {
   searchKeyword.value = keyword
 }
 function openProblem(pid: string) {
-  window.open(`https://www.luogu.com.cn/problem/${pid}`, '_blank')
+  navigateTo(AppPage.ProblemDetail, `https://www.luogu.com.cn/problem/${pid}`)
 }
 function difficultyLabel(d: number) {
   return difficultyMap[d]?.label || '未知'

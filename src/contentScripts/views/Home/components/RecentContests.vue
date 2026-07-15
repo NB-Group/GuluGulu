@@ -1,4 +1,9 @@
 <script setup lang="ts">
+import { AppPage } from '~/enums/appEnums'
+import { useGulyApp } from '~/composables/useAppProvider'
+
+const { navigateTo } = useGulyApp()
+
 interface Contest {
   id: number; name: string; startTime: number; endTime: number
   status: number; type: string; rated: boolean; host?: { name: string }
@@ -43,7 +48,7 @@ function fmt(ts: number): string {
   const d = new Date(ts * 1000)
   return `${d.getMonth() + 1}/${d.getDate()} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
 }
-function openContest(id: number) { window.open(`https://www.luogu.com.cn/contest/${id}`, '_blank') }
+function openContest(id: number) { navigateTo(AppPage.ContestDetail, `https://www.luogu.com.cn/contest/${id}`) }
 
 onMounted(fetchContests)
 </script>
