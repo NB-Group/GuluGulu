@@ -5,7 +5,7 @@ import { AppPage } from '~/enums/appEnums'
 import { useGulyApp } from '~/composables/useAppProvider'
 import { diffLabel, diffColor } from '~/utils/difficulty'
 
-const { navigateTo } = useGulyApp()
+const { navigateTo, currentUrl } = useGulyApp()
 
 function backToList() {
   const ref = document.referrer || ''
@@ -43,7 +43,7 @@ async function fetchTrainings() {
 // ============================================================
 // Detail view — fetch via lentille-context
 // ============================================================
-const trainingId = computed(() => { const m = document.URL.match(/\/training\/(\d+)/i); return m ? Number(m[1]) : null })
+const trainingId = computed(() => { const m = (currentUrl.value || document.URL).match(/\/training\/(\d+)/i); return m ? Number(m[1]) : null })
 const detailProblems = ref<any[]>([])
 const detailName = ref('')
 const detailLoading = ref(false)
@@ -60,15 +60,22 @@ async function fetchDetail(id: number) {
       const t = ctx?.data?.training || ctx?.currentData?.training || {}
       detailName.value = t.name || t.title || ''
       detailMeta.value = { problemCount: t.problems?.length || 0, markCount: t.markCount || 0 }
-      detailProblems.value = (t.problems || []).map((p: any) => ({
-        pid: String(p.pid || ''),
-        title: p.name || p.title || '',
-        difficulty: p.difficulty || 0,
-        submitted: p.submitted || false,
-        accepted: p.accepted || false,
-        totalSubmit: p.totalSubmit || 0,
-        totalAccepted: p.totalAccepted || 0,
-      }))
+      // Luogu training.problems may be pid strings, flat {pid,title,...}, or
+      // nested {problem:{pid,...}, title}. Normalize pid (esp. the nested
+      // p.problem.pid case) — an empty pid navigates to /problem/ which
+      // ProblemDetail falls back to the P1001/A+B default.
+      detailProblems.value = (t.problems || []).map((p: any) => {
+        const o = typeof p === 'string' ? { pid: p } : (p.problem || p)
+        return {
+          pid: String(o.pid || ''),
+          title: o.name || o.title || p.title || '',
+          difficulty: o.difficulty || 0,
+          submitted: o.submitted || false,
+          accepted: o.accepted || false,
+          totalSubmit: o.totalSubmit || 0,
+          totalAccepted: o.totalAccepted || 0,
+        }
+      })
     }
   } catch {}
   detailLoading.value = false

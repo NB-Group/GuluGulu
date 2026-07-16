@@ -211,13 +211,14 @@ async function fetchScoreboard(page = 1) {
     const json = await res.json()
     const data = json?.data || json?.currentData || json
     if (data?.scoreboard?.result) {
-      scoreboard.value = data.scoreboard.result.map((r: any) => ({
+      const items = data.scoreboard.result.map((r: any) => ({
         rank: r.rank || r.idx,
         user: { uid: r.user?.uid || r.uid, name: r.user?.name || r.name || '', avatar: r.user?.avatar || `https://cdn.luogu.com.cn/upload/usericon/${r.user?.uid || r.uid}.png`, color: r.user?.color || r.color || '' },
         score: r.score || r.totalScore || 0,
         scores: r.scores || r.problemScores || [],
         totalTime: r.totalTime || r.time || 0,
       }))
+      scoreboard.value = page === 1 ? items : [...scoreboard.value, ...items]
       rankingTotal.value = data.scoreboard.count || scoreboard.value.length
     }
   } catch { scoreboard.value = [] }

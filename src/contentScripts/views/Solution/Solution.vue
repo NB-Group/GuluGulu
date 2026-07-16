@@ -26,7 +26,7 @@ const solTotal = ref(0)
 const expandedLid = ref<string | null>(null)
 
 const pid = computed(() => {
-  const m = currentUrl.value.match(/\/problem\/solution\/([A-Z]?\d+)/i)
+  const m = currentUrl.value.match(/\/problem\/solution\/([A-Za-z0-9_]+)/)
   return m?.[1] || null
 })
 

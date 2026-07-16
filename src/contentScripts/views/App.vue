@@ -29,6 +29,7 @@ function getPageFromUrl(): AppPage {
   const url = document.URL
 
   if (/\/problem\/list/i.test(url)) return AppPage.ProblemList
+  if (/\/problem\/solution/i.test(url)) return AppPage.Solution
   if (/\/problem\/[A-Za-z0-9_]+/i.test(url)) return AppPage.ProblemDetail
   if (/\/contest\/list/i.test(url)) return AppPage.ContestList
   if (/\/contest\/\d+/i.test(url)) return AppPage.ContestDetail
@@ -49,7 +50,6 @@ function getPageFromUrl(): AppPage {
   if (/\/training\/\d+/i.test(url)) return AppPage.Training
   if (/\/article/i.test(url)) return AppPage.Article
   if (/\/team\//i.test(url)) return AppPage.Team
-  if (/\/problem\/solution/i.test(url)) return AppPage.Solution
   if (/\/record\//i.test(url)) return AppPage.Record
   if (/\/chat/i.test(url) && !/\/discuss/i.test(url)) return AppPage.Messages
   if (/\/search/i.test(url) || /\/problem\/keyword/i.test(url)) return AppPage.Search

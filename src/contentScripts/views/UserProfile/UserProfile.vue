@@ -6,15 +6,16 @@ import { parseMarkdownContent } from '~/utils/markdown'
 import { AppPage } from '~/enums/appEnums'
 import { useGulyApp } from '~/composables/useAppProvider'
 
-const { navigateTo } = useGulyApp()
+const { navigateTo, currentUrl } = useGulyApp()
 
 const uid = computed(() => {
-  const m = document.URL.match(/\/user\/(\d+)/)
+  const m = (currentUrl.value || document.URL).match(/\/user\/(\d+)/)
   return m ? Number(m[1]) : null
 })
 const subView = computed(() => {
-  if (/\/user\/\d+\/following/i.test(document.URL)) return 'following'
-  if (/\/user\/\d+\/follower/i.test(document.URL)) return 'followers'
+  const url = currentUrl.value || document.URL
+  if (/\/user\/\d+\/following/i.test(url)) return 'following'
+  if (/\/user\/\d+\/follower/i.test(url)) return 'followers'
   return null
 })
 

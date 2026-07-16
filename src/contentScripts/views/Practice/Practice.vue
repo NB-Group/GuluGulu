@@ -4,10 +4,10 @@ import { useGulyApp } from '~/composables/useAppProvider'
 import { renderIcon } from '~/utils/icons'
 import { diffLabel, diffColor } from '~/utils/difficulty'
 
-const { navigateTo } = useGulyApp()
+const { navigateTo, currentUrl } = useGulyApp()
 
 const uid = computed(() => {
-  const m = document.URL.match(/\/user\/(\d+)\/practice/)
+  const m = (currentUrl.value || document.URL).match(/\/user\/(\d+)\/practice/)
   return m ? Number(m[1]) : null
 })
 const passed = ref<any[]>([])
