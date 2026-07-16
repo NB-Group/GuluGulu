@@ -8,6 +8,7 @@ import { GULY_MOUNTED } from '~/constants/globalEvents'
 import { AppPage } from '~/enums/appEnums'
 import { setupApp } from '~/logic/common-setup'
 import RESET_GULY_CSS from '~/styles/reset.css?raw'
+import { builtInFontsCSS } from '~/styles/injectBuildInFonts'
 import { runWhenIdle } from '~/utils/lazyLoad'
 import { compareVersions, injectCSS, isHomePage, isInIframe } from '~/utils/main'
 import { SVG_ICONS } from '~/utils/svgIcons'
@@ -408,6 +409,15 @@ function injectApp() {
   const resetStyleEl = document.createElement('style')
   resetStyleEl.textContent = RESET_GULY_CSS
   shadowDOM.appendChild(resetStyleEl)
+  // Built-in fonts + app font stack. Injected into the shadow root so
+  // @font-face resolves inside the shadow tree; :host inherits the stack
+  // to all app text (code blocks override to monospace locally).
+  const fontsStyleEl = document.createElement('style')
+  fontsStyleEl.textContent = `${builtInFontsCSS}
+    :host {
+      font-family: CJKEmDash, Numbers, Onest, ShangguSansSCVF, -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji";
+    }`
+  shadowDOM.appendChild(fontsStyleEl)
   shadowDOM.appendChild(root)
   const svgDiv = document.createElement('div')
   svgDiv.innerHTML = SVG_ICONS
