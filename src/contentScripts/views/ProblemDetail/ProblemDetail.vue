@@ -1,7 +1,6 @@
 <script setup lang="ts">
-import hljs from 'highlight.js'
-
 import { useGulyApp } from '~/composables/useAppProvider'
+import { useCodeMirror } from '~/composables/useCodeMirror'
 import { AppPage } from '~/enums/appEnums'
 import { renderIcon } from '~/utils/icons'
 import type { LuoguLanguage } from '~/utils/luogu-api'
@@ -23,7 +22,7 @@ function extractPidFromUrl(): string {
   // aggregates (CF1234A, AT_arc123, SP8377, UVA12345, ...). The old [A-Z]?\d+
   // truncated these (CF1234A -> F1234, AT_arc123 -> 123), so the problem failed
   // to load and the UI silently fell back to the A+B (P1001) default.
-  const match = (currentUrl.value || document.URL).match(/\/problem\/([A-Za-z0-9_]+)/)
+  const match = (currentUrl.value || document.URL).match(/\/problem\/(\w+)/)
   return match?.[1] || 'P1001'
 }
 const problemId = computed(() => props.pid || extractPidFromUrl())
@@ -84,25 +83,33 @@ const problem = ref<ProblemData>({
 
 const loading = ref(true)
 const loadError = ref(false)
-let loadingTimer: ReturnType<typeof setTimeout> | null = null
+const loadingTimer: ReturnType<typeof setTimeout> | null = null
 const discussions = ref<Array<{ id: number, title: string, author: any, time: number, replyCount: number }>>([])
-const solutions = ref<Array<{ id: number; title: string; author: any; time: number; votes: number }>>([])
+const solutions = ref<Array<{ id: number, title: string, author: any, time: number, votes: number }>>([])
 const solutionsLoading = ref(false)
 async function loadSolutions() {
-  if (solutionsLoading.value) return
+  if (solutionsLoading.value)
+    return
   solutionsLoading.value = true
   try {
-    const res = await fetch("https://www.luogu.com.cn/problem/solution/" + problemId.value, { credentials: "same-origin" })
+    const res = await fetch(`https://www.luogu.com.cn/problem/solution/${problemId.value}`, { credentials: 'same-origin' })
     const html = await res.text()
     const m = html.match(/<script\s+id="lentille-context"\s+type="application\/json"[^>]*>([^<]*)<\/script>/)
     if (m?.[1]) {
       const ctx = JSON.parse(m[1])
       const list = ctx?.data?.solutions?.result || ctx?.currentData?.solutions?.result || []
-      solutions.value = list.map(function(s) { return {
-        id: s.id || 0, title: s.title || "", author: s.author || {}, time: s.time || 0, votes: s.votes || s.thumbUp || 0,
-      }})
+      solutions.value = list.map((s) => {
+        return {
+          id: s.id || 0,
+          title: s.title || '',
+          author: s.author || {},
+          time: s.time || 0,
+          votes: s.votes || s.thumbUp || 0,
+        }
+      })
     }
-  } catch(e) {}
+  }
+  catch (e) {}
   solutionsLoading.value = false
 }
 
@@ -111,10 +118,19 @@ const selectedLang = ref(LUOGU_LANGUAGES.find(l => l.id === 28) || LUOGU_LANGUAG
 const enableO2 = ref(true)
 const codeContent = ref('')
 
-let loadingPid: string | null = null  // guard against concurrent loads
+// CodeMirror 6 编辑器宿主(分屏 IDE 视图内挂载/卸载)
+const cmHost = ref<HTMLElement>()
+useCodeMirror({
+  host: cmHost,
+  value: codeContent,
+  lang: computed(() => selectedLang.value.aceMode),
+})
+
+let loadingPid: string | null = null // guard against concurrent loads
 async function loadRealData() {
   const pid = problemId.value
-  if (loadingPid === pid) return  // already loading this problem
+  if (loadingPid === pid)
+    return // already loading this problem
   loadingPid = pid
   try {
     let raw = extractProblemData()
@@ -190,7 +206,8 @@ async function loadRealData() {
         selectedLang.value = found
     }
 
-    if (loadingPid !== pid) return  // stale result from SPA race
+    if (loadingPid !== pid)
+      return // stale result from SPA race
     document.title = `${problem.value.pid} ${problem.value.title} - GuluGulu`
     loading.value = false
     loadingPid = null
@@ -269,62 +286,70 @@ let activeWsTimeout: ReturnType<typeof setTimeout> | null = null
 
 function cleanupWs() {
   if (activeWsTimeout) { clearTimeout(activeWsTimeout); activeWsTimeout = null }
-  if (activeWs) { try { activeWs.close() } catch {}; activeWs = null }
+  if (activeWs) {
+    try { activeWs.close() }
+    catch {}; activeWs = null
+  }
 }
 
 async function _runTest() {
-  if (!codeContent.value.trim()) { testVerdict.value = "无代码"; return }
-  if (!isLoggedIn.value) { testVerdict.value = "请先登录"; return }
-  if (testRunning.value) return
-  testRunning.value = true; testVerdict.value = ""; testActualOutput.value = "编译运行中…"
+  if (!codeContent.value.trim()) { testVerdict.value = '无代码'; return }
+  if (!isLoggedIn.value) { testVerdict.value = '请先登录'; return }
+  if (testRunning.value)
+    return
+  testRunning.value = true; testVerdict.value = ''; testActualOutput.value = '编译运行中…'
   cleanupWs()
-  const csrf = (window as any).__guly_user?.csrfToken || ""
+  const csrf = (window as any).__guly_user?.csrfToken || ''
   let resolved = false
-  activeWs = new WebSocket("wss://ws.luogu.com.cn/ws")
+  activeWs = new WebSocket('wss://ws.luogu.com.cn/ws')
   const ws = activeWs
-  activeWsTimeout = setTimeout(() => { if (!resolved) { resolved = true; cleanupWs(); testRunning.value = false; testVerdict.value = "超时"; testActualOutput.value = "评测超时，请重试" } }, 25000)
+  activeWsTimeout = setTimeout(() => { if (!resolved) { resolved = true; cleanupWs(); testRunning.value = false; testVerdict.value = '超时'; testActualOutput.value = '评测超时，请重试' } }, 25000)
   ws.onopen = () => {
     const xhr = new XMLHttpRequest()
-    xhr.open("POST", "https://www.luogu.com.cn/api/ide_submit")
-    xhr.setRequestHeader("Content-Type", "application/x-www-form-urlencoded")
-    xhr.setRequestHeader("X-CSRF-TOKEN", csrf)
-    xhr.setRequestHeader("X-Requested-With", "XMLHttpRequest")
+    xhr.open('POST', 'https://www.luogu.com.cn/api/ide_submit')
+    xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded')
+    xhr.setRequestHeader('X-CSRF-TOKEN', csrf)
+    xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest')
     xhr.withCredentials = true
     xhr.onload = () => {
-      if (resolved) return
+      if (resolved)
+        return
       try {
         const j = JSON.parse(xhr.responseText)
-        const rid = String(j?.data?.rid ?? "")
-        if (rid) { ws.send(JSON.stringify({ type: "join_channel", channel: "ide.track", channel_param: rid })) }
-        else { resolved = true; cleanupWs(); testRunning.value = false; testVerdict.value = "失败"; testActualOutput.value = j?.errorMessage || "IDE 提交失败" }
-      } catch { resolved = true; cleanupWs(); testRunning.value = false; testVerdict.value = "失败"; testActualOutput.value = "IDE 返回异常" }
+        const rid = String(j?.data?.rid ?? '')
+        if (rid) { ws.send(JSON.stringify({ type: 'join_channel', channel: 'ide.track', channel_param: rid })) }
+        else { resolved = true; cleanupWs(); testRunning.value = false; testVerdict.value = '失败'; testActualOutput.value = j?.errorMessage || 'IDE 提交失败' }
+      }
+      catch { resolved = true; cleanupWs(); testRunning.value = false; testVerdict.value = '失败'; testActualOutput.value = 'IDE 返回异常' }
     }
-    xhr.onerror = () => { if (!resolved) { resolved = true; cleanupWs(); testRunning.value = false; testVerdict.value = "失败"; testActualOutput.value = "请求失败，请检查网络连接或洛谷状态" } }
-    const body = new URLSearchParams({ lang: String(selectedLang.value.id), code: codeContent.value, input: testInput.value, o2: enableO2.value ? "1" : "0", 'csrf-token': csrf })
+    xhr.onerror = () => { if (!resolved) { resolved = true; cleanupWs(); testRunning.value = false; testVerdict.value = '失败'; testActualOutput.value = '请求失败，请检查网络连接或洛谷状态' } }
+    const body = new URLSearchParams({ lang: String(selectedLang.value.id), code: codeContent.value, input: testInput.value, o2: enableO2.value ? '1' : '0', 'csrf-token': csrf })
     xhr.send(body.toString())
   }
   ws.onmessage = (event) => {
-    if (resolved) return
+    if (resolved)
+      return
     try {
       const msg = JSON.parse(event.data)
-      if (msg._ws_type === "server_broadcast" && msg.type === "execute") {
+      if (msg._ws_type === 'server_broadcast' && msg.type === 'execute') {
         resolved = true; cleanupWs(); testRunning.value = false
         const exec = msg.execute || {}
-        if (exec.error) { testVerdict.value = "RE"; testActualOutput.value = exec.error }
+        if (exec.error) { testVerdict.value = 'RE'; testActualOutput.value = exec.error }
         else if (exec.exit_code != null) {
-          if (exec.exit_code !== 0) { testVerdict.value = "RE (exit " + exec.exit_code + ")"; testActualOutput.value = msg.output ?? "(no output)" }
+          if (exec.exit_code !== 0) { testVerdict.value = `RE (exit ${exec.exit_code})`; testActualOutput.value = msg.output ?? '(no output)' }
           else {
-            const out = msg.output ?? ""
-            testActualOutput.value = out || "(no output)"
+            const out = msg.output ?? ''
+            testActualOutput.value = out || '(no output)'
             const exp = testExpectedOutput.value.trim()
-            testVerdict.value = exp ? (out.trim() === exp ? "AC" : "WA") : "运行完成 (" + (exec.cpu_time ?? 0) + "ms, " + (exec.memory ?? 0) + "KB)"
+            testVerdict.value = exp ? (out.trim() === exp ? 'AC' : 'WA') : `运行完成 (${exec.cpu_time ?? 0}ms, ${exec.memory ?? 0}KB)`
           }
         }
       }
-    } catch {}
+    }
+    catch {}
   }
-  ws.onerror = () => { if (!resolved) { resolved = true; cleanupWs(); testRunning.value = false; testVerdict.value = "错误"; testActualOutput.value = "WebSocket 连接失败" } }
-  ws.onclose = () => { if (!resolved) { resolved = true; cleanupWs(); testRunning.value = false; testVerdict.value = "错误"; testActualOutput.value = "WebSocket 连接关闭" } }
+  ws.onerror = () => { if (!resolved) { resolved = true; cleanupWs(); testRunning.value = false; testVerdict.value = '错误'; testActualOutput.value = 'WebSocket 连接失败' } }
+  ws.onclose = () => { if (!resolved) { resolved = true; cleanupWs(); testRunning.value = false; testVerdict.value = '错误'; testActualOutput.value = 'WebSocket 连接关闭' } }
 }
 const contestProblems = ref<Array<{ no: string, pid: string, title: string, score: number }>>([])
 const showProblemSwitcher = ref(false)
@@ -359,75 +384,59 @@ function switchToProblem(pid: string) {
 // Initial load + SPA navigation: re-fetch when contestId changes
 if (inContestMode.value)
   fetchContestProblems()
-watch(contestId, (newId) => { if (newId) fetchContestProblems() })
+watch(contestId, (newId) => {
+  if (newId)
+    fetchContestProblems()
+})
 const submitting = ref(false)
 const submitError = ref('')
 const copiedMarkdown = ref(false)
 const copiedSample = ref<string | null>(null)
 const submitResult = ref('')
 const lastRid = ref<number | null>(null)
-const submitHistory = ref<Array<{ rid: number; pid: string; time: number }>>([])
-const captchaSrc = ref("")
-const captchaCode = ref("")
+const submitHistory = ref<Array<{ rid: number, pid: string, time: number }>>([])
+const captchaSrc = ref('')
+const captchaCode = ref('')
 function loadCaptcha() {
-  captchaCode.value = ""
-  captchaSrc.value = "https://www.luogu.com.cn/api/verify/captcha?_t=" + Date.now()
-}
-
-const highlightPre = ref<HTMLPreElement>()
-const hljsMap: Record<string, string> = { c_cpp: 'cpp', python: 'python', java: 'java', plain_text: 'plaintext' }
-const highlightedCode = computed(() => {
-  if (!codeContent.value)
-    return '\n'
-  try {
-    const lang = LUOGU_LANGUAGES.find(l => l.id === selectedLang.value.id)
-    return hljs.highlight(codeContent.value, { language: hljsMap[lang?.aceMode || ''] || 'cpp' }).value
-  }
-  catch { return codeContent.value.replace(/</g, '&lt;').replace(/>/g, '&gt;') }
-})
-function syncScroll(e: Event) {
-  const ta = e.target as HTMLElement
-  if (highlightPre.value) {
-    highlightPre.value.scrollTop = ta.scrollTop
-    highlightPre.value.scrollLeft = ta.scrollLeft
-  }
+  captchaCode.value = ''
+  captchaSrc.value = `https://www.luogu.com.cn/api/verify/captcha?_t=${Date.now()}`
 }
 
 // Default code templates per language
 function getDefaultCode(lang: number): string {
   const t: Record<number, string> = {
-    1: "program APlusB;\nvar a, b: longint;\nbegin\n    readln(a, b);\n    writeln(a + b);\nend.\n",
-    2: "#include <stdio.h>\n\nint main() {\n    int a, b;\n    scanf(\"%d%d\", &a, &b);\n    printf(\"%d\\n\", a + b);\n    return 0;\n}\n",
-    3: "#include <iostream>\nusing namespace std;\n\nint main() {\n    int a, b;\n    cin >> a >> b;\n    cout << a + b << endl;\n    return 0;\n}\n",
-    4: "#include <iostream>\nusing namespace std;\n\nint main() {\n    int a, b;\n    cin >> a >> b;\n    cout << a + b << endl;\n    return 0;\n}\n",
-    5: "",
-    7: "s = input().split()\nprint(int(s[0]) + int(s[1]))\n",
-    8: "import java.util.*;\n\npublic class Main {\n    public static void main(String[] args) {\n        Scanner cin = new Scanner(System.in);\n        int a = cin.nextInt(), b = cin.nextInt();\n        System.out.println(a + b);\n    }\n}\n",
-    9: "const fs = require(\"fs\");\nconst data = fs.readFileSync(\"/dev/stdin\");\nconst result = data.toString(\"ascii\").trim().split(\" \").map(x => parseInt(x)).reduce((a, b) => a + b, 0);\nconsole.log(result);\nprocess.exit();\n",
-    10: "a = io.read(\"*n\")\nb = io.read(\"*n\")\nprint(a + b)\n",
-    11: "#include <iostream>\nusing namespace std;\n\nint main() {\n    int a, b;\n    cin >> a >> b;\n    cout << a + b << endl;\n    return 0;\n}\n",
-    12: "#include <iostream>\nusing namespace std;\n\nint main() {\n    int a, b;\n    cin >> a >> b;\n    cout << a + b << endl;\n    return 0;\n}\n",
-    13: "Scanf.scanf \"%i %i\\n\" (fun a b -> print_int (a + b))\n",
-    14: "package main\n\nimport \"fmt\"\n\nfunc main() {\n    var a, b int\n    fmt.Scanf(\"%d%d\", &a, &b)\n    fmt.Println(a + b)\n}\n",
-    15: "use std::io;\n\nfn main() {\n    let mut input = String::new();\n    io::stdin().read_line(&mut input).unwrap();\n    let mut s = input.trim().split(\" \");\n    let a: i32 = s.next().unwrap().parse().unwrap();\n    let b: i32 = s.next().unwrap().parse().unwrap();\n    println!(\"{}\", a + b);\n}\n",
-    16: "<?php\n$input = trim(file_get_contents(\"php://stdin\"));\nlist($a, $b) = explode(\" \", $input);\necho $a + $b;\n",
-    17: "using System;\n\npublic class APlusB {\n    private static void Main() {\n        string[] input = Console.ReadLine().Split(\" \");\n        Console.WriteLine(int.Parse(input[0]) + int.Parse(input[1]));\n    }\n}\n",
-    18: "a, b = gets.split.map(&:to_i)\nprint a + b\n",
-    19: "main = do\n    [a, b] <- (map read . words) \x60fmap\x60 getLine\n    print (a + b)\n",
-    20: "fun main(args: Array<String>) {\n    val (a, b) = readLine()!!.split(\" \").map(String::toInt)\n    println(a + b)\n}\n",
-    21: "import java.util.*;\n\npublic class Main {\n    public static void main(String[] args) {\n        Scanner cin = new Scanner(System.in);\n        int a = cin.nextInt(), b = cin.nextInt();\n        System.out.println(a + b);\n    }\n}\n",
-    22: "import java.util.Scanner\n\nobject Main {\n    def main(args: Array[String]): Unit = {\n        val cin = new Scanner(System.in)\n        val a = cin.nextInt()\n        val b = cin.nextInt()\n        println(a + b)\n    }\n}\n",
-    23: "nums = map(x -> parse(Int, x), split(readline(), \" \"))\nprintln(nums[1] + nums[2])\n",
-    24: "s = raw_input().split()\nprint int(s[0]) + int(s[1])\n",
-    25: "s = input().split()\nprint(int(s[0]) + int(s[1]))\n",
-    26: "my \\$in = <STDIN>;\nchomp \\$in;\n\\$in = [split /[\\\\s,]+/, \\$in];\nmy \\$c = \\$in->[0] + \\$in->[1];\nprint \"\\$c\\\\n\";\n",
-    27: "#include <iostream>\nusing namespace std;\n\nint main() {\n    int a, b;\n    cin >> a >> b;\n    cout << a + b << endl;\n    return 0;\n}\n",
-    28: "#include <iostream>\nusing namespace std;\n\nint main() {\n    int a, b;\n    cin >> a >> b;\n    cout << a + b << endl;\n    return 0;\n}\n",
-    29: "open System\n\n[<EntryPoint>]\nlet main argv =\n    let input = Console.ReadLine().Split(\" \")\n    let a = int input.[0]\n    let b = int input.[1]\n    printfn \"%d\" (a + b)\n    0\n",
-    31: "import std.stdio;\n\nvoid main() {\n    int a, b;\n    readf(\"%d %d\", &a, &b);\n    writeln(a + b);\n}\n",
-    34: "#include <iostream>\nusing namespace std;\n\nint main() {\n    int a, b;\n    cin >> a >> b;\n    cout << a + b << endl;\n    return 0;\n}\n",
+    1: 'program APlusB;\nvar a, b: longint;\nbegin\n    readln(a, b);\n    writeln(a + b);\nend.\n',
+    2: '#include <stdio.h>\n\nint main() {\n    int a, b;\n    scanf("%d%d", &a, &b);\n    printf("%d\\n", a + b);\n    return 0;\n}\n',
+    3: '#include <iostream>\nusing namespace std;\n\nint main() {\n    int a, b;\n    cin >> a >> b;\n    cout << a + b << endl;\n    return 0;\n}\n',
+    4: '#include <iostream>\nusing namespace std;\n\nint main() {\n    int a, b;\n    cin >> a >> b;\n    cout << a + b << endl;\n    return 0;\n}\n',
+    5: '',
+    7: 's = input().split()\nprint(int(s[0]) + int(s[1]))\n',
+    8: 'import java.util.*;\n\npublic class Main {\n    public static void main(String[] args) {\n        Scanner cin = new Scanner(System.in);\n        int a = cin.nextInt(), b = cin.nextInt();\n        System.out.println(a + b);\n    }\n}\n',
+    9: 'const fs = require("fs");\nconst data = fs.readFileSync("/dev/stdin");\nconst result = data.toString("ascii").trim().split(" ").map(x => parseInt(x)).reduce((a, b) => a + b, 0);\nconsole.log(result);\nprocess.exit();\n',
+    10: 'a = io.read("*n")\nb = io.read("*n")\nprint(a + b)\n',
+    11: '#include <iostream>\nusing namespace std;\n\nint main() {\n    int a, b;\n    cin >> a >> b;\n    cout << a + b << endl;\n    return 0;\n}\n',
+    12: '#include <iostream>\nusing namespace std;\n\nint main() {\n    int a, b;\n    cin >> a >> b;\n    cout << a + b << endl;\n    return 0;\n}\n',
+    13: 'Scanf.scanf "%i %i\\n" (fun a b -> print_int (a + b))\n',
+    14: 'package main\n\nimport "fmt"\n\nfunc main() {\n    var a, b int\n    fmt.Scanf("%d%d", &a, &b)\n    fmt.Println(a + b)\n}\n',
+    15: 'use std::io;\n\nfn main() {\n    let mut input = String::new();\n    io::stdin().read_line(&mut input).unwrap();\n    let mut s = input.trim().split(" ");\n    let a: i32 = s.next().unwrap().parse().unwrap();\n    let b: i32 = s.next().unwrap().parse().unwrap();\n    println!("{}", a + b);\n}\n',
+    16: '<?php\n$input = trim(file_get_contents("php://stdin"));\nlist($a, $b) = explode(" ", $input);\necho $a + $b;\n',
+    17: 'using System;\n\npublic class APlusB {\n    private static void Main() {\n        string[] input = Console.ReadLine().Split(" ");\n        Console.WriteLine(int.Parse(input[0]) + int.Parse(input[1]));\n    }\n}\n',
+    18: 'a, b = gets.split.map(&:to_i)\nprint a + b\n',
+    19: 'main = do\n    [a, b] <- (map read . words) \x60fmap\x60 getLine\n    print (a + b)\n',
+    20: 'fun main(args: Array<String>) {\n    val (a, b) = readLine()!!.split(" ").map(String::toInt)\n    println(a + b)\n}\n',
+    21: 'import java.util.*;\n\npublic class Main {\n    public static void main(String[] args) {\n        Scanner cin = new Scanner(System.in);\n        int a = cin.nextInt(), b = cin.nextInt();\n        System.out.println(a + b);\n    }\n}\n',
+    22: 'import java.util.Scanner\n\nobject Main {\n    def main(args: Array[String]): Unit = {\n        val cin = new Scanner(System.in)\n        val a = cin.nextInt()\n        val b = cin.nextInt()\n        println(a + b)\n    }\n}\n',
+    23: 'nums = map(x -> parse(Int, x), split(readline(), " "))\nprintln(nums[1] + nums[2])\n',
+    24: 's = raw_input().split()\nprint int(s[0]) + int(s[1])\n',
+    25: 's = input().split()\nprint(int(s[0]) + int(s[1]))\n',
+    26: 'my \\$in = <STDIN>;\nchomp \\$in;\n\\$in = [split /[\\\\s,]+/, \\$in];\nmy \\$c = \\$in->[0] + \\$in->[1];\nprint "\\$c\\\\n";\n',
+    27: '#include <iostream>\nusing namespace std;\n\nint main() {\n    int a, b;\n    cin >> a >> b;\n    cout << a + b << endl;\n    return 0;\n}\n',
+    28: '#include <iostream>\nusing namespace std;\n\nint main() {\n    int a, b;\n    cin >> a >> b;\n    cout << a + b << endl;\n    return 0;\n}\n',
+    29: 'open System\n\n[<EntryPoint>]\nlet main argv =\n    let input = Console.ReadLine().Split(" ")\n    let a = int input.[0]\n    let b = int input.[1]\n    printfn "%d" (a + b)\n    0\n',
+    31: 'import std.stdio;\n\nvoid main() {\n    int a, b;\n    readf("%d %d", &a, &b);\n    writeln(a + b);\n}\n',
+    34: '#include <iostream>\nusing namespace std;\n\nint main() {\n    int a, b;\n    cin >> a >> b;\n    cout << a + b << endl;\n    return 0;\n}\n',
   }
-  return t[lang] || ""
+  return t[lang] || ''
 }
 function onLangChange(lang: LuoguLanguage) {
   selectedLang.value = lang
@@ -508,7 +517,8 @@ async function handleSubmit() {
     lastRid.value = result.rid
     submitResult.value = `提交成功！评测记录 #${result.rid}`
     submitHistory.value.unshift({ rid: result.rid, pid: problemId.value, time: Date.now() })
-    if (submitHistory.value.length > 5) submitHistory.value.pop()
+    if (submitHistory.value.length > 5)
+      submitHistory.value.pop()
     window.open(`https://www.luogu.com.cn/record/${result.rid}`, '_blank')
     return
   }
@@ -607,7 +617,8 @@ function handleTabChange(tab: string) {
   }
   activeTab.value = tab as typeof activeTab.value
   submitError.value = ''
-  if (tab === 'solutions' && solutions.value.length === 0) loadSolutions()
+  if (tab === 'solutions' && solutions.value.length === 0)
+    loadSolutions()
 }
 
 // ============================================================
@@ -646,10 +657,18 @@ onUnmounted(() => {
 <template>
   <div class="page-container" w-full h-full p="x-4 md:x-8 lg:x-16" pos="relative">
     <Loading v-if="loading" />
-    <div v-if="!loading && loadError" bg="$bew-content" rounded="$bew-radius" p-8 text="center" border="1 $bew-border-color" style="backdrop-filter:var(--bew-filter-glass-1);color:var(--bew-error-color)" flex="~ col" items="center" gap-2 mt-4>
+    <div
+      v-if="!loading && loadError" bg="$bew-content" rounded="$bew-radius" p-8 text="center"
+      border="1 $bew-border-color" style="backdrop-filter:var(--bew-filter-glass-1);color:var(--bew-error-color)" flex="~ col" items="center" gap-2
+      mt-4
+    >
       <span style="display:contents" v-html="renderIcon('mingcute:warning-line', 32)" />
-      <p fw-bold>题目数据加载失败</p>
-      <p text="sm" style="color:var(--bew-text-3)">请确认已登录洛谷并刷新页面重试</p>
+      <p fw-bold>
+        题目数据加载失败
+      </p>
+      <p text="sm" style="color:var(--bew-text-3)">
+        请确认已登录洛谷并刷新页面重试
+      </p>
     </div>
 
     <Transition name="content-reveal">
@@ -887,8 +906,7 @@ onUnmounted(() => {
                 </button>
               </div>
               <div style="flex:1;position:relative;overflow:hidden">
-                <pre ref="highlightPre" style="position:absolute;inset:0;margin:0;padding:14px 18px;font-family:Cascadia Code,Fira Code,JetBrains Mono,Consolas,monospace;font-size:14px;line-height:1.65;tab-size:4;white-space:pre-wrap;word-wrap:break-word;overflow:auto;pointer-events:none;color:var(--bew-text-1);background:var(--bew-fill-1)"><code v-html="highlightedCode" /></pre>
-                <textarea v-model="codeContent" style="position:relative;width:100%;height:100%;background:transparent;color:transparent;caret-color:var(--bew-text-1);border:none;padding:14px 18px;font-family:Cascadia Code,Fira Code,JetBrains Mono,Consolas,monospace;font-size:14px;line-height:1.65;resize:none;tab-size:4;outline:none;z-index:1" placeholder="在此输入代码…" spellcheck="false" @scroll="syncScroll" />
+                <div ref="cmHost" style="position:absolute;inset:0;overflow:hidden" />
               </div>
             </div>
 
@@ -945,7 +963,8 @@ onUnmounted(() => {
                   <textarea v-model="testActualOutput" style="flex:1;width:100%;background:var(--bew-fill-1);color:var(--bew-text-1);border:none;padding:8px 10px;font-family:Consolas,monospace;font-size:.78em;resize:none;outline:none" placeholder="—" readonly />
                 </div>
               </div>
-            </div>          </div>
+            </div>
+          </div>
         </div>
 
         <!-- ============================================================ -->
@@ -1115,15 +1134,20 @@ onUnmounted(() => {
               </div>
 
               <!-- Captcha -->
-              <div v-if="captchaSrc" flex="~ col gap-2" mb-4 p-4 bg="$bew-fill-1" rounded="$bew-radius" border="1 $bew-border-color">
-                <img :src="captchaSrc" style="max-width:200px;border-radius:4px" alt="验证码" />
+              <div
+                v-if="captchaSrc" flex="~ col gap-2" mb-4 p-4 bg="$bew-fill-1"
+                rounded="$bew-radius" border="1 $bew-border-color"
+              >
+                <img :src="captchaSrc" style="max-width:200px;border-radius:4px" alt="验证码">
                 <div flex="~ items-center gap-2">
-                  <input v-model="captchaCode" placeholder="输入验证码" style="flex:1;padding:6px 10px;background:var(--bew-bg);color:var(--bew-text-1);border:1px solid var(--bew-border-color);border-radius:4px;font-size:.85em;outline:none" @keydown.enter="handleSubmit" />
-                  <button :disabled="!captchaCode" @click="handleSubmit" style="background:var(--bew-theme-color);color:#fff;border:none;border-radius:4px;padding:6px 12px;cursor:pointer;font-size:.85em;font-weight:600;white-space:nowrap">
+                  <input v-model="captchaCode" placeholder="输入验证码" style="flex:1;padding:6px 10px;background:var(--bew-bg);color:var(--bew-text-1);border:1px solid var(--bew-border-color);border-radius:4px;font-size:.85em;outline:none" @keydown.enter="handleSubmit">
+                  <button :disabled="!captchaCode" style="background:var(--bew-theme-color);color:#fff;border:none;border-radius:4px;padding:6px 12px;cursor:pointer;font-size:.85em;font-weight:600;white-space:nowrap" @click="handleSubmit">
                     提交
                   </button>
                 </div>
-                <button @click="captchaSrc='';captchaCode='';submitError=''" style="background:none;border:none;color:var(--bew-text-3);cursor:pointer;font-size:.7em">取消</button>
+                <button style="background:none;border:none;color:var(--bew-text-3);cursor:pointer;font-size:.7em" @click="captchaSrc = '';captchaCode = '';submitError = ''">
+                  取消
+                </button>
               </div>
               <div
                 v-if="submitError"
@@ -1133,9 +1157,11 @@ onUnmounted(() => {
               >
                 <div flex="~ items-center justify-between gap-2">
                   <span>{{ submitError }}</span>
-                  <button v-if="submitError.includes('验证码')"
+                  <button
+                    v-if="submitError.includes('验证码')"
                     style="background:var(--bew-theme-color);color:#fff;border:none;border-radius:4px;padding:3px 10px;cursor:pointer;font-size:.82em;font-weight:600;white-space:nowrap;flex-shrink:0"
-                    @click="loadCaptcha()">
+                    @click="loadCaptcha()"
+                  >
                     刷新验证码
                   </button>
                 </div>
@@ -1143,11 +1169,15 @@ onUnmounted(() => {
 
               <!-- Submit history -->
               <div v-if="submitHistory.length > 0" mt-2>
-                <div text="xs $bew-text-3" mb-1>最近提交</div>
+                <div text="xs $bew-text-3" mb-1>
+                  最近提交
+                </div>
                 <div flex="~ col gap-1">
                   <div v-for="h in submitHistory" :key="h.rid" flex="~ items-center gap-2" text="xs">
-                    <a :href="`https://www.luogu.com.cn/record/${h.rid}`" target="_blank"
-                      style="color:var(--bew-theme-color);text-decoration:none;font-family:monospace">
+                    <a
+                      :href="`https://www.luogu.com.cn/record/${h.rid}`" target="_blank"
+                      style="color:var(--bew-theme-color);text-decoration:none;font-family:monospace"
+                    >
                       #{{ h.rid }}
                     </a>
                     <span style="color:var(--bew-text-3)">{{ h.pid }}</span>
@@ -1218,10 +1248,17 @@ onUnmounted(() => {
             style="backdrop-filter: var(--bew-filter-glass-1)"
           >
             <Loading v-if="solutionsLoading" />
-            <div v-else-if="solutions.length === 0" flex="~ col" items="center" justify="center" py-12 text="$bew-text-2">
+            <div
+              v-else-if="solutions.length === 0" flex="~ col" items="center" justify="center" py-12
+              text="$bew-text-2"
+            >
               <span style="display:contents" v-html="renderIcon('mingcute:bulb-line', 48)" />
-              <p text="lg" mt-4 mb-2>暂无题解</p>
-              <p text="sm $bew-text-3" mb-4>这道题目还没有题解</p>
+              <p text="lg" mt-4 mb-2>
+                暂无题解
+              </p>
+              <p text="sm $bew-text-3" mb-4>
+                这道题目还没有题解
+              </p>
             </div>
             <div v-else>
               <h2 mb-4 style="font-size:var(--bew-base-font-size);font-weight:700;color:var(--bew-text-1)">
@@ -1233,7 +1270,7 @@ onUnmounted(() => {
                 :style="{ '--row-index': idx }"
                 p="x-4 y-3" flex="~ items-center gap-4"
                 border="b-1 $bew-border-color" cursor="pointer" duration-200
-                @click="navigateTo(AppPage.Solution, 'https://www.luogu.com.cn/problem/solution/' + problemId + '?sid=' + s.id)"
+                @click="navigateTo(AppPage.Solution, `https://www.luogu.com.cn/problem/solution/${problemId}?sid=${s.id}`)"
               >
                 <div flex="1" min-w-0>
                   <div style="font-size:var(--bew-base-font-size);color:var(--bew-text-1);font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">
@@ -1241,7 +1278,7 @@ onUnmounted(() => {
                   </div>
                   <div flex="~ items-center gap-2" mt-1>
                     <img :src="s.author?.avatar" style="width:20px;height:20px;border-radius:50%;object-fit:cover" @error="(e:any) => { e.target.style.display = 'none' }">
-                    <span text="xs" :style="{ color: s.author?.color ? 'var(--bew-' + s.author.color + ')' : 'var(--bew-text-2)' }">{{ s.author?.name }}</span>
+                    <span text="xs" :style="{ color: s.author?.color ? `var(--bew-${s.author.color})` : 'var(--bew-text-2)' }">{{ s.author?.name }}</span>
                     <span text="xs $bew-text-3">{{ timeAgo(s.time) }}</span>
                   </div>
                 </div>
