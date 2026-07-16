@@ -27,7 +27,7 @@ const LANG_EXT: Record<string, () => Extension> = {
 const baseTheme = EditorView.theme({
   '&': { backgroundColor: 'var(--bew-fill-1)', color: 'var(--bew-text-1)', height: '100%', fontSize: '14px' },
   '.cm-scroller': { fontFamily: 'Cascadia Code,Fira Code,JetBrains Mono,Consolas,monospace', lineHeight: '1.65' },
-  '.cm-content': { padding: '8px 12px' },
+  '.cm-content': { padding: '0px 0px' },
   '.cm-gutters': { backgroundColor: 'var(--bew-fill-1)', color: 'var(--bew-text-4)', border: 'none' },
   '&.cm-focused': { outline: 'none' },
   '.cm-activeLine': { backgroundColor: 'transparent' },
