@@ -352,7 +352,7 @@ watch(activeTab, (t) => { if (t === 'ranking' && scoreboard.value.length === 0) 
         <div v-if="activeTab === 'overview'" bg="$bew-content" rounded="$bew-radius" p-6 mb-6 shadow="[var(--bew-shadow-1),var(--bew-shadow-edge-glow-1)]" border="1 $bew-border-color" style="backdrop-filter:var(--bew-filter-glass-1)">
           <div v-if="c.description" class="markdown-body" style="font-size:var(--bew-base-font-size);color:var(--bew-text-1);line-height:1.8" v-html="parseMarkdownContent(c.description)" />
           <div v-else style="text-align:center;padding:40px;color:var(--bew-text-3);font-size:var(--bew-base-font-size)">
-            <span v-html="renderIcon('mingcute:info-line', 48)" style="display:contents" /><p mt-2>暂无比赛介绍</p>
+            <span v-html="renderIcon('mingcute:information-line', 48)" style="display:contents" /><p mt-2>暂无比赛介绍</p>
           </div>
         </div>
 
