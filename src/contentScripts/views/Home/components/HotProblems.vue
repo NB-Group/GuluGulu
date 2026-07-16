@@ -18,7 +18,7 @@ import { diffLabel, diffColor } from '~/utils/difficulty'
 async function fetchProblems() {
   loading.value = true
   try {
-    const res = await fetch('https://www.luogu.com.cn/problem/list?order=hot', { credentials: 'same-origin' })
+    const res = await fetch('https://www.luogu.com.cn/problem/list', { credentials: 'same-origin' })
     const html = await res.text()
     const m = html.match(/<script\s+id="lentille-context"\s+type="application\/json"[^>]*>([^<]*)<\/script>/)
     if (m?.[1]) {
