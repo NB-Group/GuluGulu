@@ -1,8 +1,7 @@
 // Problem content — markdown rendering, code blocks, math formulas
-// Uses --bew-* CSS variables for dark/light mode compatibility
-
-// Import KaTeX CSS
-@import '../../node_modules/katex/dist/katex.css';
+// Uses --bew-* CSS variables for dark/light mode compatibility.
+// KaTeX CSS is injected into the Shadow DOM by src/utils/markdown.ts
+// (with external woff2 fonts under /assets/fonts/katex/) — not inlined here.
 
 .problem-statement {
   font-size: 15px;
