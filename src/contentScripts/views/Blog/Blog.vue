@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { renderIcon } from '~/utils/icons'
 import { timeAgo } from '~/utils/main'
-import { friendlyError, getCsrfToken } from '~/utils/luogu-api'
+import { friendlyError, getCsrfToken, isLoggedIn as checkLuoguLogin } from '~/utils/luogu-api'
 import { parseMarkdownContent } from '~/utils/markdown'
 import { AppPage } from '~/enums/appEnums'
 import { useGulyApp } from '~/composables/useAppProvider'
@@ -21,6 +21,7 @@ const forums = ref<Array<{name:string;slug:string;color:string}>>([])
 const selectedForum = ref('')
 const sentinelRef = ref<HTMLDivElement>()
 const totalPages = computed(() => Math.max(1, Math.ceil(totalCount.value / pageSize)))
+const isLoggedIn = computed(() => checkLuoguLogin())
 
 async function fetchPosts(append = false) {
   if (append) loadingMore.value = true; else loading.value = true
@@ -148,8 +149,26 @@ onUnmounted(() => obs?.disconnect())
 
 <template>
   <div class="page-container" w-full h-full p="x-4 md:x-8 lg:x-16" pos="relative">
+    <!-- 未登录拦截:讨论浏览与回复需登录态 -->
+    <div
+      v-if="!isLoggedIn"
+      bg="$bew-content" rounded="$bew-radius" p-8 mb-6
+      shadow="[var(--bew-shadow-1),var(--bew-shadow-edge-glow-1)]"
+      border="1 $bew-border-color" text="center"
+      style="backdrop-filter: var(--bew-filter-glass-1)"
+    >
+      <span style="display:contents; color: var(--bew-warning-color);" v-html="renderIcon('mingcute:lock-line', 40)" />
+      <p mt-3 fw-bold text="xl $bew-text-1">
+        请先登录洛谷
+      </p>
+      <p mt-1 text="sm $bew-text-2">
+        讨论浏览与回复需要登录状态
+      </p>
+      <a href="https://www.luogu.com.cn/auth/login" target="_blank" mt-4 inline-block p="x-4 y-2" rounded="$bew-radius-half" text-white style="background:var(--bew-theme-color);text-decoration:none">前往登录</a>
+    </div>
+
     <!-- Detail View -->
-    <template v-if="discussId">
+    <template v-if="isLoggedIn && discussId">
       <div bg="$bew-content" rounded="$bew-radius" p-6 mb-6 shadow="[var(--bew-shadow-1),var(--bew-shadow-edge-glow-1)]" border="1 $bew-border-color" style="backdrop-filter:var(--bew-filter-glass-1)">
         <button @click="goToDiscussList" style="background:none;border:none;cursor:pointer;color:var(--bew-theme-color);font-size:var(--bew-base-font-size)" mb-2>← 返回讨论列表</button>
         <h1 style="font-size:var(--bew-base-font-size);color:var(--bew-text-1);font-weight:700">{{ detail?.title || '加载中...' }}</h1>
@@ -201,7 +220,7 @@ onUnmounted(() => obs?.disconnect())
     </template>
 
     <!-- List View -->
-    <template v-else>
+    <template v-else-if="isLoggedIn">
     <div bg="$bew-content" rounded="$bew-radius" p-6 mb-6 shadow="[var(--bew-shadow-1),var(--bew-shadow-edge-glow-1)]" border="1 $bew-border-color" style="backdrop-filter:var(--bew-filter-glass-1)">
       <h1 style="font-size:1.5rem;color:var(--bew-text-1);font-weight:700" mb-2>讨论</h1>
       <p text="$bew-text-2">共 {{ totalCount }} 篇帖子</p>

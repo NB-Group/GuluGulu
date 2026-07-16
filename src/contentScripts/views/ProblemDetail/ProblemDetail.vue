@@ -230,7 +230,7 @@ const activeTab = ref<'statement' | 'submit' | 'solutions' | 'discussions'>('sta
 const contestId = computed(() => { const m = (currentUrl.value || window.location.href).match(/[?&]contestId=(\d+)/); return m ? m[1] : '' })
 const inContestMode = computed(() => !!contestId.value)
 const ideMode = ref(inContestMode.value || window.location.hash === '#ide')
-const isSplitView = computed(() => ideMode.value || inContestMode.value)
+const isSplitView = computed(() => isLoggedIn.value && (ideMode.value || inContestMode.value))
 
 // Resizable split
 const splitRatio = ref(40)
@@ -831,7 +831,11 @@ onUnmounted(() => {
           </button>
           <button
             v-if="!isSplitView" flex="~ items-center gap-1" p="x-3 y-2" rounded="$bew-radius-half" text="sm"
-            border="none" cursor="pointer" style="background:var(--bew-success-color-20);color:var(--bew-success-color);font-weight:600;margin-left:auto" @click="ideMode = true"
+            border="none"
+            :disabled="!isLoggedIn"
+            :title="isLoggedIn ? '' : '请先登录洛谷后再使用 IDE'"
+            :style="{ background:'var(--bew-success-color-20)', color:'var(--bew-success-color)', fontWeight:600, marginLeft:'auto', opacity: isLoggedIn ? 1 : 0.5, cursor: isLoggedIn ? 'pointer' : 'not-allowed' }"
+            @click="isLoggedIn && (ideMode = true)"
           >
             <span style="display:contents" v-html="renderIcon('mingcute:terminal-line', 16)" />
             IDE
