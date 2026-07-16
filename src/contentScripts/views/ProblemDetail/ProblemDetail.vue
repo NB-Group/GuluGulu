@@ -230,7 +230,7 @@ const activeTab = ref<'statement' | 'submit' | 'solutions' | 'discussions'>('sta
 const contestId = computed(() => { const m = (currentUrl.value || window.location.href).match(/[?&]contestId=(\d+)/); return m ? m[1] : '' })
 const inContestMode = computed(() => !!contestId.value)
 const ideMode = ref(inContestMode.value || window.location.hash === '#ide')
-const isSplitView = computed(() => isLoggedIn.value && (ideMode.value || inContestMode.value))
+const isSplitView = computed(() => isLoggedIn.value && ideMode.value)
 
 // Resizable split
 const splitRatio = ref(40)
@@ -740,18 +740,6 @@ onUnmounted(() => {
                   <span style="display:contents" v-html="renderIcon('mingcute:fire-line', 12)" />
                   {{ problem.difficultyLabel }}
                 </span>
-                <button
-                  v-if="externalUrl"
-                  text="xs"
-                  flex="~ items-center gap-1"
-                  shrink-0
-                  style="background:none;border:1px solid var(--bew-border-color);border-radius:var(--bew-radius-half);padding:2px 8px;cursor:pointer;color:var(--bew-text-2);white-space:nowrap"
-                  :title="`在原站打开 (${problemId})`"
-                  @click="openOriginalSite"
-                >
-                  <span style="display:contents" v-html="renderIcon('mingcute:link-2-line', 14)" />
-                  原站
-                </button>
               </div>
 
               <!-- Tags -->
@@ -760,29 +748,6 @@ onUnmounted(() => {
                   v-for="tag in problem.tags" :key="tag.id" text="xs" px-2 py-0.5
                   rounded-full bg="$bew-fill-2" flex="~ items-center gap-1" style="color:var(--bew-text-3)"
                 ><span style="display:contents" v-html="renderIcon('mingcute:hashtag-line', 10)" />{{ tag.name }}</span>
-              </div>
-
-              <div flex="~ gap-4 wrap" text="sm $bew-text-2">
-                <span flex="~ items-center gap-1">
-                  <span style="display:contents" v-html="renderIcon('mingcute:time-line', 16)" />
-                  <span>{{ problem.timeLimit }}</span>
-                </span>
-                <span flex="~ items-center gap-1">
-                  <span style="display:contents" v-html="renderIcon('mingcute:chip-line', 16)" />
-                  <span>{{ problem.memoryLimit }}</span>
-                </span>
-                <span flex="~ items-center gap-1">
-                  <span style="display:contents" v-html="renderIcon('mingcute:chart-bar-line', 16)" />
-                  <span>通过 {{ problem.totalAccepted.toLocaleString() }} / {{ problem.totalSubmit.toLocaleString() }} ({{ passRate }}%)</span>
-                </span>
-              </div>
-
-              <div v-if="problem.provider" flex="~ items-center gap-2" mt-1>
-                <span text="xs $bew-text-3">提供者：</span>
-                <span
-                  text="sm $bew-theme-color" fw-bold cursor-pointer
-                  @click="openProviderProfile(problem.provider!.uid)"
-                >{{ problem.provider.name }}</span>
               </div>
             </div>
 
@@ -968,13 +933,9 @@ onUnmounted(() => {
                   <span style="display:contents" v-html="renderIcon(showTestPanel ? 'mingcute:down-line' : 'mingcute:right-line', 12)" />
                   自测
                 </button>
-                <button v-if="!inContestMode" style="display:flex;align-items:center;gap:4px;background:none;border:1px solid var(--bew-border-color);border-radius:var(--bew-radius-half);padding:2px 8px;cursor:pointer;color:var(--bew-text-2);font-size:.82em;white-space:nowrap" @click="ideMode = false">
+                <button style="display:flex;align-items:center;gap:4px;background:none;border:1px solid var(--bew-border-color);border-radius:var(--bew-radius-half);padding:2px 8px;cursor:pointer;color:var(--bew-text-2);font-size:.82em;white-space:nowrap" @click="ideMode = false">
                   <span style="display:contents" v-html="renderIcon('mingcute:exit-line', 12)" />
                   退出
-                </button>
-                <button v-else style="display:flex;align-items:center;gap:4px;background:none;border:1px solid var(--bew-border-color);border-radius:var(--bew-radius-half);padding:2px 8px;cursor:pointer;color:var(--bew-text-2);font-size:.82em;white-space:nowrap" @click="navigateTo(AppPage.ContestDetail, `https://www.luogu.com.cn/contest/${contestId}`)">
-                  <span style="display:contents" v-html="renderIcon('mingcute:arrow-left-line', 12)" />
-                  返回比赛
                 </button>
                 <button :disabled="submitting" style="display:flex;align-items:center;gap:4px;background:var(--bew-theme-color);color:#fff;border:none;border-radius:var(--bew-radius-half);padding:3px 12px;cursor:pointer;font-size:.85em;font-weight:600;white-space:nowrap" @click="handleSubmit">
                   <span style="display:contents" v-html="renderIcon('mingcute:send-line', 12)" />
@@ -1051,12 +1012,15 @@ onUnmounted(() => {
           <div
             v-if="activeTab === 'statement'"
             key="statement"
+            flex="~ col md:row gap-6"
+            items="start"
             bg="$bew-content" rounded="$bew-radius" p="6 md:p-8"
             shadow="[var(--bew-shadow-1),var(--bew-shadow-edge-glow-1)]"
             border="1 $bew-border-color"
             style="backdrop-filter: var(--bew-filter-glass-1)"
           >
-            <div class="problem-statement">
+            <!-- Left column: problem statement (description + samples + hint + source) -->
+            <div class="problem-statement" flex="2" min-w-0>
               <!-- Main description (includes background, description, I/O format) -->
               <div mb-6 v-html="renderedDescription" />
 
@@ -1109,6 +1073,93 @@ onUnmounted(() => {
               <!-- Source -->
               <div v-if="problem.source" mt-8 pt-4 border="t-1 $bew-border-color">
                 <span text="sm $bew-text-3">来源：{{ problem.source }}</span>
+              </div>
+            </div>
+
+            <!-- Right column: sidebar info card (pid / difficulty / limits / tags / provider / external link) -->
+            <div flex="1" min-w-0 class="problem-sidebar-col">
+              <div
+                class="problem-sidebar"
+                bg="$bew-fill-1" rounded="$bew-radius" p-4
+                flex="~ col gap-3"
+              >
+                <!-- PID + Difficulty badge -->
+                <div flex="~ items-center justify-between gap-2">
+                  <span font-mono text="base $bew-text-1" fw-bold>{{ problem.pid }}</span>
+                  <span
+                    text="xs" fw-bold p="x-2 y-0.5"
+                    rounded="$bew-radius-half"
+                    flex="~ items-center gap-1"
+                    :style="{ backgroundColor: `${difficultyColor}20`, color: difficultyColor }"
+                  >
+                    <span style="display:contents" v-html="renderIcon('mingcute:fire-line', 12)" />
+                    {{ problem.difficultyLabel }}
+                  </span>
+                </div>
+
+                <!-- Limits + pass rate -->
+                <div flex="~ col gap-1.5" text="sm $bew-text-2" p="y-3" border="y-1 $bew-border-color">
+                  <span flex="~ items-center gap-2">
+                    <span style="display:contents" v-html="renderIcon('mingcute:time-line', 16)" />
+                    <span>时间 {{ problem.timeLimit }}</span>
+                  </span>
+                  <span flex="~ items-center gap-2">
+                    <span style="display:contents" v-html="renderIcon('mingcute:chip-line', 16)" />
+                    <span>内存 {{ problem.memoryLimit }}</span>
+                  </span>
+                  <span flex="~ items-center gap-2">
+                    <span style="display:contents" v-html="renderIcon('mingcute:chart-bar-line', 16)" />
+                    <span>通过率 {{ passRate }}% ({{ problem.totalAccepted.toLocaleString() }}/{{ problem.totalSubmit.toLocaleString() }})</span>
+                  </span>
+                </div>
+
+                <!-- Tags -->
+                <div v-if="problem.tags.length > 0">
+                  <div text="xs $bew-text-3" mb-2 flex="~ items-center gap-1">
+                    <span style="display:contents" v-html="renderIcon('mingcute:hashtag-line', 12)" />
+                    标签
+                  </div>
+                  <div flex="~ gap-1.5 wrap">
+                    <span
+                      v-for="tag in problem.tags" :key="tag.id" text="xs" px-2 py-0.5
+                      rounded-full bg="$bew-content" style="color:var(--bew-text-3)"
+                    >{{ tag.name }}</span>
+                  </div>
+                </div>
+
+                <!-- Provider (avatar + name) -->
+                <div v-if="problem.provider">
+                  <div text="xs $bew-text-3" mb-2 flex="~ items-center gap-1">
+                    <span style="display:contents" v-html="renderIcon('mingcute:user-3-line', 12)" />
+                    提供者
+                  </div>
+                  <div flex="~ items-center gap-2" cursor-pointer @click="openProviderProfile(problem.provider!.uid)">
+                    <img
+                      v-if="problem.provider.avatar"
+                      :src="problem.provider.avatar"
+                      style="width:24px;height:24px;border-radius:50%;object-fit:cover"
+                      @error="(e:any) => { e.target.style.display = 'none' }"
+                    >
+                    <span text="sm $bew-theme-color" fw-bold>{{ problem.provider.name }}</span>
+                  </div>
+                </div>
+
+                <!-- External site link (CF/AT/NC/SP/UVA) -->
+                <button
+                  v-if="externalUrl"
+                  flex="~ items-center justify-center gap-1"
+                  p="x-3 y-2"
+                  text="sm $bew-text-1"
+                  rounded="$bew-radius-half"
+                  border="1 $bew-border-color"
+                  bg="$bew-content"
+                  cursor="pointer"
+                  :title="`在原站打开 (${problemId})`"
+                  @click="openOriginalSite"
+                >
+                  <span style="display:contents" v-html="renderIcon('mingcute:link-2-line', 14)" />
+                  在原站打开
+                </button>
               </div>
             </div>
           </div>
@@ -1433,6 +1484,18 @@ onUnmounted(() => {
     background: var(--bew-success-color-20);
     color: var(--bew-success-color);
     font-weight: 600;
+  }
+}
+
+/* Statement sidebar: sticky only on md+ (two-column mode).
+   Below md the layout collapses to a single column and the sidebar
+   simply flows under the statement. UnoCSS default md breakpoint = 768px. */
+@media (min-width: 768px) {
+  .problem-sidebar {
+    position: sticky;
+    top: calc(var(--bew-top-bar-height) + 16px);
+    max-height: calc(100vh - var(--bew-top-bar-height) - 32px);
+    overflow-y: auto;
   }
 }
 </style>
