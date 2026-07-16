@@ -1,5 +1,4 @@
-import lineMdIcons from '@iconify/json/json/line-md.json'
-import mingcuteIcons from '@iconify/json/json/mingcute.json'
+import { lineMdIcons, mingcuteIcons } from './icon-data'
 
 const collections: Record<string, Record<string, { body: string, width?: number, height?: number }>> = {
   mingcute: mingcuteIcons.icons,
@@ -37,7 +36,3 @@ export function renderIcon(name: string, size = 24): string {
 
   return `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" aria-hidden="true" role="img" width="${size}" height="${size}" viewBox="0 0 ${w} ${h}" style="color:inherit">${icon.body}</svg>`
 }
-
-// Prevent tree-shaking: force access to commonly used icons
-void (mingcuteIcons.icons['home-4-fill'] && mingcuteIcons.icons['home-4-line']
-  && lineMdIcons.icons['moon-to-sunny-outline-transition'])
