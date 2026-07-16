@@ -25,7 +25,7 @@ document.addEventListener('keydown', (e) => {
   if (!path)
     return
   for (const node of path) {
-    if (node instanceof HTMLElement && (node.tagName === 'TEXTAREA' || node.tagName === 'INPUT' || node.tagName === 'SELECT'))
+    if (node instanceof HTMLElement && (node.tagName === 'TEXTAREA' || node.tagName === 'INPUT' || node.tagName === 'SELECT' || node.isContentEditable))
       e.stopImmediatePropagation()
   }
 }, true) // capture phase
