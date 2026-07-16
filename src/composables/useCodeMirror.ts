@@ -10,7 +10,7 @@ import { search, searchKeymap } from '@codemirror/search'
 import type { Extension } from '@codemirror/state'
 import { Compartment, EditorState } from '@codemirror/state'
 import { oneDarkHighlightStyle } from '@codemirror/theme-one-dark'
-import { EditorView, highlightActiveLine, keymap, lineNumbers } from '@codemirror/view'
+import { drawSelection, EditorView, highlightActiveLine, keymap, lineNumbers } from '@codemirror/view'
 import { onUnmounted, type Ref, ref, watch } from 'vue'
 
 // aceMode -> CodeMirror 语言扩展(洛谷 LUOGU_LANGUAGES[i].aceMode)
@@ -25,7 +25,7 @@ const LANG_EXT: Record<string, () => Extension> = {
 
 // 编辑器外观基于 --bew-* 变量(随 .dark 自动切换 bg/fg/gutter)
 const baseTheme = EditorView.theme({
-  '&': { backgroundColor: 'var(--bew-fill-1)', color: 'var(--bew-text-1)', caretColor: 'var(--bew-text-1)', height: '100%', fontSize: '14px' },
+  '&': { backgroundColor: 'var(--bew-fill-1)', color: 'var(--bew-text-1)', height: '100%', fontSize: '14px' },
   '.cm-scroller': { fontFamily: 'Cascadia Code,Fira Code,JetBrains Mono,Consolas,monospace', lineHeight: '1.65' },
   '.cm-content': { padding: '14px 18px' },
   '.cm-gutters': { backgroundColor: 'var(--bew-fill-1)', color: 'var(--bew-text-4)', border: 'none' },
@@ -55,8 +55,9 @@ export function useCodeMirror(opts: {
   const langExtension = () => (LANG_EXT[opts.lang.value] || LANG_EXT.plain_text)()
   const themeExtension = () => [
     syntaxHighlighting(isDark.value ? oneDarkHighlightStyle : defaultHighlightStyle),
-    // 光标颜色显式随深色切换(--bew-text-1 经实测未生效),并加粗到 2px
+    // CM6 光标色由 caret-color 驱动(并非 borderLeftColor),显式随深浅切换 + 加粗到 2px
     EditorView.theme({
+      '&': { caretColor: isDark.value ? '#f0f0f0' : '#1f1f1f' },
       '& .cm-cursor, & .cm-dropCursor': { borderLeftColor: isDark.value ? '#f0f0f0' : '#1f1f1f', borderLeftWidth: '2px' },
     }),
   ]
@@ -70,6 +71,7 @@ export function useCodeMirror(opts: {
         extensions: [
           lineNumbers(),
           highlightActiveLine(),
+          drawSelection(),
           history(),
           closeBrackets(),
           bracketMatching(),
