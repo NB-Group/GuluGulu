@@ -31,7 +31,6 @@ const baseTheme = EditorView.theme({
   '.cm-gutters': { backgroundColor: 'var(--bew-fill-1)', color: 'var(--bew-text-4)', border: 'none' },
   '&.cm-focused': { outline: 'none' },
   '.cm-activeLine': { backgroundColor: 'transparent' },
-  '.cm-cursor, .cm-dropCursor': { borderLeftColor: 'var(--bew-text-1)' },
   '.cm-selectionBackground, ::selection': { background: 'var(--bew-theme-color-30)' },
 })
 
@@ -54,7 +53,13 @@ export function useCodeMirror(opts: {
   let darkObs: MutationObserver | null = null
 
   const langExtension = () => (LANG_EXT[opts.lang.value] || LANG_EXT.plain_text)()
-  const themeExtension = (): Extension => syntaxHighlighting(isDark.value ? oneDarkHighlightStyle : defaultHighlightStyle)
+  const themeExtension = () => [
+    syntaxHighlighting(isDark.value ? oneDarkHighlightStyle : defaultHighlightStyle),
+    // 光标颜色显式随深色切换(--bew-text-1 经实测未生效),并加粗到 2px
+    EditorView.theme({
+      '& .cm-cursor, & .cm-dropCursor': { borderLeftColor: isDark.value ? '#f0f0f0' : '#1f1f1f', borderLeftWidth: '2px' },
+    }),
+  ]
 
   function create(el: HTMLElement) {
     if (view)
