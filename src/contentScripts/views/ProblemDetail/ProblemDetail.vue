@@ -127,6 +127,7 @@ useCodeMirror({
 })
 
 let loadingPid: string | null = null // guard against concurrent loads
+let isInitialLoad = true // 只在首次加载填模板,切题时不强行覆盖编辑器
 async function loadRealData() {
   const pid = problemId.value
   if (loadingPid === pid)
@@ -134,8 +135,9 @@ async function loadRealData() {
   loadingPid = pid
   try {
     let raw = extractProblemData()
-    // If DOM data is stale (SPA navigation), fetch via _contentOnly=1 API
-    if (!raw?.data?.problem && !raw?.currentData?.problem)
+    // If DOM data is stale (SPA navigation to a DIFFERENT problem), fetch via _contentOnly=1 API
+    const extractedPid = raw?.data?.problem?.pid || raw?.currentData?.problem?.pid
+    if ((!raw?.data?.problem && !raw?.currentData?.problem) || (extractedPid && extractedPid !== pid))
       raw = await fetchProblemData(pid)
     // Normalize: _contentOnly=1 uses currentData, HTML pages use data
     const rd: any = raw?.data || raw?.currentData || {}
@@ -196,10 +198,13 @@ async function loadRealData() {
       }))
     }
 
-    // Load saved code from Luogu (lastCode / lastLanguage), or reset to default
+    // Load saved code from Luogu (lastCode / lastLanguage). Only auto-fill a
+    // starter template on the first load — on problem-switch leave empty when
+    // there's no saved code, so we don't clobber the editor with A+B.
     const savedCode: string = rd.lastCode || ''
     const savedLang: number | undefined = rd.lastLanguage
-    codeContent.value = savedCode || getDefaultCode(savedLang || 28)
+    codeContent.value = savedCode || (isInitialLoad ? getDefaultCode(savedLang || 28) : '')
+    isInitialLoad = false
     if (savedLang) {
       const found = LUOGU_LANGUAGES.find(l => l.id === savedLang)
       if (found)
@@ -503,6 +508,7 @@ async function handleSubmit() {
 
   const result = await submitCode({
     pid: problemId.value,
+    contestId: inContestMode.value ? contestId.value : undefined,
     code: codeContent.value,
     lang: selectedLang.value.id,
     enableO2: enableO2.value && selectedLang.value.canO2,
