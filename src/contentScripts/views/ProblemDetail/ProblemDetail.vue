@@ -609,6 +609,40 @@ function _openOriginalPage() {
   window.open(`https://www.luogu.com.cn/problem/${problemId.value}`, '_blank')
 }
 
+// 外站题目(CF/AT/NC/SP/UVA)→ 原站跳转;洛谷自建题(P/B/T/…)返回 null
+function externalProblemUrl(pid: string): string | null {
+  if (!pid)
+    return null
+  // Codeforces CF{contest}{index}:CF1A / CF1011D
+  let m = pid.match(/^CF(\d+)([A-Z]\d*)$/)
+  if (m)
+    return `https://codeforces.com/problemset/problem/${m[1]}/${m[2]}`
+  // AtCoder AT_{contest}_{task}:AT_abc188_d
+  m = pid.match(/^AT_(.+)$/)
+  if (m) {
+    const contest = m[1].split('_')[0]
+    return `https://atcoder.jp/contests/${contest}/tasks/${m[1]}`
+  }
+  // NowCoder NC{id}:NC12345
+  m = pid.match(/^NC(\d+)$/)
+  if (m)
+    return `https://ac.nowcoder.com/acm/problem/${m[1]}`
+  // SPOJ SP[_]?{code}
+  m = pid.match(/^SP_?(.+)$/)
+  if (m)
+    return `https://www.spoj.com/problems/${m[1].toUpperCase()}/`
+  // UVa UVA[_]?{id}:跳到官方 PDF 题面
+  m = pid.match(/^UVA_?(\d+)$/)
+  if (m)
+    return `https://onlinejudge.org/external/${m[1].slice(0, 3)}/${m[1]}.pdf`
+  return null
+}
+const externalUrl = computed(() => externalProblemUrl(problemId.value))
+function openOriginalSite() {
+  if (externalUrl.value)
+    window.open(externalUrl.value, '_blank')
+}
+
 function openSolutionsPage() {
   navigateTo(AppPage.Solution, `https://www.luogu.com.cn/problem/solution/${problemId.value}`)
 }
@@ -706,6 +740,18 @@ onUnmounted(() => {
                   <span style="display:contents" v-html="renderIcon('mingcute:fire-line', 12)" />
                   {{ problem.difficultyLabel }}
                 </span>
+                <button
+                  v-if="externalUrl"
+                  text="xs"
+                  flex="~ items-center gap-1"
+                  shrink-0
+                  style="background:none;border:1px solid var(--bew-border-color);border-radius:var(--bew-radius-half);padding:2px 8px;cursor:pointer;color:var(--bew-text-2);white-space:nowrap"
+                  :title="`在原站打开 (${problemId})`"
+                  @click="openOriginalSite"
+                >
+                  <span style="display:contents" v-html="renderIcon('mingcute:link-2-line', 14)" />
+                  原站
+                </button>
               </div>
 
               <!-- Tags -->
