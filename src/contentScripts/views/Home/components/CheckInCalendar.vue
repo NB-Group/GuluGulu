@@ -66,16 +66,25 @@ function parsePunchHtml(html: string) {
 
 const checkInLoading = ref(true)
 
+// GET the Luogu homepage and parse today's punch fortune from its HTML card.
+// ajax_punch's response is just {code, message} (no fortune html), so the
+// fortune must be read from the homepage — used both on mount and right after
+// a successful check-in, so the result shows without a manual page refresh.
+async function fetchFortuneFromHome() {
+  const res = await fetch('https://www.luogu.com.cn/', { credentials: 'same-origin' })
+  const html = await res.text()
+  const punchMatch = html.match(/lg-punch[^>]*>([\s\S]*?)<\/div>\s*<\/div>\s*<\/div>/)
+  if (punchMatch && punchMatch[1].includes('运势')) return parsePunchHtml(punchMatch[1])
+  return null
+}
+
 // On mount: GET Luogu homepage to check today's punch status (server-side, no auto-check-in)
 onMounted(async () => {
   if (!uid || uid === '0') { checkInLoading.value = false; return }
   try {
-    const res = await fetch('https://www.luogu.com.cn/', { credentials: 'same-origin' })
-    const html = await res.text()
-    // Parse the punch card from Luogu's HTML response
-    const punchMatch = html.match(/lg-punch[^>]*>([\s\S]*?)<\/div>\s*<\/div>\s*<\/div>/)
-    if (punchMatch && punchMatch[1].includes('运势')) {
-      fortuneResult.value = parsePunchHtml(punchMatch[1])
+    const fortune = await fetchFortuneFromHome()
+    if (fortune) {
+      fortuneResult.value = fortune
       checkInDone.value = true
       saveCheckInState()
     }
@@ -97,10 +106,14 @@ async function handleCheckIn() {
     const data = await res.json()
     // code 200: success (html=fortune card), code 201: already checked in today
     if (data?.code === 200) {
-      if (data?.html) fortuneResult.value = parsePunchHtml(data.html)
       checkInDone.value = true
       saveCheckInState()
       checkInMsg.value = ''
+      // ajax_punch returns {code, message} with no fortune html — fetch the
+      // freshly-unlocked fortune from the homepage so it shows without refresh.
+      try {
+        fortuneResult.value = data?.html ? parsePunchHtml(data.html) : await fetchFortuneFromHome()
+      } catch {}
     } else if (data?.code === 201 || data?.message?.includes('已经打过') || data?.message?.includes('已经打卡')) {
       checkInDone.value = true
       saveCheckInState()

@@ -77,6 +77,28 @@ async function fetchTeamDetail(id: number) {
     }
   } catch {}
   detailLoading.value = false
+  // usages.training is a combined (trainings+homework) quota, not a per-type
+  // count — fetch each sub-page's real count so 题单/作业 show correct numbers.
+  Promise.all([fetchTeamSubCount(id, 'training'), fetchTeamSubCount(id, 'homework')]).then(([tr, hw]) => {
+    if (detail.value) detail.value = { ...detail.value, counts: { training: tr, homework: hw } }
+  })
+}
+
+// Fetch a team sub-page's real item count. trainings & homework are both served
+// under data.trainings on their respective sub-pages (pre-filtered server-side),
+// so the count must be read per sub-page — usages.training is only a combined quota.
+async function fetchTeamSubCount(id: number, path: string): Promise<number | null> {
+  try {
+    const res = await fetch(`https://www.luogu.com.cn/team/${id}/${path}`, { credentials: 'same-origin' })
+    const html = await res.text()
+    const m = html.match(/<script\s+id="lentille-context"\s+type="application\/json"[^>]*>([^<]+)<\/script>/)
+    if (m?.[1]) {
+      const ctx = JSON.parse(m[1])
+      const t = ctx?.data?.trainings
+      if (t && typeof t === 'object') return t.count ?? t.result?.length ?? 0
+    }
+  } catch {}
+  return null
 }
 
 // Extract items from lentille-context, trying multiple data paths
@@ -376,7 +398,8 @@ watch(() => currentUrl.value, () => loadContent())
                 </div>
                 <div style="font-size:.85em;color:var(--bew-text-3)">
                   <span v-if="item.k === 'file' && detail.usages.file?.[0]">{{ formatFileSize(detail.usages.file[0]) }}</span>
-                  <span v-else-if="item.k === 'homework' && detail.usages.training?.[0]">{{ detail.usages.training[0] + ' 个' }}</span>
+                  <span v-else-if="item.k === 'training' && detail.counts?.training != null">{{ detail.counts.training + ' 个' }}</span>
+                  <span v-else-if="item.k === 'homework' && detail.counts?.homework != null">{{ detail.counts.homework + ' 个' }}</span>
                   <span v-else-if="detail.usages[item.k]?.[0]">{{ detail.usages[item.k][0] + ' 个' }}</span>
                   <span v-else>—</span>
                 </div>
