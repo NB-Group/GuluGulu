@@ -1,5 +1,5 @@
 import type { Ref } from 'vue'
-import { ref } from 'vue'
+import { onScopeDispose, ref, watch } from 'vue'
 
 export interface DelayedHoverOptions {
   enterDelay?: number
@@ -28,6 +28,23 @@ export function useDelayedHover(options: DelayedHoverOptions = {}): Ref<HTMLElem
       options.leave?.()
     }, options.leaveDelay ?? 0)
   }
+
+  // Bind handlers to whatever element the template ref resolves to.
+  // flush:'post' runs after the DOM is patched so `target` is populated.
+  watch(target, (el, _old, onCleanup) => {
+    if (!el) return
+    el.addEventListener('mouseenter', onMouseEnter)
+    el.addEventListener('mouseleave', onMouseLeave)
+    onCleanup(() => {
+      el.removeEventListener('mouseenter', onMouseEnter)
+      el.removeEventListener('mouseleave', onMouseLeave)
+    })
+  }, { flush: 'post' })
+
+  onScopeDispose(() => {
+    clearTimeout(enterTimer)
+    clearTimeout(leaveTimer)
+  })
 
   return target
 }
