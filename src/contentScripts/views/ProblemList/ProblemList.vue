@@ -173,11 +173,12 @@ watch(sentinelRef, (el) => {
 
 onUnmounted(() => observer?.disconnect())
 
-// Watchers — only refetch when keyword or difficulty changes (not page)
+// Watchers — refetch when keyword, type, or difficulty changes (not page)
 watch(
   () => searchKeyword.value,
   () => resetAndFetch(),
 )
+watch(selectedType, () => resetAndFetch())
 watch(selectedDifficulty, () => resetAndFetch())
 
 function handleSearch(keyword: string) {
@@ -358,8 +359,6 @@ function difficultyColor(d: number) {
         </div>
       </div>
     </Transition>
-
-    <Loading v-if="loadingMore" />
 
     <!-- Sentinel for infinite scroll -->
     <div
