@@ -24,8 +24,11 @@ function getPageParam(): AppPage | null {
   return null
 }
 
-// Detect which page to show based on the current URL
-function getPageFromUrl(): AppPage {
+// Detect which page to show based on the current URL.
+// Returns null for Luogu URLs GuluGulu has no dedicated view for (theme store,
+// settings, paintboard, ...) so the caller can bail out and let the native page
+// render instead of falling back to Home.
+function getPageFromUrl(): AppPage | null {
   const url = document.URL
 
   if (/\/problem\/list/i.test(url)) return AppPage.ProblemList
@@ -54,7 +57,7 @@ function getPageFromUrl(): AppPage {
   if (/\/chat/i.test(url) && !/\/discuss/i.test(url)) return AppPage.Messages
   if (/\/search/i.test(url) || /\/problem\/keyword/i.test(url)) return AppPage.Search
 
-  return AppPage.Home
+  return null
 }
 
 const activatedPage = ref<AppPage>(
@@ -188,6 +191,13 @@ function onHistoryChange() {
     currentUrl.value = url
     const page = getPageFromUrl()
     console.log('[historyChange] page:', page, 'activatedPage:', activatedPage.value)
+    if (page === null) {
+      // Navigated to a Luogu page GuluGulu has no view for — reload so the
+      // content script re-evaluates isSupportedPages() and lets the native
+      // page render instead of showing a blank Home.
+      window.location.reload()
+      return
+    }
     if (page !== activatedPage.value) {
       activatedPage.value = page
       console.log('[historyChange] changed to:', page)
@@ -201,6 +211,11 @@ function onPopState() {
   currentUrl.value = window.location.href
   const page = getPageFromUrl()
   console.log('[popstate] page:', page, 'activatedPage:', activatedPage.value)
+  if (page === null) {
+    // Back/forward to an unsupported Luogu page — reload to render it natively.
+    window.location.reload()
+    return
+  }
   if (page !== activatedPage.value) {
     activatedPage.value = page
     console.log('[popstate] changed to:', page)

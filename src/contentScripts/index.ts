@@ -108,6 +108,29 @@ function isAuthPage(): boolean {
   return /\/auth\/login|\/auth\/register|\/openid\//i.test(currentUrl)
 }
 
+// Check if the current Luogu URL is one GuluGulu has a dedicated view for.
+// Mirrors the route patterns in getPageFromUrl() (App.vue). Unmapped Luogu
+// sub-pages (theme store / 商店, settings, paintboard, ...) are NOT taken over
+// and fall back to Luogu's native page.
+function isSupportedLuoguPath(): boolean {
+  if (isHomePage())
+    return true
+  return (
+    /\/problem\//i.test(currentUrl) // list / detail / solution / keyword
+    || /\/contest\//i.test(currentUrl) // list / detail
+    || /\/ranking/i.test(currentUrl)
+    || /\/blog\//i.test(currentUrl)
+    || /\/discuss/i.test(currentUrl)
+    || /\/user\//i.test(currentUrl) // profile / mine / notification / practice
+    || /\/training\//i.test(currentUrl) // list / detail
+    || /\/article/i.test(currentUrl)
+    || /\/team\//i.test(currentUrl)
+    || /\/record\//i.test(currentUrl)
+    || /\/chat/i.test(currentUrl) // messages (discuss has no "chat" substring)
+    || /\/search/i.test(currentUrl)
+  )
+}
+
 function isSupportedPages(): boolean {
   if (isInIframe())
     return false
@@ -121,7 +144,9 @@ function isSupportedPages(): boolean {
     || /https?:\/\/(?:www\.)?luogu\.com/.test(currentUrl)
     || /https?:\/\/(?:www\.)?luogu\.org/.test(currentUrl)
   ) {
-    return true
+    // Only take over Luogu pages GuluGulu has a dedicated view for; let every
+    // other Luogu sub-page render natively.
+    return isSupportedLuoguPath()
   }
 
   return false
