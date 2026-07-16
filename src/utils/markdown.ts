@@ -43,12 +43,22 @@ hljs.registerLanguage('yaml', yaml)
 hljs.registerLanguage('markdown', markdownLang)
 hljs.registerLanguage('plaintext', plaintext)
 import katex from 'katex'
+import browser from 'webextension-polyfill'
 // @ts-ignore
-import katexCSS from 'katex/dist/katex.min.css?raw'
+import katexCSSRaw from 'katex/dist/katex.min.css?raw'
 // @ts-ignore
 import hljsLightCSS from 'highlight.js/styles/github.css?raw'
 // @ts-ignore
 import hljsDarkCSS from 'highlight.js/styles/github-dark.css?raw'
+
+// Rewrite KaTeX font urls to extension-absolute paths so they resolve inside
+// the Shadow DOM (relative urls would resolve against the host page). Only
+// woff2 is shipped (under /assets/fonts/katex/); browsers use the first
+// supported src and skip the rest, so the ttf/woff entries are never fetched.
+const katexCSS = katexCSSRaw.replace(
+  /url\((['"]?)fonts\//g,
+  (_m, q: string) => `url(${q}${browser.runtime.getURL('/assets/fonts/katex/')}`,
+)
 
 // ============================================================
 // Inject KaTeX CSS and Highlight.js CSS into Shadow DOM (once)
