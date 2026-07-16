@@ -367,7 +367,7 @@ onUnmounted(() => {
             <div style="font-size:var(--bew-base-font-size);color:var(--bew-text-2);font-weight:600" mb-2>
               源代码
             </div>
-            <pre bg="$bew-fill-1" rounded="$bew-radius" p-4 style="font-size:var(--bew-base-font-size);font-family:monospace;max-height:400px;overflow:auto;color:var(--bew-text-1);tab-size:4" v-html="highlightCode(detail.sourceCode, String(detail.language))" />
+            <pre bg="$bew-fill-1" rounded="$bew-radius" p-4 style="font-size:var(--bew-base-font-size);font-family:monospace;overflow:auto;color:var(--bew-text-1);tab-size:4" v-html="highlightCode(detail.sourceCode, String(detail.language))" />
           </div>
         </div>
       </Transition>
