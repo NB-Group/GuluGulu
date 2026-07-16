@@ -25,12 +25,13 @@ const LANG_EXT: Record<string, () => Extension> = {
 
 // 编辑器外观基于 --bew-* 变量(随 .dark 自动切换 bg/fg/gutter)
 const baseTheme = EditorView.theme({
-  '&': { backgroundColor: 'var(--bew-fill-1)', color: 'var(--bew-text-1)', height: '100%', fontSize: '14px' },
+  '&': { backgroundColor: 'var(--bew-fill-1)', color: 'var(--bew-text-1)', caretColor: 'var(--bew-text-1)', height: '100%', fontSize: '14px' },
   '.cm-scroller': { fontFamily: 'Cascadia Code,Fira Code,JetBrains Mono,Consolas,monospace', lineHeight: '1.65' },
   '.cm-content': { padding: '14px 18px' },
   '.cm-gutters': { backgroundColor: 'var(--bew-fill-1)', color: 'var(--bew-text-4)', border: 'none' },
   '&.cm-focused': { outline: 'none' },
   '.cm-activeLine': { backgroundColor: 'transparent' },
+  '.cm-cursor, .cm-dropCursor': { borderLeftColor: 'var(--bew-text-1)' },
   '.cm-selectionBackground, ::selection': { background: 'var(--bew-theme-color-30)' },
 })
 
