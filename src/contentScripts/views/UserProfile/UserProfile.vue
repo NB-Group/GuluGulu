@@ -241,6 +241,10 @@ watch(subView, (v) => { if (v) fetchFollowList(v) })
 
     <Transition name="content-reveal">
       <div v-if="!loading && user" w-full>
+        <div flex="~ col md:row gap-6" items="start">
+        <!-- Left sidebar: user info card + stats (sticky on md+) -->
+        <div flex="1" min-w-0 class="profile-sidebar-col">
+          <div class="profile-sidebar">
         <!-- Profile Card -->
         <div bg="$bew-content" rounded="$bew-radius" p-6 mb-6 shadow="[var(--bew-shadow-1),var(--bew-shadow-edge-glow-1)]" border="1 $bew-border-color" style="backdrop-filter:var(--bew-filter-glass-1)">
           <div flex="~ col md:row gap-6" items="start md:items-center">
@@ -287,7 +291,7 @@ watch(subView, (v) => { if (v) fetchFollowList(v) })
         </div>
 
         <!-- Stats -->
-        <div grid="~ cols-2 md:cols-4" gap-4 mb-6>
+        <div grid="~ cols-2" gap-4 mb-6>
           <div v-for="stat in [
             { label: '通过', value: user.passedProblemCount, icon: 'check-circle-line', color: '#52c41a' },
             { label: '提交', value: user.submittedProblemCount, icon: 'code-line', color: '#1890ff' },
@@ -304,9 +308,13 @@ watch(subView, (v) => { if (v) fetchFollowList(v) })
             </div>
           </div>
         </div>
+          </div>
+        </div>
 
+        <!-- Right main: quick entries + heatmap + prizes -->
+        <div flex="2" min-w-0>
         <!-- Quick entry buttons (own profile only) -->
-        <div v-if="isOwnProfile" flex="~ gap-2" mb-6>
+        <div v-if="isOwnProfile" flex="~ wrap gap-2" mb-6>
           <div v-for="item in quickEntries" :key="item.label"
             class="quick-entry-btn" cursor="pointer"
             flex="~ items-center gap-1.5"
@@ -365,6 +373,8 @@ watch(subView, (v) => { if (v) fetchFollowList(v) })
             </span>
           </div>
         </div>
+        </div>
+        </div>
       </div>
     </Transition>
   </div>
@@ -408,5 +418,16 @@ watch(subView, (v) => { if (v) fetchFollowList(v) })
   :deep(code) { background: var(--bew-fill-2); padding: 1px 5px; border-radius: 3px; font-size: .9em; }
   :deep(blockquote) { border-left: 3px solid var(--bew-theme-color); padding: 2px 10px; margin: .4em 0; color: var(--bew-text-3); }
   :deep(img) { max-width: 100%; border-radius: var(--bew-radius); }
+}
+
+/* Profile sidebar: sticky only on md+ (two-column mode).
+   Below md the layout collapses to a single column. UnoCSS default md = 768px. */
+@media (min-width: 768px) {
+  .profile-sidebar {
+    position: sticky;
+    top: calc(var(--bew-top-bar-height) + 16px);
+    max-height: calc(100vh - var(--bew-top-bar-height) - 32px);
+    overflow-y: auto;
+  }
 }
 </style>
