@@ -922,6 +922,10 @@ onUnmounted(() => {
                   <span style="display:contents" v-html="renderIcon('mingcute:exit-line', 12)" />
                   退出
                 </button>
+                <button v-else style="display:flex;align-items:center;gap:4px;background:none;border:1px solid var(--bew-border-color);border-radius:var(--bew-radius-half);padding:2px 8px;cursor:pointer;color:var(--bew-text-2);font-size:.82em;white-space:nowrap" @click="navigateTo(AppPage.ContestDetail, `https://www.luogu.com.cn/contest/${contestId}`)">
+                  <span style="display:contents" v-html="renderIcon('mingcute:arrow-left-line', 12)" />
+                  返回比赛
+                </button>
                 <button :disabled="submitting" style="display:flex;align-items:center;gap:4px;background:var(--bew-theme-color);color:#fff;border:none;border-radius:var(--bew-radius-half);padding:3px 12px;cursor:pointer;font-size:.85em;font-weight:600;white-space:nowrap" @click="handleSubmit">
                   <span style="display:contents" v-html="renderIcon('mingcute:send-line', 12)" />
                   {{ submitting ? '…' : '提交' }}
