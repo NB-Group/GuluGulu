@@ -929,6 +929,10 @@ onUnmounted(() => {
                   <input v-model="enableO2" type="checkbox" style="width:13px;height:13px;cursor:pointer"> O2
                 </label>
                 <span style="flex:1" />
+                <button style="display:flex;align-items:center;gap:4px;background:none;border:1px solid var(--bew-border-color);border-radius:var(--bew-radius-half);padding:2px 8px;cursor:pointer;color:var(--bew-text-2);font-size:.82em;white-space:nowrap" @click="copyMarkdown">
+                  <span style="display:contents" v-html="renderIcon(copiedMarkdown ? 'mingcute:check-circle-fill' : 'mingcute:copy-line', 12)" />
+                  {{ copiedMarkdown ? '已复制' : '复制MD' }}
+                </button>
                 <button style="display:flex;align-items:center;gap:4px;background:none;border:1px solid var(--bew-border-color);border-radius:var(--bew-radius-half);padding:2px 8px;cursor:pointer;color:var(--bew-text-2);font-size:.82em;white-space:nowrap" @click="showTestPanel = !showTestPanel">
                   <span style="display:contents" v-html="renderIcon(showTestPanel ? 'mingcute:down-line' : 'mingcute:right-line', 12)" />
                   自测
