@@ -126,8 +126,47 @@ useCodeMirror({
   lang: computed(() => selectedLang.value.aceMode),
 })
 
+// 本地代码草稿(按 pid)。洛谷只通过自家编辑器存服务端草稿,本扩展 IDE 从未回写,
+// 导致退出即丢。这里把编辑器镜像到 localStorage,草稿即可跨刷新/退出存活;载入时
+// 洛谷服务端草稿优先。
+function localCodeKey(pid: string) {
+  return `guly:code:${pid}`
+}
+function loadLocalCode(pid: string): { code: string, lang: number } | null {
+  try {
+    const raw = localStorage.getItem(localCodeKey(pid))
+    if (!raw)
+      return null
+    const v = JSON.parse(raw)
+    if (typeof v?.code === 'string')
+      return { code: v.code, lang: typeof v.lang === 'number' ? v.lang : 28 }
+  }
+  catch {}
+  return null
+}
+let pendingSavePid: string | null = null
+let saveTimer: ReturnType<typeof setTimeout> | null = null
+function flushLocalCode() {
+  if (saveTimer) { clearTimeout(saveTimer); saveTimer = null }
+  const pid = pendingSavePid
+  pendingSavePid = null
+  if (!pid)
+    return
+  try {
+    localStorage.setItem(localCodeKey(pid), JSON.stringify({ code: codeContent.value, lang: selectedLang.value.id, ts: Date.now() }))
+  }
+  catch {}
+}
+function scheduleLocalSave() {
+  pendingSavePid = problemId.value
+  if (saveTimer)
+    clearTimeout(saveTimer)
+  saveTimer = setTimeout(flushLocalCode, 600)
+}
+watch(codeContent, scheduleLocalSave)
+watch(() => selectedLang.value.id, scheduleLocalSave)
+
 let loadingPid: string | null = null // guard against concurrent loads
-let isInitialLoad = true // 只在首次加载填模板,切题时不强行覆盖编辑器
 async function loadRealData() {
   const pid = problemId.value
   if (loadingPid === pid)
@@ -198,15 +237,15 @@ async function loadRealData() {
       }))
     }
 
-    // Load saved code from Luogu (lastCode / lastLanguage). Only auto-fill a
-    // starter template on the first load — on problem-switch leave empty when
-    // there's no saved code, so we don't clobber the editor with A+B.
+    // 代码恢复优先级:洛谷服务端草稿 → 本地草稿 → 空。不再填 A+B 模板:
+    // 无关起始代码反而困惑,且本地草稿现已跨退出存活,编辑器不会重置。
     const savedCode: string = rd.lastCode || ''
     const savedLang: number | undefined = rd.lastLanguage
-    codeContent.value = savedCode || (isInitialLoad ? getDefaultCode(savedLang || 28) : '')
-    isInitialLoad = false
-    if (savedLang) {
-      const found = LUOGU_LANGUAGES.find(l => l.id === savedLang)
+    const local = loadLocalCode(pid)
+    codeContent.value = savedCode || local?.code || ''
+    const restoreLang = savedLang || local?.lang
+    if (restoreLang) {
+      const found = LUOGU_LANGUAGES.find(l => l.id === restoreLang)
       if (found)
         selectedLang.value = found
     }
@@ -407,51 +446,9 @@ function loadCaptcha() {
   captchaSrc.value = `https://www.luogu.com.cn/api/verify/captcha?_t=${Date.now()}`
 }
 
-// Default code templates per language
-function getDefaultCode(lang: number): string {
-  const t: Record<number, string> = {
-    1: 'program APlusB;\nvar a, b: longint;\nbegin\n    readln(a, b);\n    writeln(a + b);\nend.\n',
-    2: '#include <stdio.h>\n\nint main() {\n    int a, b;\n    scanf("%d%d", &a, &b);\n    printf("%d\\n", a + b);\n    return 0;\n}\n',
-    3: '#include <iostream>\nusing namespace std;\n\nint main() {\n    int a, b;\n    cin >> a >> b;\n    cout << a + b << endl;\n    return 0;\n}\n',
-    4: '#include <iostream>\nusing namespace std;\n\nint main() {\n    int a, b;\n    cin >> a >> b;\n    cout << a + b << endl;\n    return 0;\n}\n',
-    5: '',
-    7: 's = input().split()\nprint(int(s[0]) + int(s[1]))\n',
-    8: 'import java.util.*;\n\npublic class Main {\n    public static void main(String[] args) {\n        Scanner cin = new Scanner(System.in);\n        int a = cin.nextInt(), b = cin.nextInt();\n        System.out.println(a + b);\n    }\n}\n',
-    9: 'const fs = require("fs");\nconst data = fs.readFileSync("/dev/stdin");\nconst result = data.toString("ascii").trim().split(" ").map(x => parseInt(x)).reduce((a, b) => a + b, 0);\nconsole.log(result);\nprocess.exit();\n',
-    10: 'a = io.read("*n")\nb = io.read("*n")\nprint(a + b)\n',
-    11: '#include <iostream>\nusing namespace std;\n\nint main() {\n    int a, b;\n    cin >> a >> b;\n    cout << a + b << endl;\n    return 0;\n}\n',
-    12: '#include <iostream>\nusing namespace std;\n\nint main() {\n    int a, b;\n    cin >> a >> b;\n    cout << a + b << endl;\n    return 0;\n}\n',
-    13: 'Scanf.scanf "%i %i\\n" (fun a b -> print_int (a + b))\n',
-    14: 'package main\n\nimport "fmt"\n\nfunc main() {\n    var a, b int\n    fmt.Scanf("%d%d", &a, &b)\n    fmt.Println(a + b)\n}\n',
-    15: 'use std::io;\n\nfn main() {\n    let mut input = String::new();\n    io::stdin().read_line(&mut input).unwrap();\n    let mut s = input.trim().split(" ");\n    let a: i32 = s.next().unwrap().parse().unwrap();\n    let b: i32 = s.next().unwrap().parse().unwrap();\n    println!("{}", a + b);\n}\n',
-    16: '<?php\n$input = trim(file_get_contents("php://stdin"));\nlist($a, $b) = explode(" ", $input);\necho $a + $b;\n',
-    17: 'using System;\n\npublic class APlusB {\n    private static void Main() {\n        string[] input = Console.ReadLine().Split(" ");\n        Console.WriteLine(int.Parse(input[0]) + int.Parse(input[1]));\n    }\n}\n',
-    18: 'a, b = gets.split.map(&:to_i)\nprint a + b\n',
-    19: 'main = do\n    [a, b] <- (map read . words) \x60fmap\x60 getLine\n    print (a + b)\n',
-    20: 'fun main(args: Array<String>) {\n    val (a, b) = readLine()!!.split(" ").map(String::toInt)\n    println(a + b)\n}\n',
-    21: 'import java.util.*;\n\npublic class Main {\n    public static void main(String[] args) {\n        Scanner cin = new Scanner(System.in);\n        int a = cin.nextInt(), b = cin.nextInt();\n        System.out.println(a + b);\n    }\n}\n',
-    22: 'import java.util.Scanner\n\nobject Main {\n    def main(args: Array[String]): Unit = {\n        val cin = new Scanner(System.in)\n        val a = cin.nextInt()\n        val b = cin.nextInt()\n        println(a + b)\n    }\n}\n',
-    23: 'nums = map(x -> parse(Int, x), split(readline(), " "))\nprintln(nums[1] + nums[2])\n',
-    24: 's = raw_input().split()\nprint int(s[0]) + int(s[1])\n',
-    25: 's = input().split()\nprint(int(s[0]) + int(s[1]))\n',
-    26: 'my \\$in = <STDIN>;\nchomp \\$in;\n\\$in = [split /[\\\\s,]+/, \\$in];\nmy \\$c = \\$in->[0] + \\$in->[1];\nprint "\\$c\\\\n";\n',
-    27: '#include <iostream>\nusing namespace std;\n\nint main() {\n    int a, b;\n    cin >> a >> b;\n    cout << a + b << endl;\n    return 0;\n}\n',
-    28: '#include <iostream>\nusing namespace std;\n\nint main() {\n    int a, b;\n    cin >> a >> b;\n    cout << a + b << endl;\n    return 0;\n}\n',
-    29: 'open System\n\n[<EntryPoint>]\nlet main argv =\n    let input = Console.ReadLine().Split(" ")\n    let a = int input.[0]\n    let b = int input.[1]\n    printfn "%d" (a + b)\n    0\n',
-    31: 'import std.stdio;\n\nvoid main() {\n    int a, b;\n    readf("%d %d", &a, &b);\n    writeln(a + b);\n}\n',
-    34: '#include <iostream>\nusing namespace std;\n\nint main() {\n    int a, b;\n    cin >> a >> b;\n    cout << a + b << endl;\n    return 0;\n}\n',
-  }
-  return t[lang] || ''
-}
 function onLangChange(lang: LuoguLanguage) {
   selectedLang.value = lang
-  if (!codeContent.value) {
-    codeContent.value = getDefaultCode(lang.id)
-  }
 }
-
-if (!codeContent.value)
-  codeContent.value = getDefaultCode(28)
 
 // ============================================================
 // Computed
@@ -667,11 +664,13 @@ function handleTabChange(tab: string) {
 onMounted(() => {
   loadRealData()
   injectKatexCSS()
+  window.addEventListener('pagehide', flushLocalCode)
 })
 
 // Reload data on SPA navigation to a different problem
 watch(problemId, (newPid, oldPid) => {
   if (newPid !== oldPid) {
+    flushLocalCode() // 在编辑器被新题目覆盖前,先把上一题草稿落盘
     loadError.value = false
     loading.value = true
     submitError.value = ''
@@ -687,6 +686,8 @@ watch(problemId, (newPid, oldPid) => {
 })
 
 onUnmounted(() => {
+  flushLocalCode()
+  window.removeEventListener('pagehide', flushLocalCode)
   if (loadingTimer)
     clearTimeout(loadingTimer)
   cleanupResize?.()
