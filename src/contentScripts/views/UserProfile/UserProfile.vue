@@ -249,7 +249,7 @@ watch(subView, (v) => { if (v) fetchFollowList(v) })
           <span v-if="relationshipLabel" text="xs" px-2 py-0.5 rounded-full bg="$bew-theme-color-20" flex-shrink-0 style="color:var(--bew-theme-color);font-weight:600">{{ relationshipLabel }}</span>
           <span text="xs" fw-bold px-2 py-0.5 rounded-full flex-shrink-0 :style="{ background: `${ccfColor(user.ccfLevel)}20`, color: ccfColor(user.ccfLevel) }">{{ ccfLabel(user.ccfLevel) }}</span>
         </div>
-        <div flex="~ col lg:row gap-6" items="start">
+        <div flex="~ col xl:row gap-6" items="start">
         <!-- Left sidebar: user info card + stats (sticky on md+) -->
         <div flex="1" min-w-0 class="profile-sidebar-col">
           <div class="profile-sidebar">
@@ -428,10 +428,9 @@ watch(subView, (v) => { if (v) fetchFollowList(v) })
   :deep(img) { max-width: 100%; border-radius: var(--bew-radius); }
 }
 
-/* Profile sidebar (right column): sticky only on lg+ (two-column mode).
-   Below lg the layout collapses to a single column. UnoCSS default lg = 1024px.
-   Offset below the always-pinned slim title bar (~40px). */
-@media (min-width: 1024px) {
+/* Profile sidebar: sticky only on xl+ (two-column mode, ≥1280px).
+   Below xl the layout collapses to a single column so the card gets full width. */
+@media (min-width: 1280px) {
   .profile-sidebar {
     position: sticky;
     top: calc(var(--bew-top-bar-height) + 56px);
