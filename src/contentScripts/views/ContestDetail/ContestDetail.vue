@@ -283,7 +283,16 @@ function openUser(uid: number) { window.open(`https://www.luogu.com.cn/user/${ui
 function openOriginal() { window.open(`https://www.luogu.com.cn/contest/${contestId.value}`, '_blank') }
 function openRecord(rid: number) { window.open(`https://www.luogu.com.cn/record/${rid}`, '_blank') }
 
-onMounted(() => { fetchContestData() })
+// Current user's per-problem scores (from the scoreboard), so the problem list
+// shows real attainment instead of the always-100 max. Null until the
+// scoreboard loads or if the user isn't on it (not registered / not started).
+const myUid = computed(() => Number((window as any).__guly_user?.uid) || 0)
+const myScores = computed(() => scoreboard.value.find(r => r.user.uid === myUid.value)?.scores ?? null)
+
+onMounted(() => {
+  fetchContestData()
+  fetchScoreboard() // best-effort (catches internally); enables per-problem my-score
+})
 watch(contestId, () => { if (contestId.value) fetchContestData() })
 watch(activeTab, (t) => { if (t === 'ranking' && scoreboard.value.length === 0) fetchScoreboard() })
 </script>
@@ -373,7 +382,7 @@ watch(activeTab, (t) => { if (t === 'ranking' && scoreboard.value.length === 0) 
                 <div style="font-size:var(--bew-base-font-size);color:var(--bew-text-1);font-weight:600">{{ p.pid }} {{ p.title }}</div>
                 <div v-if="p.submitted != null && p.submitted >= 0" style="font-size:.8em;color:var(--bew-text-3)">通过 {{ p.accepted }} / 提交 {{ p.submitted }}</div>
               </div>
-              <span style="font-size:var(--bew-base-font-size);color:var(--bew-theme-color);font-weight:600;flex-shrink:0">{{ p.score }} 分</span>
+              <span style="font-size:var(--bew-base-font-size);font-weight:600;flex-shrink:0" :style="{ color: (myScores && myScores[idx] != null) ? 'var(--bew-success-color)' : 'var(--bew-text-4)' }">{{ (myScores && myScores[idx] != null) ? `${myScores[idx]} 分` : '未提交' }}</span>
               <button ml-4 mt-0 style="background:var(--bew-theme-color-20);color:var(--bew-theme-color);border:none;border-radius:var(--bew-radius);padding:3px 12px;cursor:pointer;font-size:.8em;font-weight:600" @click.prevent="activeTab='submit';selectedPid=p.pid;loadProblem(p.pid)">提交</button>
             </a>
             <div v-if="problems.length === 0" text="center" p-8 style="color:var(--bew-text-3);font-size:var(--bew-base-font-size)">暂无题目</div>
