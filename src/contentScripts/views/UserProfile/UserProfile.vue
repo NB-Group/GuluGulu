@@ -251,7 +251,7 @@ watch(subView, (v) => { if (v) fetchFollowList(v) })
         </div>
         <div flex="~ col lg:row gap-6" items="start">
         <!-- Left sidebar: user info card + stats (sticky on md+) -->
-        <div min-w-0 class="profile-sidebar-col lg:order-1 lg:w-80">
+        <div flex="1" min-w-0 class="profile-sidebar-col">
           <div class="profile-sidebar">
         <!-- Profile Card -->
         <div bg="$bew-content" rounded="$bew-radius" p-7 mb-6 shadow="[var(--bew-shadow-1),var(--bew-shadow-edge-glow-1)]" border="1 $bew-border-color" style="backdrop-filter:var(--bew-filter-glass-1)">
@@ -320,7 +320,7 @@ watch(subView, (v) => { if (v) fetchFollowList(v) })
         </div>
 
         <!-- Right main: quick entries + heatmap + prizes -->
-        <div flex="1" min-w-0 class="lg:order-2">
+        <div flex="2" min-w-0>
         <!-- Quick entry buttons (own profile only) -->
         <div v-if="isOwnProfile" flex="~ wrap gap-2" mb-6>
           <div v-for="item in quickEntries" :key="item.label"
