@@ -242,7 +242,7 @@ watch(subView, (v) => { if (v) fetchFollowList(v) })
     <Transition name="content-reveal">
       <div v-if="!loading && user" w-full>
         <!-- Sticky slim title bar — avatar + name + uid + ccf, pinned while scrolling -->
-        <div flex="~ items-center gap-2" style="position:sticky; top:calc(var(--bew-top-bar-height) + 8px); z-index:9; padding:7px 14px; background:var(--bew-content); border:1px solid var(--bew-border-color); border-radius:var(--bew-radius); backdrop-filter:var(--bew-filter-glass-1); box-shadow:var(--bew-shadow-1); margin-bottom:8px">
+        <div flex="~ items-center gap-2" style="position:sticky; top:calc(var(--bew-top-bar-height) + 8px); z-index:9; padding:8px 18px; background:var(--bew-content); border:1px solid var(--bew-border-color); border-radius:var(--bew-radius); backdrop-filter:var(--bew-filter-glass-1); box-shadow:var(--bew-shadow-1); margin-bottom:8px">
           <img :src="user.avatar" style="width:24px;height:24px;border-radius:50%;object-fit:cover;flex-shrink:0" @error="(e:any) => e.target.style.display='none'" />
           <h1 style="font-size:1rem;font-weight:700;margin:0;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" :style="{ color: colorVar(user.color) }">{{ user.name }}</h1>
           <span text="xs $bew-text-2" px-2 py-0.5 rounded-full bg="$bew-fill-1" flex-shrink-0>UID: {{ user.uid }}</span>
@@ -251,10 +251,10 @@ watch(subView, (v) => { if (v) fetchFollowList(v) })
         </div>
         <div flex="~ col lg:row gap-6" items="start">
         <!-- Left sidebar: user info card + stats (sticky on md+) -->
-        <div min-w-0 class="profile-sidebar-col lg:order-2 lg:w-80">
+        <div min-w-0 class="profile-sidebar-col lg:order-1 lg:w-80">
           <div class="profile-sidebar">
         <!-- Profile Card -->
-        <div bg="$bew-content" rounded="$bew-radius" p-6 mb-6 shadow="[var(--bew-shadow-1),var(--bew-shadow-edge-glow-1)]" border="1 $bew-border-color" style="backdrop-filter:var(--bew-filter-glass-1)">
+        <div bg="$bew-content" rounded="$bew-radius" p-7 mb-6 shadow="[var(--bew-shadow-1),var(--bew-shadow-edge-glow-1)]" border="1 $bew-border-color" style="backdrop-filter:var(--bew-filter-glass-1)">
           <div flex="~ col md:row gap-6" items="start md:items-center">
             <!-- Avatar -->
             <div flex="~ col" items="center" gap-2 shrink-0>
@@ -320,7 +320,7 @@ watch(subView, (v) => { if (v) fetchFollowList(v) })
         </div>
 
         <!-- Right main: quick entries + heatmap + prizes -->
-        <div flex="1" min-w-0 class="lg:order-1">
+        <div flex="1" min-w-0 class="lg:order-2">
         <!-- Quick entry buttons (own profile only) -->
         <div v-if="isOwnProfile" flex="~ wrap gap-2" mb-6>
           <div v-for="item in quickEntries" :key="item.label"
