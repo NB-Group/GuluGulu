@@ -801,12 +801,22 @@ onUnmounted(() => {
             <span style="display:contents" v-html="renderIcon(tab.icon, 16)" />
             {{ tab.label }}
           </button>
+          <!-- Problem meta (moved from right sidebar) -->
+          <div flex="~ items-center gap-3" px-3 text="xs $bew-text-3" style="margin-left:auto">
+            <span flex="~ items-center gap-1"><span style="display:contents" v-html="renderIcon('mingcute:time-line', 14)" />{{ problem.timeLimit }}</span>
+            <span flex="~ items-center gap-1"><span style="display:contents" v-html="renderIcon('mingcute:chip-line', 14)" />{{ problem.memoryLimit }}</span>
+            <span flex="~ items-center gap-1"><span style="display:contents" v-html="renderIcon('mingcute:chart-bar-line', 14)" />{{ passRate }}%</span>
+            <span v-if="problem.provider" flex="~ items-center gap-1" cursor="pointer" @click="openProviderProfile(problem.provider!.uid)">
+              <img v-if="problem.provider.avatar" :src="problem.provider.avatar" style="width:16px;height:16px;border-radius:50%" @error="(e:any)=>{e.target.style.display='none'}" />
+              <span text="$bew-theme-color">{{ problem.provider.name }}</span>
+            </span>
+          </div>
           <button
             v-if="!isSplitView" flex="~ items-center gap-1" p="x-3 y-2" rounded="$bew-radius-half" text="sm"
             border="none"
             :disabled="!isLoggedIn"
             :title="isLoggedIn ? '' : '请先登录洛谷后再使用 IDE'"
-            :style="{ background:'var(--bew-success-color-20)', color:'var(--bew-success-color)', fontWeight:600, marginLeft:'auto', opacity: isLoggedIn ? 1 : 0.5, cursor: isLoggedIn ? 'pointer' : 'not-allowed' }"
+            :style="{ background:'var(--bew-success-color-20)', color:'var(--bew-success-color)', fontWeight:600, opacity: isLoggedIn ? 1 : 0.5, cursor: isLoggedIn ? 'pointer' : 'not-allowed' }"
             @click="isLoggedIn && (ideMode = true)"
           >
             <span style="display:contents" v-html="renderIcon('mingcute:terminal-line', 16)" />
@@ -1084,109 +1094,6 @@ onUnmounted(() => {
               <!-- Source -->
               <div v-if="problem.source" mt-8 pt-4 border="t-1 $bew-border-color">
                 <span text="sm $bew-text-3">来源：{{ problem.source }}</span>
-              </div>
-            </div>
-
-            <!-- Right column: sidebar info card (pid / difficulty / limits / tags / provider / external link) -->
-            <div min-w-0 class="problem-sidebar-col lg:order-2 lg:w-80">
-              <div
-                class="problem-sidebar"
-                bg="$bew-fill-1" rounded="$bew-radius" p-4
-                flex="~ col gap-3"
-              >
-                <!-- Quick actions: submit / copy markdown / solutions / discussions -->
-                <div flex="~ gap-2 wrap" mb-1>
-                  <button flex="~ items-center gap-1" px-3 py-1.5 rounded="$bew-radius-half" style="background:var(--bew-theme-color);color:#fff;border:none;cursor:pointer;font-size:.82em;font-weight:600" @click="handleTabChange('submit')">
-                    <span v-html="renderIcon('mingcute:code-line', 14)" style="display:contents" /> 提交
-                  </button>
-                  <button flex="~ items-center gap-1" px-3 py-1.5 rounded="$bew-radius-half" style="background:var(--bew-content);color:var(--bew-text-1);border:1px solid var(--bew-border-color);cursor:pointer;font-size:.82em;font-weight:600" @click="copyMarkdown">
-                    <span v-html="renderIcon(copiedMarkdown ? 'mingcute:check-circle-fill' : 'mingcute:copy-line', 14)" style="display:contents" /> {{ copiedMarkdown ? '已复制' : '复制' }}
-                  </button>
-                  <button flex="~ items-center gap-1" px-3 py-1.5 rounded="$bew-radius-half" style="background:var(--bew-content);color:var(--bew-text-1);border:1px solid var(--bew-border-color);cursor:pointer;font-size:.82em;font-weight:600" @click="handleTabChange('solutions')">
-                    <span v-html="renderIcon('mingcute:book-4-line', 14)" style="display:contents" /> 题解
-                  </button>
-                  <button flex="~ items-center gap-1" px-3 py-1.5 rounded="$bew-radius-half" style="background:var(--bew-content);color:var(--bew-text-1);border:1px solid var(--bew-border-color);cursor:pointer;font-size:.82em;font-weight:600" @click="handleTabChange('discussions')">
-                    <span v-html="renderIcon('mingcute:comment-line', 14)" style="display:contents" /> 讨论
-                  </button>
-                </div>
-
-                <!-- PID + Difficulty badge -->
-                <div flex="~ items-center justify-between gap-2">
-                  <span font-mono text="base $bew-text-1" fw-bold>{{ problem.pid }}</span>
-                  <span
-                    text="xs" fw-bold p="x-2 y-0.5"
-                    rounded="$bew-radius-half"
-                    flex="~ items-center gap-1"
-                    :style="{ backgroundColor: `${difficultyColor}20`, color: difficultyColor }"
-                  >
-                    <span style="display:contents" v-html="renderIcon('mingcute:fire-line', 12)" />
-                    {{ problem.difficultyLabel }}
-                  </span>
-                </div>
-
-                <!-- Limits + pass rate -->
-                <div flex="~ col gap-1.5" text="sm $bew-text-2" p="y-3" border="y-1 $bew-border-color">
-                  <span flex="~ items-center gap-2">
-                    <span style="display:contents" v-html="renderIcon('mingcute:time-line', 16)" />
-                    <span>时间 {{ problem.timeLimit }}</span>
-                  </span>
-                  <span flex="~ items-center gap-2">
-                    <span style="display:contents" v-html="renderIcon('mingcute:chip-line', 16)" />
-                    <span>内存 {{ problem.memoryLimit }}</span>
-                  </span>
-                  <span flex="~ items-center gap-2">
-                    <span style="display:contents" v-html="renderIcon('mingcute:chart-bar-line', 16)" />
-                    <span>通过率 {{ passRate }}% ({{ problem.totalAccepted.toLocaleString() }}/{{ problem.totalSubmit.toLocaleString() }})</span>
-                  </span>
-                </div>
-
-                <!-- Tags -->
-                <div v-if="problem.tags.length > 0">
-                  <div text="xs $bew-text-3" mb-2 flex="~ items-center gap-1">
-                    <span style="display:contents" v-html="renderIcon('mingcute:hashtag-line', 12)" />
-                    标签
-                  </div>
-                  <div flex="~ gap-1.5 wrap">
-                    <span
-                      v-for="tag in problem.tags" :key="tag.id" text="xs" px-2 py-0.5
-                      rounded-full bg="$bew-content" style="color:var(--bew-text-3)"
-                    >{{ tag.name }}</span>
-                  </div>
-                </div>
-
-                <!-- Provider (avatar + name) -->
-                <div v-if="problem.provider">
-                  <div text="xs $bew-text-3" mb-2 flex="~ items-center gap-1">
-                    <span style="display:contents" v-html="renderIcon('mingcute:user-3-line', 12)" />
-                    提供者
-                  </div>
-                  <div flex="~ items-center gap-2" cursor-pointer @click="openProviderProfile(problem.provider!.uid)">
-                    <img
-                      v-if="problem.provider.avatar"
-                      :src="problem.provider.avatar"
-                      style="width:24px;height:24px;border-radius:50%;object-fit:cover"
-                      @error="(e:any) => { e.target.style.display = 'none' }"
-                    >
-                    <span text="sm $bew-theme-color" fw-bold>{{ problem.provider.name }}</span>
-                  </div>
-                </div>
-
-                <!-- External site link (CF/AT/NC/SP/UVA) -->
-                <button
-                  v-if="externalUrl"
-                  flex="~ items-center justify-center gap-1"
-                  p="x-3 y-2"
-                  text="sm $bew-text-1"
-                  rounded="$bew-radius-half"
-                  border="1 $bew-border-color"
-                  bg="$bew-content"
-                  cursor="pointer"
-                  :title="`在原站打开 (${problemId})`"
-                  @click="openOriginalSite"
-                >
-                  <span style="display:contents" v-html="renderIcon('mingcute:link-2-line', 14)" />
-                  在原站打开
-                </button>
               </div>
             </div>
           </div>
