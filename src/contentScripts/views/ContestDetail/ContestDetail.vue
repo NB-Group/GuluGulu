@@ -386,9 +386,8 @@ watch(activeTab, (t) => { if (t === 'ranking' && scoreboard.value.length === 0) 
               <span style="width:32px;font-size:var(--bew-base-font-size);color:var(--bew-text-2);font-weight:700;flex-shrink:0">{{ problemLabel(idx) }}</span>
               <div flex="1" min-w-0 mx-3>
                 <div style="font-size:var(--bew-base-font-size);color:var(--bew-text-1);font-weight:600">{{ p.pid }} {{ p.title }}</div>
-                <div v-if="p.submitted != null && p.submitted >= 0" style="font-size:.8em;color:var(--bew-text-3)">通过 {{ p.accepted }} / 提交 {{ p.submitted }}</div>
               </div>
-              <span style="font-size:var(--bew-base-font-size);font-weight:600;flex-shrink:0" :style="{ color: (myScores && myScores[idx] != null) ? 'var(--bew-success-color)' : 'var(--bew-text-4)' }">{{ (myScores && myScores[idx] != null) ? `${myScores[idx]} 分` : '未提交' }}</span>
+              <span style="font-size:var(--bew-base-font-size);font-weight:600;flex-shrink:0" :style="{ color: ((myScores && myScores[idx] != null) || p.accepted) ? 'var(--bew-success-color)' : 'var(--bew-text-4)' }">{{ (myScores && myScores[idx] != null) ? `${myScores[idx]} 分` : (p.accepted ? '已通过' : (p.submitted ? '已提交' : '未提交')) }}</span>
               <button ml-4 mt-0 style="background:var(--bew-theme-color-20);color:var(--bew-theme-color);border:none;border-radius:var(--bew-radius);padding:3px 12px;cursor:pointer;font-size:.8em;font-weight:600" @click.prevent="activeTab='submit';selectedPid=p.pid;loadProblem(p.pid)">提交</button>
             </a>
             <div v-if="problems.length === 0" text="center" p-8 style="color:var(--bew-text-3);font-size:var(--bew-base-font-size)">暂无题目</div>
