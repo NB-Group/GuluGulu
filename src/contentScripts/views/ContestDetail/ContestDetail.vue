@@ -288,6 +288,15 @@ function openRecord(rid: number) { window.open(`https://www.luogu.com.cn/record/
 // scoreboard loads or if the user isn't on it (not registered / not started).
 const myUid = computed(() => Number((window as any).__guly_user?.uid) || 0)
 const myScores = computed(() => scoreboard.value.find(r => r.user.uid === myUid.value)?.scores ?? null)
+// My contest standing — drives the rich "我的成绩" sidebar card.
+const myRow = computed(() => scoreboard.value.find(r => r.user.uid === myUid.value) || null)
+const myRank = computed(() => myRow.value?.rank ?? null)
+const myTotalScore = computed(() => myRow.value?.score ?? null)
+const myPassedCount = computed(() => {
+  const s = myScores.value
+  if (!s) return 0
+  return s.reduce((n, v, i) => n + (v != null && v >= (problems.value[i]?.score || 100) ? 1 : 0), 0)
+})
 
 onMounted(() => {
   fetchContestData()
@@ -305,47 +314,101 @@ watch(activeTab, (t) => { if (t === 'ranking' && scoreboard.value.length === 0) 
     </div>
 
     <Transition name="content-reveal">
-      <div v-if="!loading && contest" w-full flex="~ col md:row gap-6" items="start">
+      <div v-if="!loading && contest" w-full flex="~ col lg:row gap-6" class="lg:flex-wrap" items="start">
         <!-- Sticky contest title bar — pinned at the very top, always visible -->
         <div w-full flex="~ items-center gap-2" style="position:sticky; top:calc(var(--bew-top-bar-height) + 8px); z-index:9; padding:8px 12px; background:var(--bew-content); border:1px solid var(--bew-border-color); border-radius:var(--bew-radius); backdrop-filter:var(--bew-filter-glass-1); box-shadow:var(--bew-shadow-1); margin-bottom:8px">
-          <span text="xs" fw-bold px-3 py-1 rounded-full flex-shrink-0 :style="{ background: contestStatus.color + '20', color: contestStatus.color }">{{ contestStatus.label }}</span>
+          <span v-html="renderIcon(contestStatus.ongoing ? 'mingcute:play-fill' : contestStatus.ended ? 'mingcute:trophy-fill' : 'mingcute:time-line', 16)" :style="{ display: 'contents', color: contestStatus.color }" />
+          <span text="xs" fw-bold px-2.5 py-1 rounded-full flex-shrink-0 :style="{ background: contestStatus.color + '20', color: contestStatus.color }">{{ contestStatus.label }}</span>
           <h1 style="font-size:1.1rem;color:var(--bew-text-1);font-weight:700;margin:0;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ c.name }}</h1>
-          <span v-if="countdown()" text="xs" fw-bold px-3 py-1 rounded-full flex-shrink-0 style="background:var(--bew-error-color-20);color:var(--bew-error-color)">{{ countdown() }}</span>
+          <span v-if="c.rated" text="xs" fw-bold px-2.5 py-1 rounded-full flex-shrink-0 style="background:var(--bew-warning-color-20);color:var(--bew-warning-color)">Rated</span>
+          <span v-if="countdown()" text="xs" fw-bold px-2.5 py-1 rounded-full flex-shrink-0 style="background:var(--bew-error-color-20);color:var(--bew-error-color)">{{ countdown() }}</span>
         </div>
         <!-- ============================================================ -->
         <!-- Left column: Contest meta sidebar (sticky on md+) -->
         <!-- ============================================================ -->
-        <div flex="1" min-w-0 class="contest-sidebar-col md:order-2">
+        <div min-w-0 class="contest-sidebar-col lg:order-2 lg:w-80">
           <div class="contest-sidebar" bg="$bew-content" rounded="$bew-radius" p-6 shadow="[var(--bew-shadow-1),var(--bew-shadow-edge-glow-1)]" border="1 $bew-border-color" style="backdrop-filter:var(--bew-filter-glass-1)">
-            <div flex="~ col gap-4">
-              <div flex="~ items-center gap-2" flex-wrap>
-                <span text="xs" fw-bold px-3 py-1 rounded-full :style="{ background: contestStatus.color + '20', color: contestStatus.color }">{{ contestStatus.label }}</span>
-                <span text="xs" fw-bold px-3 py-1 rounded-full bg="$bew-theme-color-20" style="color:var(--bew-theme-color)">{{ c.ruleType || c.type || 'OI' }}</span>
-                <span v-if="c.rated" text="xs" fw-bold px-3 py-1 rounded-full style="background:var(--bew-warning-color-20);color:var(--bew-warning-color)">Rated</span>
-                <template v-if="countdown()"><span text="xs" fw-bold px-3 py-1 rounded-full style="background:var(--bew-error-color-20);color:var(--bew-error-color)">{{ countdown() }}</span></template>
+            <!-- 我的成绩 — rich centerpiece -->
+            <div v-if="isLoggedIn" p-5 style="background:linear-gradient(135deg,var(--bew-theme-color-20),transparent);border-bottom:1px solid var(--bew-border-color)">
+              <div flex="~ items-center justify-between" mb-3>
+                <span style="font-size:.75em;color:var(--bew-text-3);font-weight:600;letter-spacing:.05em">我的成绩</span>
+                <span v-if="isRegistered" text="xs" px-2 py-0.5 rounded-full style="background:var(--bew-success-color-20);color:var(--bew-success-color);font-weight:600">已报名</span>
+                <span v-else text="xs" px-2 py-0.5 rounded-full style="background:var(--bew-fill-2);color:var(--bew-text-3)">未报名</span>
               </div>
-              <h1 style="font-size:1.5rem;color:var(--bew-text-1);font-weight:700">{{ c.name }}</h1>
-              <div v-if="c.host" style="font-size:var(--bew-base-font-size);color:var(--bew-text-2)" flex="~ items-center gap-2" mb-1>
-                <span style="font-size:.85em">主办:</span>
-                <img :src="c.host.avatar" style="width:20px;height:20px;border-radius:50%" @error="(e:any) => e.target.style.display='none'" />
-                <span :style="{color:`var(--bew-${c.host.color})`,fontWeight:500}">{{ c.host.name }}</span>
+              <div flex="~ items-end gap-5" mb-3>
+                <div>
+                  <div style="font-size:.7em;color:var(--bew-text-3);margin-bottom:2px">排名</div>
+                  <div flex="~ items-center gap-1" style="font-size:1.55rem;font-weight:800;line-height:1;color:var(--bew-text-1)">
+                    <span v-html="renderIcon('mingcute:medal-fill', 22)" :style="{ display:'contents', color: (myRank != null && myRank <= 3) ? 'var(--bew-warning-color)' : 'var(--bew-theme-color)' }" />
+                    <span>{{ myRank != null ? '#' + myRank : '—' }}</span>
+                  </div>
+                </div>
+                <div style="flex:1">
+                  <div style="font-size:.7em;color:var(--bew-text-3);margin-bottom:2px">总分</div>
+                  <div style="font-size:1.55rem;font-weight:800;line-height:1;color:var(--bew-theme-color)">{{ myTotalScore != null ? myTotalScore : 0 }}</div>
+                </div>
               </div>
-              <div style="font-size:var(--bew-base-font-size);color:var(--bew-text-2)" flex="~ items-center gap-2">
-                <span v-html="renderIcon('mingcute:time-line', 16)" style="display:contents" />
-                {{ timeRange }} ({{ duration }})
+              <div>
+                <div flex="~ items-center justify-between" mb-1 style="font-size:.72em;color:var(--bew-text-3)">
+                  <span flex="~ items-center gap-1"><span v-html="renderIcon('mingcute:check-circle-fill', 14)" style="display:contents;color:var(--bew-success-color)" />通过题目</span>
+                  <span style="color:var(--bew-text-2);font-weight:600">{{ myPassedCount }} / {{ problems.length }}</span>
+                </div>
+                <div style="height:6px;border-radius:99px;background:var(--bew-fill-2);overflow:hidden">
+                  <div :style="{ width: (problems.length ? Math.round(myPassedCount / problems.length * 100) : 0) + '%', height: '100%', background: 'var(--bew-theme-color)', borderRadius: '99px', transition: 'width .4s' }" />
+                </div>
+                <div v-if="!myRow && isRegistered" mt-2 style="font-size:.7em;color:var(--bew-text-3)">比赛开始或有提交后显示成绩</div>
               </div>
-              <div v-if="c.description" style="font-size:var(--bew-base-font-size);color:var(--bew-text-2);line-height:1.6;white-space:pre-wrap" mt-2>{{ c.description }}</div>
-              <div v-if="registeredCount > 0" style="font-size:var(--bew-base-font-size);color:var(--bew-text-3)">{{ registeredCount }} 人已报名</div>
-              <!-- Registration button -->
-              <div v-if="!contestStatus.ended" flex="~ items-center gap-3">
-                <Button v-if="!isRegistered" type="primary" :loading="regLoading" @click="handleRegister">
+            </div>
+            <!-- 比赛信息 — icon meta rows -->
+            <div p-5 flex="~ col gap-3.5">
+              <div flex="~ items-center gap-3" style="font-size:var(--bew-base-font-size)">
+                <span v-html="renderIcon('mingcute:trophy-line', 18)" style="display:contents;color:var(--bew-theme-color);flex-shrink:0" />
+                <span style="color:var(--bew-text-3);width:2.5em;flex-shrink:0;font-size:.9em">赛制</span>
+                <span flex="~ items-center gap-1.5" min-w-0 style="color:var(--bew-text-1);font-weight:500">
+                  <span>{{ c.ruleType || c.type || 'OI' }}</span>
+                  <span v-if="c.rated" text="xs" px-1.5 py-0.5 rounded style="background:var(--bew-warning-color-20);color:var(--bew-warning-color);font-weight:600">Rated</span>
+                </span>
+              </div>
+              <div v-if="c.host" flex="~ items-center gap-3" style="font-size:var(--bew-base-font-size)">
+                <span v-html="renderIcon('mingcute:user-3-line', 18)" style="display:contents;color:var(--bew-theme-color);flex-shrink:0" />
+                <span style="color:var(--bew-text-3);width:2.5em;flex-shrink:0;font-size:.9em">主办</span>
+                <span flex="~ items-center gap-1.5" min-w-0 style="color:var(--bew-text-1);font-weight:500">
+                  <img :src="c.host.avatar" style="width:18px;height:18px;border-radius:50%;flex-shrink:0;object-fit:cover" @error="(e:any) => e.target.style.display='none'" />
+                  <span :style="{ color: `var(--bew-${c.host.color})`, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }">{{ c.host.name }}</span>
+                </span>
+              </div>
+              <div flex="~ items-start gap-3" style="font-size:var(--bew-base-font-size)">
+                <span v-html="renderIcon('mingcute:time-line', 18)" style="display:contents;color:var(--bew-theme-color);flex-shrink:0;margin-top:1px" />
+                <span style="color:var(--bew-text-3);width:2.5em;flex-shrink:0;font-size:.9em;margin-top:1px">时间</span>
+                <span style="color:var(--bew-text-1);font-weight:500;font-size:.88em;line-height:1.45">{{ timeRange }}</span>
+              </div>
+              <div flex="~ items-center gap-3" style="font-size:var(--bew-base-font-size)">
+                <span v-html="renderIcon('mingcute:watch', 18)" style="display:contents;color:var(--bew-theme-color);flex-shrink:0" />
+                <span style="color:var(--bew-text-3);width:2.5em;flex-shrink:0;font-size:.9em">时长</span>
+                <span style="color:var(--bew-text-1);font-weight:500">{{ duration || '—' }}</span>
+              </div>
+              <div flex="~ items-center gap-3" style="font-size:var(--bew-base-font-size)">
+                <span v-html="renderIcon('mingcute:document-line', 18)" style="display:contents;color:var(--bew-theme-color);flex-shrink:0" />
+                <span style="color:var(--bew-text-3);width:2.5em;flex-shrink:0;font-size:.9em">题目</span>
+                <span style="color:var(--bew-text-1);font-weight:500">{{ problems.length }} 题</span>
+              </div>
+              <div v-if="registeredCount > 0 || c.totalRegisteredUsers" flex="~ items-center gap-3" style="font-size:var(--bew-base-font-size)">
+                <span v-html="renderIcon('mingcute:user-add-line', 18)" style="display:contents;color:var(--bew-theme-color);flex-shrink:0" />
+                <span style="color:var(--bew-text-3);width:2.5em;flex-shrink:0;font-size:.9em">报名</span>
+                <span style="color:var(--bew-text-1);font-weight:500">{{ registeredCount || c.totalRegisteredUsers }} 人</span>
+              </div>
+              <div v-if="c.description" mt-2 p-3 rounded="$bew-radius" bg="$bew-fill-1" style="max-height:160px;overflow-y:auto">
+                <div class="markdown-body" style="font-size:.86em;color:var(--bew-text-2);line-height:1.7" v-html="parseMarkdownContent(c.description)" />
+              </div>
+              <div v-if="!contestStatus.ended" mt-1>
+                <Button v-if="!isRegistered" type="primary" :loading="regLoading" w-full @click="handleRegister">
                   <span v-html="renderIcon('mingcute:user-add-line', 16)" style="display:contents" /> 报名参赛
                 </Button>
-                <span v-else px-3 py-1 rounded-full style="font-size:var(--bew-base-font-size);background:var(--bew-success-color-20);color:var(--bew-success-color);font-weight:600">已报名</span>
-                <span v-if="regMsg" style="font-size:var(--bew-base-font-size);color:var(--bew-success-color)">{{ regMsg }}</span>
+                <div v-else text="center" px-3 py-2 rounded-full style="font-size:var(--bew-base-font-size);background:var(--bew-success-color-20);color:var(--bew-success-color);font-weight:600">已报名</div>
               </div>
-              <div v-if="contestStatus.ended" style="font-size:var(--bew-base-font-size);color:var(--bew-text-3)">比赛已结束</div>
-              <div v-if="!canAccessContent && isRegistered" mt-2 p-3 rounded="$bew-radius" style="background:var(--bew-warning-color-20);color:var(--bew-warning-color);font-size:var(--bew-base-font-size)">比赛尚未开始，开始后可查看题目与提交</div>
+              <div v-if="regMsg" style="font-size:.82em;color:var(--bew-success-color)">{{ regMsg }}</div>
+              <div v-if="contestStatus.ended" style="font-size:.82em;color:var(--bew-text-3)">比赛已结束</div>
+              <div v-if="!canAccessContent && isRegistered" p-3 rounded="$bew-radius" style="background:var(--bew-warning-color-20);color:var(--bew-warning-color);font-size:.82em">比赛尚未开始，开始后可查看题目与提交</div>
             </div>
           </div>
         </div>
@@ -353,16 +416,17 @@ watch(activeTab, (t) => { if (t === 'ranking' && scoreboard.value.length === 0) 
         <!-- ============================================================ -->
         <!-- Main content (tab bar + tabs). Left column on md+, scrollable. -->
         <!-- ============================================================ -->
-        <div flex="2" min-w-0 class="md:order-1">
+        <div flex="1" min-w-0 class="lg:order-1">
 
           <!-- ============================================================ -->
           <!-- Tab Bar -->
           <!-- ============================================================ -->
           <div bg="$bew-content" rounded="$bew-radius" mb-4 shadow="[var(--bew-shadow-1),var(--bew-shadow-edge-glow-1)]" border="1 $bew-border-color" style="backdrop-filter:var(--bew-filter-glass-1)" overflow="hidden">
-            <div flex="~" border="b-1 $bew-border-color">
+            <div flex="~" border="b-1 $bew-border-color" overflow="x-auto">
               <template v-for="tab in (['overview','problems','submit','ranking'] as const)" :key="tab">
-                <button v-if="tab==='overview' || canAccessContent" flex="1" style="background:none;border:none;cursor:pointer;padding:12px 16px;font-size:var(--bew-base-font-size);font-weight:600;transition:all .2s" :style="{ color: activeTab === tab ? 'var(--bew-theme-color)' : 'var(--bew-text-3)', borderBottom: activeTab === tab ? '2px solid var(--bew-theme-color)' : '2px solid transparent' }" @click="activeTab = tab">
-                {{ { overview: '概览', problems: '题目', submit: '提交', ranking: '排名' }[tab] }}
+                <button v-if="tab==='overview' || canAccessContent" flex="~ items-center justify-center gap-1.5" flex-shrink-0 style="background:none;border:none;cursor:pointer;padding:11px 18px;font-size:var(--bew-base-font-size);font-weight:600;transition:all .2s" :style="{ color: activeTab === tab ? 'var(--bew-theme-color)' : 'var(--bew-text-3)', borderBottom: activeTab === tab ? '2px solid var(--bew-theme-color)' : '2px solid transparent' }" @click="activeTab = tab">
+                  <span v-html="renderIcon({ overview: 'mingcute:information-line', problems: 'mingcute:document-line', submit: 'mingcute:code-line', ranking: 'mingcute:chart-bar-line' }[tab], 16)" style="display:contents" />
+                  {{ { overview: '概览', problems: '题目', submit: '提交', ranking: '排名' }[tab] }}
                 </button>
               </template>
             </div>
@@ -510,14 +574,14 @@ watch(activeTab, (t) => { if (t === 'ranking' && scoreboard.value.length === 0) 
   :deep(ul), :deep(ol) { padding-left: 1.5em; }
 }
 
-/* Contest meta sidebar: sticky only on md+ (two-column mode).
-   Below md the layout collapses to a single column and the sidebar
-   simply flows above the main content. UnoCSS default md breakpoint = 768px. */
-@media (min-width: 768px) {
+/* Contest meta sidebar: sticky only on lg+ (two-column mode).
+   Below lg the layout collapses to a single column. UnoCSS default lg = 1024px. */
+@media (min-width: 1024px) {
   .contest-sidebar {
     position: sticky;
-    top: calc(var(--bew-top-bar-height) + 16px);
-    max-height: calc(100vh - var(--bew-top-bar-height) - 32px);
+    /* sit just below the always-pinned sticky title bar */
+    top: calc(var(--bew-top-bar-height) + 56px);
+    max-height: calc(100vh - var(--bew-top-bar-height) - 72px);
     overflow-y: auto;
   }
 }
