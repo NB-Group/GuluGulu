@@ -1421,15 +1421,5 @@ onUnmounted(() => {
   }
 }
 
-/* Statement sidebar: sticky only on lg+ (two-column mode).
-   Below lg the layout collapses to a single column. UnoCSS default lg = 1024px.
-   Offset below the always-pinned slim title bar (~40px). */
-@media (min-width: 1024px) {
-  .problem-sidebar {
-    position: sticky;
-    top: calc(var(--bew-top-bar-height) + 56px);
-    max-height: calc(100vh - var(--bew-top-bar-height) - 72px);
-    overflow-y: auto;
-  }
-}
+/* (problem-sidebar right column removed — meta moved to the tab bar) */
 </style>
