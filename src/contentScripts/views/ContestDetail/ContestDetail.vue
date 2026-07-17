@@ -300,7 +300,7 @@ watch(activeTab, (t) => { if (t === 'ranking' && scoreboard.value.length === 0) 
         <!-- ============================================================ -->
         <!-- Left column: Contest meta sidebar (sticky on md+) -->
         <!-- ============================================================ -->
-        <div flex="1" min-w-0 class="contest-sidebar-col">
+        <div flex="1" min-w-0 class="contest-sidebar-col md:order-2">
           <div class="contest-sidebar" bg="$bew-content" rounded="$bew-radius" p-6 shadow="[var(--bew-shadow-1),var(--bew-shadow-edge-glow-1)]" border="1 $bew-border-color" style="backdrop-filter:var(--bew-filter-glass-1)">
             <div flex="~ col gap-4">
               <div flex="~ items-center gap-2" flex-wrap>
@@ -336,9 +336,9 @@ watch(activeTab, (t) => { if (t === 'ranking' && scoreboard.value.length === 0) 
         </div>
 
         <!-- ============================================================ -->
-        <!-- Right column: Main content (tab bar + tabs) -->
+        <!-- Main content (tab bar + tabs). Left column on md+, scrollable. -->
         <!-- ============================================================ -->
-        <div flex="2" min-w-0>
+        <div flex="2" min-w-0 class="md:order-1">
 
           <!-- ============================================================ -->
           <!-- Tab Bar -->
