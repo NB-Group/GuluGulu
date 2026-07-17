@@ -326,7 +326,7 @@ watch(activeTab, (t) => { if (t === 'ranking' && scoreboard.value.length === 0) 
         <!-- ============================================================ -->
         <!-- Left column: Contest meta sidebar (sticky on md+) -->
         <!-- ============================================================ -->
-        <div min-w-0 class="contest-sidebar-col lg:order-2 lg:w-80">
+        <div min-w-0 class="contest-sidebar-col lg:order-2 lg:w-80 lg:shrink-0">
           <div class="contest-sidebar" bg="$bew-content" rounded="$bew-radius" p-6 shadow="[var(--bew-shadow-1),var(--bew-shadow-edge-glow-1)]" border="1 $bew-border-color" style="backdrop-filter:var(--bew-filter-glass-1)">
             <!-- 我的成绩 — rich centerpiece -->
             <div v-if="isLoggedIn" p-5 style="background:linear-gradient(135deg,var(--bew-theme-color-20),transparent);border-bottom:1px solid var(--bew-border-color)">

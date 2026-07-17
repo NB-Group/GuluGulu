@@ -249,9 +249,9 @@ watch(subView, (v) => { if (v) fetchFollowList(v) })
           <span v-if="relationshipLabel" text="xs" px-2 py-0.5 rounded-full bg="$bew-theme-color-20" flex-shrink-0 style="color:var(--bew-theme-color);font-weight:600">{{ relationshipLabel }}</span>
           <span text="xs" fw-bold px-2 py-0.5 rounded-full flex-shrink-0 :style="{ background: `${ccfColor(user.ccfLevel)}20`, color: ccfColor(user.ccfLevel) }">{{ ccfLabel(user.ccfLevel) }}</span>
         </div>
-        <div flex="~ col xl:row gap-6" items="start">
-        <!-- Left sidebar: user info card + stats (sticky on md+) -->
-        <div flex="1" min-w-0 class="profile-sidebar-col w-full xl:w-auto">
+        <div flex="~ col lg:row gap-6" items="start">
+        <!-- Left sidebar: user info card + stats (sticky on lg+) -->
+        <div min-w-0 class="profile-sidebar-col w-full lg:w-80 lg:shrink-0">
           <div class="profile-sidebar">
         <!-- Profile Card -->
         <div bg="$bew-content" rounded="$bew-radius" p-7 mb-6 shadow="[var(--bew-shadow-1),var(--bew-shadow-edge-glow-1)]" border="1 $bew-border-color" style="backdrop-filter:var(--bew-filter-glass-1)">
@@ -320,7 +320,7 @@ watch(subView, (v) => { if (v) fetchFollowList(v) })
         </div>
 
         <!-- Right main: quick entries + heatmap + prizes -->
-        <div flex="2" min-w-0 class="w-full xl:w-auto">
+        <div flex="1" min-w-0 class="w-full lg:w-auto">
         <!-- Quick entry buttons (own profile only) -->
         <div v-if="isOwnProfile" flex="~ wrap gap-2" mb-6>
           <div v-for="item in quickEntries" :key="item.label"
@@ -428,9 +428,9 @@ watch(subView, (v) => { if (v) fetchFollowList(v) })
   :deep(img) { max-width: 100%; border-radius: var(--bew-radius); }
 }
 
-/* Profile sidebar: sticky only on xl+ (two-column mode, ≥1280px).
-   Below xl the layout collapses to a single column so the card gets full width. */
-@media (min-width: 1280px) {
+/* Profile sidebar: sticky only on lg+ (two-column mode, ≥1024px).
+   Below lg the layout collapses to a single column so the card gets full width. */
+@media (min-width: 1024px) {
   .profile-sidebar {
     position: sticky;
     top: calc(var(--bew-top-bar-height) + 56px);
