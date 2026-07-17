@@ -115,9 +115,11 @@ export interface SubmitResult {
 export async function submitCode(payload: SubmitPayload): Promise<SubmitResult> {
   const csrf = getCsrfToken()
 
-  const url = payload.contestId != null
-    ? `https://www.luogu.com.cn/fe/api/contest/submit/${payload.contestId}/${payload.pid}`
-    : `https://www.luogu.com.cn/fe/api/problem/submit/${payload.pid}`
+  // Luogu uses a SINGLE submit endpoint for both normal and contest submissions.
+  // The /fe/api/contest/submit/{cid}/{pid} route does NOT exist (404 "该页面未找到");
+  // contestId is passed as a query param instead.
+  const url = new URL(`https://www.luogu.com.cn/fe/api/problem/submit/${payload.pid}`)
+  if (payload.contestId != null) url.searchParams.set('contestId', String(payload.contestId))
 
   try {
     const res = await fetch(url, {
@@ -149,6 +151,12 @@ export async function submitCode(payload: SubmitPayload): Promise<SubmitResult> 
     let data: any
     try { data = JSON.parse(text) } catch {
       return { status: 0, errorMessage: '提交失败：洛谷返回了非预期的响应' }
+    }
+
+    // Unknown route / 题目不存在（洛谷 404，data.data 含"该页面未找到"）
+    if (data.status === 404 || data.errorCode === 404
+      || (typeof data.data === 'string' && (data.data.includes('未找到') || data.data.includes('页面')))) {
+      return { status: 404, errorMessage: '提交失败：洛谷返回"未找到"——题目不存在或端点失效，请刷新页面或到洛谷原站提交。' }
     }
 
     // Success
