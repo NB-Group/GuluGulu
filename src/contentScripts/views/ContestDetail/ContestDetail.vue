@@ -306,6 +306,12 @@ watch(activeTab, (t) => { if (t === 'ranking' && scoreboard.value.length === 0) 
 
     <Transition name="content-reveal">
       <div v-if="!loading && contest" w-full flex="~ col md:row gap-6" items="start">
+        <!-- Sticky contest title bar — pinned at the very top, always visible -->
+        <div w-full flex="~ items-center gap-2" style="position:sticky; top:calc(var(--bew-top-bar-height) + 8px); z-index:9; padding:8px 12px; background:var(--bew-content); border:1px solid var(--bew-border-color); border-radius:var(--bew-radius); backdrop-filter:var(--bew-filter-glass-1); box-shadow:var(--bew-shadow-1); margin-bottom:8px">
+          <span text="xs" fw-bold px-3 py-1 rounded-full flex-shrink-0 :style="{ background: contestStatus.color + '20', color: contestStatus.color }">{{ contestStatus.label }}</span>
+          <h1 style="font-size:1.1rem;color:var(--bew-text-1);font-weight:700;margin:0;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ c.name }}</h1>
+          <span v-if="countdown()" text="xs" fw-bold px-3 py-1 rounded-full flex-shrink-0 style="background:var(--bew-error-color-20);color:var(--bew-error-color)">{{ countdown() }}</span>
+        </div>
         <!-- ============================================================ -->
         <!-- Left column: Contest meta sidebar (sticky on md+) -->
         <!-- ============================================================ -->
