@@ -713,6 +713,13 @@ onUnmounted(() => {
 
     <Transition name="content-reveal">
       <div v-if="!loading" w-full>
+        <!-- Sticky slim title bar — pid + title + difficulty, pinned while scrolling -->
+        <div v-show="!isSplitView" flex="~ items-center gap-2" style="position:sticky; top:calc(var(--bew-top-bar-height) + 8px); z-index:9; padding:7px 14px; background:var(--bew-content); border:1px solid var(--bew-border-color); border-radius:var(--bew-radius); backdrop-filter:var(--bew-filter-glass-1); box-shadow:var(--bew-shadow-1); margin-bottom:8px">
+          <span v-html="renderIcon('mingcute:fire-line', 16)" :style="{ display: 'contents', color: difficultyColor }" />
+          <span font-mono text="sm $bew-text-3" fw-bold flex-shrink-0>{{ problem.pid }}</span>
+          <h1 style="font-size:1rem;color:var(--bew-text-1);font-weight:700;margin:0;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ problem.title }}</h1>
+          <span text="xs" fw-bold px-2.5 py-1 rounded-full flex-shrink-0 :style="{ background: `${difficultyColor}20`, color: difficultyColor }">{{ problem.difficultyLabel }}</span>
+        </div>
         <!-- ============================================================ -->
         <!-- Problem Header -->
         <!-- ============================================================ -->
@@ -1016,7 +1023,7 @@ onUnmounted(() => {
           <div
             v-if="activeTab === 'statement'"
             key="statement"
-            flex="~ col md:row gap-6"
+            flex="~ col lg:row gap-6"
             items="start"
             bg="$bew-content" rounded="$bew-radius" p="6 md:p-8"
             shadow="[var(--bew-shadow-1),var(--bew-shadow-edge-glow-1)]"
@@ -1024,7 +1031,7 @@ onUnmounted(() => {
             style="backdrop-filter: var(--bew-filter-glass-1)"
           >
             <!-- Left column: problem statement (description + samples + hint + source) -->
-            <div class="problem-statement" flex="2" min-w-0>
+            <div class="problem-statement lg:order-1" flex="1" min-w-0>
               <!-- Main description (includes background, description, I/O format) -->
               <div mb-6 v-html="renderedDescription" />
 
@@ -1081,12 +1088,28 @@ onUnmounted(() => {
             </div>
 
             <!-- Right column: sidebar info card (pid / difficulty / limits / tags / provider / external link) -->
-            <div flex="1" min-w-0 class="problem-sidebar-col">
+            <div min-w-0 class="problem-sidebar-col lg:order-2 lg:w-80">
               <div
                 class="problem-sidebar"
                 bg="$bew-fill-1" rounded="$bew-radius" p-4
                 flex="~ col gap-3"
               >
+                <!-- Quick actions: submit / copy markdown / solutions / discussions -->
+                <div flex="~ gap-2 wrap" mb-1>
+                  <button flex="~ items-center gap-1" px-3 py-1.5 rounded="$bew-radius-half" style="background:var(--bew-theme-color);color:#fff;border:none;cursor:pointer;font-size:.82em;font-weight:600" @click="handleTabChange('submit')">
+                    <span v-html="renderIcon('mingcute:code-line', 14)" style="display:contents" /> 提交
+                  </button>
+                  <button flex="~ items-center gap-1" px-3 py-1.5 rounded="$bew-radius-half" style="background:var(--bew-content);color:var(--bew-text-1);border:1px solid var(--bew-border-color);cursor:pointer;font-size:.82em;font-weight:600" @click="copyMarkdown">
+                    <span v-html="renderIcon(copiedMarkdown ? 'mingcute:check-circle-fill' : 'mingcute:copy-line', 14)" style="display:contents" /> {{ copiedMarkdown ? '已复制' : '复制' }}
+                  </button>
+                  <button flex="~ items-center gap-1" px-3 py-1.5 rounded="$bew-radius-half" style="background:var(--bew-content);color:var(--bew-text-1);border:1px solid var(--bew-border-color);cursor:pointer;font-size:.82em;font-weight:600" @click="handleTabChange('solutions')">
+                    <span v-html="renderIcon('mingcute:book-4-line', 14)" style="display:contents" /> 题解
+                  </button>
+                  <button flex="~ items-center gap-1" px-3 py-1.5 rounded="$bew-radius-half" style="background:var(--bew-content);color:var(--bew-text-1);border:1px solid var(--bew-border-color);cursor:pointer;font-size:.82em;font-weight:600" @click="handleTabChange('discussions')">
+                    <span v-html="renderIcon('mingcute:comment-line', 14)" style="display:contents" /> 讨论
+                  </button>
+                </div>
+
                 <!-- PID + Difficulty badge -->
                 <div flex="~ items-center justify-between gap-2">
                   <span font-mono text="base $bew-text-1" fw-bold>{{ problem.pid }}</span>
@@ -1491,14 +1514,14 @@ onUnmounted(() => {
   }
 }
 
-/* Statement sidebar: sticky only on md+ (two-column mode).
-   Below md the layout collapses to a single column and the sidebar
-   simply flows under the statement. UnoCSS default md breakpoint = 768px. */
-@media (min-width: 768px) {
+/* Statement sidebar: sticky only on lg+ (two-column mode).
+   Below lg the layout collapses to a single column. UnoCSS default lg = 1024px.
+   Offset below the always-pinned slim title bar (~40px). */
+@media (min-width: 1024px) {
   .problem-sidebar {
     position: sticky;
-    top: calc(var(--bew-top-bar-height) + 16px);
-    max-height: calc(100vh - var(--bew-top-bar-height) - 32px);
+    top: calc(var(--bew-top-bar-height) + 56px);
+    max-height: calc(100vh - var(--bew-top-bar-height) - 72px);
     overflow-y: auto;
   }
 }
