@@ -213,6 +213,7 @@ const dockTransformStyle = computed((): { transform: string, transformOrigin: st
         'hide': hideDock,
         'half-hide': settings.halfHideDock,
         'hover': dockContentHover,
+        'collapse-hide': settings.dockCollapsed,
       }"
       :style="dockTransformStyle"
       @mouseenter="toggleHideDock(false)"
@@ -295,6 +296,16 @@ const dockTransformStyle = computed((): { transform: string, transformOrigin: st
         </button>
       </div>
 
+      <!-- 收起按钮(dock 右侧,贴在 dock 旁) -->
+      <button
+        v-if="!settings.dockCollapsed"
+        class="dock-collapse-btn"
+        :class="`dock-collapse-${settings.dockPosition}`"
+        title="收起"
+        pointer-events-auto
+        @click="settings.dockCollapsed = true"
+      >‹</button>
+
       <!-- Back to top & refresh buttons -->
       <div
         v-if="showBackToTopOrRefreshButton"
@@ -356,6 +367,16 @@ const dockTransformStyle = computed((): { transform: string, transformOrigin: st
         </template>
       </div>
     </div>
+
+    <!-- 展开按钮(收起时显示) -->
+    <button
+      v-if="settings.dockCollapsed"
+      class="dock-expand"
+      :class="`dock-expand-${settings.dockPosition}`"
+      title="展开"
+      pointer-events-auto
+      @click="settings.dockCollapsed = false"
+    >›</button>
   </aside>
 </template>
 
@@ -542,6 +563,53 @@ const dockTransformStyle = computed((): { transform: string, transformOrigin: st
     pointer-events: none;
   }
 }
+
+.dock-content.collapse-hide {
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+
+.dock-expand {
+  position: fixed;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 18px;
+  color: var(--bew-text-2);
+  background: var(--bew-content);
+  border: 1px solid var(--bew-border-color);
+  border-radius: var(--bew-radius);
+  box-shadow: var(--bew-shadow-1);
+  backdrop-filter: var(--bew-filter-glass-1);
+  transition: background .2s, color .2s;
+}
+.dock-expand:hover { background: var(--bew-fill-2); color: var(--bew-text-1); }
+.dock-expand-left { left: 0; top: 50%; transform: translateY(-50%); width: 20px; height: 48px; }
+.dock-expand-right { right: 0; top: 50%; transform: translateY(-50%); width: 20px; height: 48px; }
+.dock-expand-bottom { bottom: 0; left: 50%; transform: translateX(-50%); height: 20px; width: 48px; }
+
+.dock-collapse-btn {
+  position: absolute;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 15px;
+  color: var(--bew-text-2);
+  background: var(--bew-content);
+  border: 1px solid var(--bew-border-color);
+  border-radius: var(--bew-radius);
+  box-shadow: var(--bew-shadow-1);
+  backdrop-filter: var(--bew-filter-glass-1);
+  transition: background .2s, color .2s;
+}
+.dock-collapse-btn:hover { background: var(--bew-fill-2); color: var(--bew-text-1); }
+.dock-collapse-left { right: -24px; top: 50%; transform: translateY(-50%); width: 18px; height: 36px; }
+.dock-collapse-right { left: -24px; top: 50%; transform: translateY(-50%); width: 18px; height: 36px; }
+.dock-collapse-bottom { top: -24px; left: 50%; transform: translateX(-50%); width: 36px; height: 18px; }
 
 .fade-enter-active,
 .fade-leave-active {

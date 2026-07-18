@@ -10,6 +10,7 @@ export interface Settings {
   dockAutoHide: boolean
   autoHideDock: boolean
   halfHideDock: boolean
+  dockCollapsed: boolean
   disableDockGlowingEffect: boolean
   disableLightDarkModeSwitcherOnDock: boolean
   backToTopAndRefreshButtonsAreSeparated: boolean
@@ -55,6 +56,7 @@ export const originalSettings: Settings = {
   dockAutoHide: false,
   autoHideDock: false,
   halfHideDock: false,
+  dockCollapsed: false,
   disableDockGlowingEffect: false,
   disableLightDarkModeSwitcherOnDock: false,
   backToTopAndRefreshButtonsAreSeparated: false,

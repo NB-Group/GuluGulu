@@ -405,6 +405,7 @@ provide<GulyAppProvider>('GULY_APP', {
               <div
                 p="t-[calc(var(--bew-top-bar-height)+10px)]" m-auto
                 w="lg:[calc(100%-200px)] [calc(100%-150px)]"
+                :style="settings.dockCollapsed ? { width: 'calc(100% - 40px)' } : undefined"
               >
                 <Transition name="page-fade">
                   <Component :is="pages[activatedPage]" :key="activatedPage" />
