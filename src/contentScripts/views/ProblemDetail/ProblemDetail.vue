@@ -166,12 +166,32 @@ function scheduleLocalSave() {
 watch(codeContent, scheduleLocalSave)
 watch(() => selectedLang.value.id, scheduleLocalSave)
 
+// 洛谷标签 id→算法名 字典(题目数据常只给数字 id)。懒加载、同源拉取 _lfe/tags,会话内缓存。
+const tagMap = new Map<number, string>()
+let tagMapPromise: Promise<void> | null = null
+function ensureTagMap() {
+  if (!tagMapPromise) {
+    tagMapPromise = (async () => {
+      try {
+        const res = await fetch('https://www.luogu.com.cn/_lfe/tags', { credentials: 'same-origin' })
+        const j = await res.json()
+        for (const t of j?.tags || [])
+          if (typeof t?.id === 'number' && typeof t.name === 'string')
+            tagMap.set(t.id, t.name)
+      }
+      catch {}
+    })()
+  }
+  return tagMapPromise
+}
+
 let loadingPid: string | null = null // guard against concurrent loads
 async function loadRealData() {
   const pid = problemId.value
   if (loadingPid === pid)
     return // already loading this problem
   loadingPid = pid
+  ensureTagMap() // 与题目数据并行预取标签字典
   try {
     let raw = extractProblemData()
     // If DOM data is stale (SPA navigation to a DIFFERENT problem), fetch via _contentOnly=1 API
@@ -205,6 +225,7 @@ async function loadRealData() {
       }
     }
 
+    await ensureTagMap() // 标签字典就绪后再解析算法名
     problem.value = {
       pid: p.pid,
       title: p.name || p.title || '',
@@ -212,7 +233,7 @@ async function loadRealData() {
       difficultyLabel: difficultyMap[p.difficulty || 0]?.label || '暂无评定',
       timeLimit: `${(timeMs / 1000).toFixed(2)}s`,
       memoryLimit: memKb >= 1024 ? `${(memKb / 1024).toFixed(0)}.00MB` : `${memKb}.00KB`,
-      tags: Array.isArray(p.tags) ? p.tags.map((t: any) => (typeof t === 'number' ? { id: t, name: `标签 ${t}` } : t)) : [],
+      tags: Array.isArray(p.tags) ? p.tags.map((t: any) => (typeof t === 'number' ? { id: t, name: tagMap.get(t) || `标签 ${t}` } : t)) : [],
       totalSubmit: p.totalSubmit || 0,
       totalAccepted: p.totalAccepted || 0,
       background: p.contenu?.background || p.content?.background || '',
@@ -397,6 +418,7 @@ async function _runTest() {
 }
 const contestProblems = ref<Array<{ no: string, pid: string, title: string, score: number }>>([])
 const showProblemSwitcher = ref(false)
+const showTags = ref(false)
 
 async function fetchContestProblems() {
   if (!contestId.value)
@@ -714,13 +736,7 @@ onUnmounted(() => {
 
     <Transition name="content-reveal">
       <div v-if="!loading" w-full>
-        <!-- Sticky slim title bar — pid + title + difficulty, pinned while scrolling -->
-        <div v-show="!isSplitView" flex="~ items-center gap-2" style="position:sticky; top:calc(var(--bew-top-bar-height) + 8px); z-index:9; padding:7px 14px; background:var(--bew-content); border:1px solid var(--bew-border-color); border-radius:var(--bew-radius); backdrop-filter:var(--bew-filter-glass-1); box-shadow:var(--bew-shadow-1); margin-bottom:8px">
-          <span v-html="renderIcon('mingcute:fire-line', 16)" :style="{ display: 'contents', color: difficultyColor }" />
-          <span font-mono text="sm $bew-text-3" fw-bold flex-shrink-0>{{ problem.pid }}</span>
-          <h1 style="font-size:1rem;color:var(--bew-text-1);font-weight:700;margin:0;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ problem.title }}</h1>
-          <span text="xs" fw-bold px-2.5 py-1 rounded-full flex-shrink-0 :style="{ background: `${difficultyColor}20`, color: difficultyColor }">{{ problem.difficultyLabel }}</span>
-        </div>
+
         <!-- ============================================================ -->
         <!-- Problem Header -->
         <!-- ============================================================ -->
@@ -750,12 +766,24 @@ onUnmounted(() => {
                 </span>
               </div>
 
-              <!-- Tags -->
-              <div v-if="problem.tags.length > 0" flex="~ gap-1.5 wrap" mt-1>
-                <span
-                  v-for="tag in problem.tags" :key="tag.id" text="xs" px-2 py-0.5
-                  rounded-full bg="$bew-fill-2" flex="~ items-center gap-1" style="color:var(--bew-text-3)"
-                ><span style="display:contents" v-html="renderIcon('mingcute:hashtag-line', 10)" />{{ tag.name }}</span>
+              <!-- Tags: 收起为开关按钮,点击展开(标签多为数字 id,铺开是噪音) -->
+              <div v-if="problem.tags.length > 0" mt-1 flex="~ items-center gap-1.5 wrap">
+                <button
+                  flex="~ items-center gap-1" text="xs" px-2 py-0.5 rounded-full
+                  bg="$bew-fill-2" border="none" cursor-pointer hover="bg-$bew-fill-1"
+                  style="color:var(--bew-text-3)"
+                  @click="showTags = !showTags"
+                >
+                  <span style="display:contents" v-html="renderIcon('mingcute:hashtag-line', 10)" />
+                  {{ showTags ? '收起' : `标签 (${problem.tags.length})` }}
+                  <span style="display:contents" v-html="renderIcon(showTags ? 'mingcute:down-line' : 'mingcute:right-line', 10)" />
+                </button>
+                <template v-if="showTags">
+                  <span
+                    v-for="tag in problem.tags" :key="tag.id" text="xs" px-2 py-0.5
+                    rounded-full bg="$bew-fill-2" flex="~ items-center gap-1" style="color:var(--bew-text-3)"
+                  ><span style="display:contents" v-html="renderIcon('mingcute:hashtag-line', 10)" />{{ tag.name }}</span>
+                </template>
               </div>
             </div>
 
@@ -780,7 +808,7 @@ onUnmounted(() => {
         <!-- ============================================================ -->
         <div
           v-show="!isSplitView"
-          flex="~ gap-1" mb-4 p-1
+          flex="~ gap-1 wrap" mb-4 p-1
           bg="$bew-content" rounded="$bew-radius"
           border="1 $bew-border-color"
           style="backdrop-filter: var(--bew-filter-glass-1)"
@@ -803,7 +831,7 @@ onUnmounted(() => {
             {{ tab.label }}
           </button>
           <!-- Problem meta (moved from right sidebar) -->
-          <div flex="~ items-center gap-3" px-3 text="xs $bew-text-3" style="margin-left:auto">
+          <div class="hidden md:flex items-center gap-3" px-3 text="xs $bew-text-3" style="margin-left:auto">
             <span flex="~ items-center gap-1"><span style="display:contents" v-html="renderIcon('mingcute:time-line', 14)" />{{ problem.timeLimit }}</span>
             <span flex="~ items-center gap-1"><span style="display:contents" v-html="renderIcon('mingcute:chip-line', 14)" />{{ problem.memoryLimit }}</span>
             <span flex="~ items-center gap-1"><span style="display:contents" v-html="renderIcon('mingcute:chart-bar-line', 14)" />{{ passRate }}%</span>
@@ -813,7 +841,7 @@ onUnmounted(() => {
             </span>
           </div>
           <button
-            v-if="!isSplitView" flex="~ items-center gap-1" p="x-3 y-2" rounded="$bew-radius-half" text="sm"
+            v-if="!isSplitView" class="ml-auto md:ml-0" flex="~ items-center gap-1" p="x-3 y-2" rounded="$bew-radius-half" text="sm"
             border="none"
             :disabled="!isLoggedIn"
             :title="isLoggedIn ? '' : '请先登录洛谷后再使用 IDE'"
