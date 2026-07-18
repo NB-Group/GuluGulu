@@ -24,7 +24,7 @@ interface ContestProblem {
 }
 interface ScoreboardRow {
   rank: number; user: { uid: number; name: string; avatar: string; color: string }
-  score: number; scores: (number | null)[]; totalTime?: number
+  score: number; scores: (number | null)[]; totalTime?: number; details: Record<string, any>
 }
 
 const contest = ref<any>(null)
@@ -216,6 +216,7 @@ async function fetchScoreboard(page = 1) {
         user: { uid: r.user?.uid || r.uid, name: r.user?.name || r.name || '', avatar: r.user?.avatar || `https://cdn.luogu.com.cn/upload/usericon/${r.user?.uid || r.uid}.png`, color: r.user?.color || r.color || '' },
         score: r.score || r.totalScore || 0,
         scores: r.scores || r.problemScores || [],
+        details: r.details || {},
         totalTime: r.totalTime || r.time || 0,
       }))
       scoreboard.value = page === 1 ? items : [...scoreboard.value, ...items]
@@ -287,9 +288,15 @@ function openRecord(rid: number) { window.open(`https://www.luogu.com.cn/record/
 // shows real attainment instead of the always-100 max. Null until the
 // scoreboard loads or if the user isn't on it (not registered / not started).
 const myUid = computed(() => Number((window as any).__guly_user?.uid) || 0)
-const myScores = computed(() => scoreboard.value.find(r => r.user.uid === myUid.value)?.scores ?? null)
-// My contest standing — drives the rich "我的成绩" sidebar card.
-const myRow = computed(() => scoreboard.value.find(r => r.user.uid === myUid.value) || null)
+// 每行按当前 problems 顺序从 details 派生每题分(洛谷每题分在 row.details[pid].score,
+// 非已弃用的 scores 数组;computed 里对齐避免 fetch 时 problems 未就绪的竞态)。
+const scoreboardView = computed(() => scoreboard.value.map(row => ({
+  ...row,
+  scores: problems.value.map(p => row.details?.[p.pid]?.score ?? null),
+})))
+// My contest standing — drives the rich "我的成绩" sidebar card + 排名置顶行。
+const myRow = computed(() => scoreboardView.value.find(r => r.user.uid === myUid.value) || null)
+const myScores = computed(() => myRow.value?.scores ?? null)
 const myRank = computed(() => myRow.value?.rank ?? null)
 const myTotalScore = computed(() => myRow.value?.score ?? null)
 const myPassedCount = computed(() => {
@@ -316,17 +323,21 @@ watch(activeTab, (t) => { if (t === 'ranking' && scoreboard.value.length === 0) 
     <Transition name="content-reveal">
       <div v-if="!loading && contest" w-full flex="~ col lg:row gap-6" class="lg:flex-wrap" items="start">
         <!-- Sticky contest title bar — pinned at the very top, always visible -->
-        <div w-full flex="~ items-center gap-2" style="position:sticky; top:calc(var(--bew-top-bar-height) + 8px); z-index:9; padding:8px 12px; background:var(--bew-content); border:1px solid var(--bew-border-color); border-radius:var(--bew-radius); backdrop-filter:var(--bew-filter-glass-1); box-shadow:var(--bew-shadow-1); margin-bottom:8px">
-          <span v-html="renderIcon(contestStatus.ongoing ? 'mingcute:play-fill' : contestStatus.ended ? 'mingcute:trophy-fill' : 'mingcute:time-line', 16)" :style="{ display: 'contents', color: contestStatus.color }" />
-          <span text="xs" fw-bold px-2.5 py-1 rounded-full flex-shrink-0 :style="{ background: contestStatus.color + '20', color: contestStatus.color }">{{ contestStatus.label }}</span>
-          <h1 style="font-size:1.1rem;color:var(--bew-text-1);font-weight:700;margin:0;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ c.name }}</h1>
-          <span v-if="c.rated" text="xs" fw-bold px-2.5 py-1 rounded-full flex-shrink-0 style="background:var(--bew-warning-color-20);color:var(--bew-warning-color)">Rated</span>
-          <span v-if="countdown()" text="xs" fw-bold px-2.5 py-1 rounded-full flex-shrink-0 style="background:var(--bew-error-color-20);color:var(--bew-error-color)">{{ countdown() }}</span>
+        <div w-full flex="~ col gap-2" class="lg:flex-row lg:items-center" style="position:sticky; top:calc(var(--bew-top-bar-height) + 8px); z-index:9; padding:8px 12px; background:var(--bew-content); border:1px solid var(--bew-border-color); border-radius:var(--bew-radius); backdrop-filter:var(--bew-filter-glass-1); box-shadow:var(--bew-shadow-1); margin-bottom:8px">
+          <div flex="~ items-center gap-2" min-w-0 class="w-full lg:w-auto lg:flex-1">
+            <span v-html="renderIcon(contestStatus.ongoing ? 'mingcute:play-fill' : contestStatus.ended ? 'mingcute:trophy-fill' : 'mingcute:time-line', 16)" :style="{ display: 'contents', color: contestStatus.color }" />
+            <span text="xs" fw-bold px-2.5 py-1 rounded-full flex-shrink-0 :style="{ background: contestStatus.color + '20', color: contestStatus.color }">{{ contestStatus.label }}</span>
+            <h1 style="font-size:1.1rem;color:var(--bew-text-1);font-weight:700;margin:0;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ c.name }}</h1>
+          </div>
+          <div v-if="c.rated || countdown()" flex="~ items-center gap-2" flex-shrink-0 class="lg:ml-auto">
+            <span v-if="c.rated" text="xs" fw-bold px-2.5 py-1 rounded-full style="background:var(--bew-warning-color-20);color:var(--bew-warning-color)">Rated</span>
+            <span v-if="countdown()" text="xs" fw-bold px-2.5 py-1 rounded-full style="background:var(--bew-error-color-20);color:var(--bew-error-color)">{{ countdown() }}</span>
+          </div>
         </div>
         <!-- ============================================================ -->
         <!-- Left column: Contest meta sidebar (sticky on md+) -->
         <!-- ============================================================ -->
-        <div min-w-0 class="contest-sidebar-col lg:order-2 lg:w-80 lg:shrink-0">
+        <div min-w-0 w-full class="contest-sidebar-col lg:order-2 lg:w-80 lg:shrink-0">
           <div class="contest-sidebar" bg="$bew-content" rounded="$bew-radius" p-6 shadow="[var(--bew-shadow-1),var(--bew-shadow-edge-glow-1)]" border="1 $bew-border-color" style="backdrop-filter:var(--bew-filter-glass-1)">
             <!-- 我的成绩 — rich centerpiece -->
             <div v-if="isLoggedIn" p-5 style="background:linear-gradient(135deg,var(--bew-theme-color-20),transparent);border-bottom:1px solid var(--bew-border-color)">
@@ -355,6 +366,14 @@ watch(activeTab, (t) => { if (t === 'ranking' && scoreboard.value.length === 0) 
                 </div>
                 <div style="height:6px;border-radius:99px;background:var(--bew-fill-2);overflow:hidden">
                   <div :style="{ width: (problems.length ? Math.round(myPassedCount / problems.length * 100) : 0) + '%', height: '100%', background: 'var(--bew-theme-color)', borderRadius: '99px', transition: 'width .4s' }" />
+                </div>
+                <!-- 每题部分分明细 -->
+                <div v-if="myScores" mt-3 flex="~ wrap gap-1">
+                  <span
+                    v-for="(s, i) in myScores" :key="i" text="xs" px-1.5 py-0.5 rounded
+                    style="font-weight:600;line-height:1.6"
+                    :style="{ background: s != null && s >= (problems[i]?.score||100) ? 'var(--bew-success-color-20)' : s != null ? 'var(--bew-error-color-20)' : 'var(--bew-fill-2)', color: s != null && s >= (problems[i]?.score||100) ? 'var(--bew-success-color)' : s != null ? 'var(--bew-error-color)' : 'var(--bew-text-4)' }"
+                  >{{ problemLabel(i) }} {{ s != null ? s : '-' }}</span>
                 </div>
                 <div v-if="!myRow && isRegistered" mt-2 style="font-size:.7em;color:var(--bew-text-3)">比赛开始或有提交后显示成绩</div>
               </div>
@@ -416,7 +435,7 @@ watch(activeTab, (t) => { if (t === 'ranking' && scoreboard.value.length === 0) 
         <!-- ============================================================ -->
         <!-- Main content (tab bar + tabs). Left column on md+, scrollable. -->
         <!-- ============================================================ -->
-        <div flex="1" min-w-0 class="lg:order-1">
+        <div flex="1" min-w-0 w-full class="lg:order-1" style="overflow-x:clip">
 
           <!-- ============================================================ -->
           <!-- Tab Bar -->
@@ -450,6 +469,7 @@ watch(activeTab, (t) => { if (t === 'ranking' && scoreboard.value.length === 0) 
               <span style="width:32px;font-size:var(--bew-base-font-size);color:var(--bew-text-2);font-weight:700;flex-shrink:0">{{ problemLabel(idx) }}</span>
               <div flex="1" min-w-0 mx-3>
                 <div style="font-size:var(--bew-base-font-size);color:var(--bew-text-1);font-weight:600">{{ p.pid }} {{ p.title }}</div>
+                <span text="xs" mt-0.5 inline-block style="background:var(--bew-fill-2);color:var(--bew-text-3);font-weight:600;padding:1px 6px;border-radius:var(--bew-radius-half)">{{ p.score }}分</span>
               </div>
               <span style="font-size:var(--bew-base-font-size);font-weight:600;flex-shrink:0" :style="{ color: ((myScores && myScores[idx] != null) || p.accepted) ? 'var(--bew-success-color)' : 'var(--bew-text-4)' }">{{ (myScores && myScores[idx] != null) ? `${myScores[idx]} 分` : (p.accepted ? '已通过' : (p.submitted ? '已提交' : '未提交')) }}</span>
               <button ml-4 mt-0 style="background:var(--bew-theme-color-20);color:var(--bew-theme-color);border:none;border-radius:var(--bew-radius);padding:3px 12px;cursor:pointer;font-size:.8em;font-weight:600" @click.prevent="activeTab='submit';selectedPid=p.pid;loadProblem(p.pid)">提交</button>
@@ -527,27 +547,35 @@ watch(activeTab, (t) => { if (t === 'ranking' && scoreboard.value.length === 0) 
               <span v-html="renderIcon('mingcute:chart-bar-line', 48)" style="display:contents" /><p mt-2>暂无排名数据{{ contestStatus.upcoming ? '（比赛尚未开始）' : '' }}</p>
             </div>
             <!-- Scoreboard table -->
-            <div v-if="scoreboard.length > 0" overflow="auto">
-              <table style="width:100%;border-collapse:collapse;font-size:var(--bew-base-font-size)">
+            <div v-if="scoreboard.length > 0" class="rank-scroll" style="overflow-x:auto">
+              <table class="rank-table" style="width:100%;border-collapse:collapse;font-size:var(--bew-base-font-size)">
                 <thead>
                   <tr bg="$bew-fill-1" text="left">
-                    <th px-4 py-3 style="color:var(--bew-text-2);font-weight:600">#</th>
-                    <th px-4 py-3 style="color:var(--bew-text-2);font-weight:600">选手</th>
-                    <th v-for="(_p, pi) in problems" :key="pi" px-4 py-3 text="center" style="color:var(--bew-text-2);font-weight:600">{{ problemLabel(pi) }}</th>
-                    <th px-4 py-3 text="right" style="color:var(--bew-text-2);font-weight:600">总分</th>
+                    <th class="rk">#</th>
+                    <th class="rk">选手</th>
+                    <th v-for="(_p, pi) in problems" :key="pi" class="rk" text="center">{{ problemLabel(pi) }}</th>
+                    <th class="rk" text="right">总分</th>
                   </tr>
                 </thead>
                 <tbody>
-                  <tr v-for="(row, idx) in scoreboard" :key="row.rank" class="stagger-row" :style="{ '--row-index': idx }" border="b-1 $bew-border-color" duration-150 cursor="pointer" @click="openUser(row.user.uid)">
-                    <td px-4 py-3 fw-bold :style="{ color: row.rank <= 3 ? 'var(--bew-warning-color)' : 'var(--bew-text-1)' }">{{ row.rank }}</td>
-                    <td px-4 py-3 flex="~ items-center gap-2">
-                      <img :src="row.user.avatar" style="width:24px;height:24px;border-radius:50%;object-fit:cover" @error="(e:any) => e.target.style.display='none'" />
-                      <span :style="{ color: row.user.color ? `var(--bew-${row.user.color})` : 'var(--bew-text-1)', fontWeight: 600 }">{{ row.user.name }}</span>
+                  <!-- 置顶:我的排名(高亮),原位行也保留并高亮 -->
+                  <tr v-if="myRow" class="rank-mine" cursor="pointer" @click="openUser(myRow.user.uid)">
+                    <td class="rk" fw-bold style="color:var(--bew-theme-color)">{{ myRow.rank }}</td>
+                    <td class="rk" flex="~ items-center gap-2">
+                      <img :src="myRow.user.avatar" style="width:24px;height:24px;border-radius:50%;object-fit:cover;flex-shrink:0" @error="(e:any) => e.target.style.display='none'" />
+                      <span class="rk-name" style="color:var(--bew-theme-color);font-weight:700">{{ myRow.user.name }}<span style="color:var(--bew-text-3);font-weight:400">（我）</span></span>
                     </td>
-                    <td v-for="(s, si) in row.scores" :key="si" px-4 py-3 text="center" fw-bold :style="{ color: s != null && s >= (problems[si]?.score||100) ? 'var(--bew-success-color)' : s != null ? 'var(--bew-error-color)' : 'var(--bew-text-4)' }">
-                      {{ s != null ? s : '-' }}
+                    <td v-for="(s, si) in myRow.scores" :key="si" class="rk" text="center" fw-bold :style="{ color: s != null && s >= (problems[si]?.score||100) ? 'var(--bew-success-color)' : s != null ? 'var(--bew-error-color)' : 'var(--bew-text-4)' }">{{ s != null ? s : '-' }}</td>
+                    <td class="rk" text="right" fw-bold style="color:var(--bew-theme-color)">{{ myRow.score }}</td>
+                  </tr>
+                  <tr v-for="(row, idx) in scoreboardView" :key="row.rank" class="stagger-row" :class="{ 'rank-mine': row.user.uid === myUid }" :style="{ '--row-index': idx }" border="b-1 $bew-border-color" duration-150 cursor="pointer" @click="openUser(row.user.uid)">
+                    <td class="rk" fw-bold :style="{ color: row.rank <= 3 ? 'var(--bew-warning-color)' : 'var(--bew-text-1)' }">{{ row.rank }}</td>
+                    <td class="rk" flex="~ items-center gap-2">
+                      <img :src="row.user.avatar" style="width:24px;height:24px;border-radius:50%;object-fit:cover;flex-shrink:0" @error="(e:any) => e.target.style.display='none'" />
+                      <span class="rk-name" :style="{ color: row.user.color ? `var(--bew-${row.user.color})` : 'var(--bew-text-1)', fontWeight: 600 }">{{ row.user.name }}</span>
                     </td>
-                    <td px-4 py-3 text="right" fw-bold style="color:var(--bew-text-1)">{{ row.score }}</td>
+                    <td v-for="(s, si) in row.scores" :key="si" class="rk" text="center" fw-bold :style="{ color: s != null && s >= (problems[si]?.score||100) ? 'var(--bew-success-color)' : s != null ? 'var(--bew-error-color)' : 'var(--bew-text-4)' }">{{ s != null ? s : '-' }}</td>
+                    <td class="rk" text="right" fw-bold style="color:var(--bew-text-1)">{{ row.score }}</td>
                   </tr>
                 </tbody>
               </table>
@@ -565,6 +593,15 @@ watch(activeTab, (t) => { if (t === 'ranking' && scoreboard.value.length === 0) 
 <style lang="scss" scoped>
 .hover-row { transition: background .15s; }
 .hover-row:hover { background: var(--bew-fill-2); }
+/* 比赛排名表:窄屏紧凑 + 用户名省略 + 我的行高亮(置顶与原位) */
+.rank-table .rk { padding: 10px 16px; color: var(--bew-text-2); font-weight: 600; white-space: nowrap; }
+.rank-table .rk-name { display: inline-block; max-width: 9rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; vertical-align: middle; }
+.rank-table tr.rank-mine td { background: var(--bew-theme-color-20); }
+.rank-table tr.rank-mine td:first-child { box-shadow: inset 3px 0 0 var(--bew-theme-color); }
+@media (max-width: 768px) {
+  .rank-table .rk { padding: 6px 8px; }
+  .rank-table .rk-name { max-width: 5.5rem; }
+}
 .markdown-body {
   :deep(h1) { font-size: 1.4em; font-weight: 700; margin: 1em 0 .5em; }
   :deep(h2) { font-size: 1.2em; font-weight: 700; margin: .8em 0 .4em; }
