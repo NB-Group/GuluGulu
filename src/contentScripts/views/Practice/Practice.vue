@@ -2,7 +2,13 @@
 import { diffColor, diffLabel } from '~/utils/difficulty'
 import { renderIcon } from '~/utils/icons'
 
+const props = withDefaults(defineProps<{ embedded?: boolean, uid?: number | null }>(), { embedded: false, uid: null })
+
 const uid = computed(() => {
+  // When embedded as a tab inside a profile, the uid is passed in as a prop;
+  // otherwise (standalone page) it is taken from the URL.
+  if (props.uid)
+    return props.uid
   const m = document.URL.match(/\/user\/(\d+)\/practice/)
   return m ? Number(m[1]) : null
 })
@@ -37,8 +43,9 @@ onMounted(async () => {
 </script>
 
 <template>
-  <div class="page-container" w-full h-full p="x-4 md:x-8 lg:x-16">
+  <div :class="{ 'page-container': !props.embedded }" w-full h-full :p="props.embedded ? '' : 'x-4 md:x-8 lg:x-16'">
     <div
+      v-if="!props.embedded"
       bg="$bew-content" rounded="$bew-radius" p-6 mb-6 shadow="[var(--bew-shadow-1)]"
       border="1 $bew-border-color"
     >

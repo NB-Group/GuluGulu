@@ -6,6 +6,8 @@ import { friendlyError } from '~/utils/luogu-api'
 import { timeAgo } from '~/utils/main'
 import { parseMarkdownContent } from '~/utils/markdown'
 
+const props = withDefaults(defineProps<{ embedded?: boolean }>(), { embedded: false })
+
 const { currentUrl, navigateTo } = useGulyApp()
 
 // ============================================================
@@ -249,7 +251,7 @@ watch(
 </script>
 
 <template>
-  <div class="page-container" w-full h-full p="x-4 md:x-8 lg:x-16" pos="relative">
+  <div :class="{ 'page-container': !props.embedded }" w-full h-full :p="props.embedded ? '' : 'x-4 md:x-8 lg:x-16'" pos="relative">
     <Loading v-if="loading" />
 
     <!-- ============================================================ -->
@@ -799,6 +801,7 @@ watch(
     <!-- ============================================================ -->
     <template v-if="!teamId && !loading">
       <div
+        v-if="!props.embedded"
         bg="$bew-content"
         rounded="$bew-radius"
         p-6

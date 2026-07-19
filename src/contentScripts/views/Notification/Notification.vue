@@ -2,6 +2,8 @@
 import { renderIcon } from '~/utils/icons'
 import { timeAgo } from '~/utils/main'
 
+const props = withDefaults(defineProps<{ embedded?: boolean }>(), { embedded: false })
+
 const items = ref<any[]>([])
 const loading = ref(true)
 
@@ -21,8 +23,9 @@ onMounted(async () => {
 </script>
 
 <template>
-  <div class="page-container" w-full h-full p="x-4 md:x-8 lg:x-16">
+  <div :class="{ 'page-container': !props.embedded }" w-full h-full :p="props.embedded ? '' : 'x-4 md:x-8 lg:x-16'">
     <div
+      v-if="!props.embedded"
       bg="$bew-content" rounded="$bew-radius" p-6 mb-6 shadow="[var(--bew-shadow-1)]"
       border="1 $bew-border-color"
     >
