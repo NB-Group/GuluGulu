@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { renderIcon } from '~/utils/icons'
-import { getCsrfToken, isLoggedIn as checkLuoguLogin, LUOGU_LANGUAGES, submitCode, friendlyError } from '~/utils/luogu-api'
+import { getCsrfToken, ideExecLabel, isLoggedIn as checkLuoguLogin, LUOGU_LANGUAGES, parseErrorLines, parseIdeExecute, pollRecordVerdict, submitCode, friendlyError } from '~/utils/luogu-api'
+import type { VerdictResult } from '~/utils/luogu-api'
 import { parseMarkdownContent } from '~/utils/markdown'
 import { useGulyApp } from '~/composables/useAppProvider'
 
@@ -41,14 +42,24 @@ const activeTab = ref<'overview' | 'problems' | 'submit' | 'ranking'>('overview'
 // Submit state
 const selectedPid = ref('')
 const code = ref('')
-const lang = ref(3)
+const lang = ref(28)
 const enableO2 = ref(false)
 const submitLoading = ref(false)
 const submitResult = ref<any>(null)
+const verdictResult = ref<VerdictResult | null>(null)
+const codeEditorRef = ref<any>(null)
 const submitError = ref('')
 const captchaSrc = ref('')
 const captchaCode = ref('')
 const isLoggedIn = computed(() => checkLuoguLogin())
+// Self-test state (mirrors ProblemDetail's ide_submit + ws.luogu flow)
+const testInput = ref('')
+const testExpectedOutput = ref('')
+const testActualOutput = ref('')
+const testVerdict = ref('')
+const testRunning = ref(false)
+let activeWs: WebSocket | null = null
+let activeWsTimeout: ReturnType<typeof setTimeout> | null = null
 
 // Problem statement
 const problemStatement = ref<any>(null)
@@ -127,6 +138,13 @@ async function handleRegister() {
 // ============================================================
 async function loadProblem(pid: string) {
   selectedPid.value = pid
+  // restore saved code + lang for this problem (per-problem memory)
+  try {
+    const raw = localStorage.getItem(contestCodeKey(pid))
+    if (raw) { const sv = JSON.parse(raw); code.value = sv.code || ''; if (sv.lang) lang.value = sv.lang }
+    else code.value = ''
+  } catch { code.value = '' }
+  testVerdict.value = ''; testActualOutput.value = ''
   statementLoading.value = true
   submitResult.value = null; submitError.value = ''
   problemStatement.value = null
@@ -174,6 +192,13 @@ async function handleSubmit() {
   if (result.status === 200 && result.rid) {
     captchaSrc.value = ''; captchaCode.value = ''
     submitResult.value = { success: true, rid: result.rid }
+    // Poll the record until judged, then surface the verdict via the AC-stamp overlay.
+    verdictResult.value = null
+    pollRecordVerdict(result.rid).then((v) => {
+      verdictResult.value = v
+      if (v.verdict === 'CE')
+        highlightErrorLines(v.compileMessage)
+    })
     return
   }
 
@@ -202,6 +227,88 @@ async function handleSubmit() {
 }
 
 // ============================================================
+// Self-test (custom run) + per-problem code/lang memory
+// ============================================================
+function cleanupWs() {
+  if (activeWsTimeout) { clearTimeout(activeWsTimeout); activeWsTimeout = null }
+  if (activeWs) { try { activeWs.close() } catch {} activeWs = null }
+}
+// CE/RE 报错定位:解析行号 → 编辑器高亮 + 跳转
+function highlightErrorLines(msg: string | null | undefined) {
+  const ls = parseErrorLines(msg)
+  if (ls.length) {
+    codeEditorRef.value?.highlightLines(ls)
+    codeEditorRef.value?.jumpToLine(ls[0])
+  }
+}
+
+async function runSelfTest() {
+  if (!code.value.trim()) { testVerdict.value = '无代码'; return }
+  if (!isLoggedIn.value) { testVerdict.value = '请先登录'; return }
+  if (testRunning.value) return
+  testRunning.value = true; testVerdict.value = ''; testActualOutput.value = '编译运行中…'
+  cleanupWs()
+  const csrf = (window as any).__guly_user?.csrfToken || ''
+  let resolved = false
+  activeWs = new WebSocket('wss://ws.luogu.com.cn/ws')
+  const ws = activeWs
+  activeWsTimeout = setTimeout(() => { if (!resolved) { resolved = true; cleanupWs(); testRunning.value = false; testVerdict.value = '超时'; testActualOutput.value = '评测超时，请重试' } }, 25000)
+  ws.onopen = () => {
+    const xhr = new XMLHttpRequest()
+    xhr.open('POST', 'https://www.luogu.com.cn/api/ide_submit')
+    xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded')
+    xhr.setRequestHeader('X-CSRF-TOKEN', csrf)
+    xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest')
+    xhr.withCredentials = true
+    xhr.onload = () => {
+      if (resolved) return
+      try {
+        const j = JSON.parse(xhr.responseText)
+        const rid = String(j?.data?.rid ?? '')
+        if (rid) { ws.send(JSON.stringify({ type: 'join_channel', channel: 'ide.track', channel_param: rid })) }
+        else { resolved = true; cleanupWs(); testRunning.value = false; testVerdict.value = '失败'; testActualOutput.value = j?.errorMessage || 'IDE 提交失败' }
+      } catch { resolved = true; cleanupWs(); testRunning.value = false; testVerdict.value = '失败'; testActualOutput.value = 'IDE 返回异常' }
+    }
+    xhr.onerror = () => { if (!resolved) { resolved = true; cleanupWs(); testRunning.value = false; testVerdict.value = '失败'; testActualOutput.value = '请求失败，请检查网络连接或洛谷状态' } }
+    const body = new URLSearchParams({ lang: String(lang.value), code: code.value, input: testInput.value, o2: enableO2.value ? '1' : '0', 'csrf-token': csrf })
+    xhr.send(body.toString())
+  }
+  ws.onmessage = (event) => {
+    if (resolved) return
+    try {
+      const msg = JSON.parse(event.data)
+      console.debug('[GuluGulu] ide ws msg', msg)
+      if (msg._ws_type === 'server_broadcast' && msg.type === 'execute') {
+        resolved = true; cleanupWs(); testRunning.value = false
+        console.debug('[GuluGulu] ide execute', msg)
+        const ideRes = parseIdeExecute(msg.execute || {}, msg, testExpectedOutput.value.trim())
+        testVerdict.value = ideExecLabel(ideRes)
+        testActualOutput.value = ideRes.output
+        if (ideRes.verdict === 'CE' && ideRes.message)
+          highlightErrorLines(ideRes.message)
+      }
+      else if (msg._ws_type === 'server_broadcast' && msg.desc) {
+        resolved = true; cleanupWs(); testRunning.value = false
+        testVerdict.value = 'CE · 编译错误'
+        testActualOutput.value = String(msg.desc)
+        highlightErrorLines(String(msg.desc))
+      }
+    } catch {}
+  }
+}
+// per-problem code + lang persistence
+function contestCodeKey(pid: string) { return `gulugulu-contest-code-${pid}` }
+let saveTimer: ReturnType<typeof setTimeout> | null = null
+function scheduleContestSave() {
+  if (!selectedPid.value) return
+  if (saveTimer) clearTimeout(saveTimer)
+  saveTimer = setTimeout(() => {
+    try { localStorage.setItem(contestCodeKey(selectedPid.value), JSON.stringify({ code: code.value, lang: lang.value, ts: Date.now() })) } catch {}
+  }, 500)
+}
+watch([code, lang], scheduleContestSave)
+
+// ============================================================
 // Ranking / Scoreboard
 // ============================================================
 async function fetchScoreboard(page = 1) {
@@ -211,8 +318,8 @@ async function fetchScoreboard(page = 1) {
     const json = await res.json()
     const data = json?.data || json?.currentData || json
     if (data?.scoreboard?.result) {
-      const items = data.scoreboard.result.map((r: any) => ({
-        rank: r.rank || r.idx,
+      const items = data.scoreboard.result.map((r: any, i: number) => ({
+        rank: r.rank || r.idx || (i + 1),
         user: { uid: r.user?.uid || r.uid, name: r.user?.name || r.name || '', avatar: r.user?.avatar || `https://cdn.luogu.com.cn/upload/usericon/${r.user?.uid || r.uid}.png`, color: r.user?.color || r.color || '' },
         score: r.score || r.totalScore || 0,
         scores: r.scores || r.problemScores || [],
@@ -233,6 +340,7 @@ const c = computed(() => contest.value || {})
 const nowTs = ref(Math.floor(Date.now() / 1000))
 const nowTimer = setInterval(() => { nowTs.value = Math.floor(Date.now() / 1000) }, 1000)
 onUnmounted(() => clearInterval(nowTimer))
+onUnmounted(() => { cleanupWs(); if (saveTimer) clearTimeout(saveTimer) })
 
 const contestStatus = computed(() => {
   const now = nowTs.value
@@ -279,6 +387,30 @@ function countdown(): string {
   return ''
 }
 function problemLabel(idx: number) { return String.fromCharCode(65 + idx) }
+// ---- Scoreboard redesign (direction B) helpers ----
+// Medal styling for the top-3 ribbon. Gold/silver/bronze tint + accent border.
+function rankInfo(rank: number) {
+  if (rank === 1) return { icon: 'mingcute:medal-fill', color: '#f2c200', bg: 'rgba(242,194,0,.10)', border: '#f2c200' }
+  if (rank === 2) return { icon: 'mingcute:medal-fill', color: '#9aa3ad', bg: 'rgba(154,163,173,.12)', border: '#9aa3ad' }
+  if (rank === 3) return { icon: 'mingcute:medal-fill', color: '#c47d3a', bg: 'rgba(196,125,58,.12)', border: '#c47d3a' }
+  return { icon: '', color: 'var(--bew-text-1)', bg: '', border: '' }
+}
+// Left-edge accent for a row: my-row uses theme color, medalists use their
+// medal color, others get nothing.
+function rankAccent(rank: number, isMine: boolean): Record<string, string> {
+  if (isMine) return { boxShadow: 'inset 3px 0 0 var(--bew-theme-color)' }
+  const ri = rankInfo(rank)
+  return ri.border ? { boxShadow: `inset 3px 0 0 ${ri.border}` } : {}
+}
+// Color-block style for one problem score. Full=green, partial=amber heatmap
+// (alpha scales with attainment), zero=red tint, null=muted grey.
+function scoreBlockStyle(sc: number | null, max: number): Record<string, string> {
+  if (sc == null) return { background: 'var(--bew-fill-2)', color: 'var(--bew-text-4)' }
+  if (sc >= max) return { background: 'var(--bew-success-color-20)', color: 'var(--bew-success-color)' }
+  if (sc === 0) return { background: 'var(--bew-error-color-20)', color: 'var(--bew-error-color)' }
+  const r = Math.min(1, sc / max)
+  return { background: `rgba(245, 158, 11, ${(0.12 + r * 0.30).toFixed(3)})`, color: 'var(--bew-warning-color)' }
+}
 
 function openUser(uid: number) { window.open(`https://www.luogu.com.cn/user/${uid}`, '_blank') }
 function openOriginal() { window.open(`https://www.luogu.com.cn/contest/${contestId.value}`, '_blank') }
@@ -499,20 +631,21 @@ watch(activeTab, (t) => { if (t === 'ranking' && scoreboard.value.length === 0) 
                 <div style="white-space:pre-wrap" v-text="(problemStatement.background||'')+' '+(problemStatement.description||'').replace(/<[^>]+>/g,'').slice(0,800)+(problemStatement.description?.length>800?'...':'')" />
               </div>
 
-              <!-- Language & O2 -->
-              <div flex="~ items-center gap-3" mb-3>
-                <select v-model="lang" style="padding:6px 10px;background:var(--bew-fill-1);color:var(--bew-text-1);border:1px solid var(--bew-border-color);border-radius:var(--bew-radius);font-size:var(--bew-base-font-size)">
-                  <option v-for="l in LUOGU_LANGUAGES.slice(0, 12)" :key="l.id" :value="l.id">{{ l.name }}</option>
-                </select>
-                <label flex="~ items-center gap-1" style="font-size:var(--bew-base-font-size);color:var(--bew-text-2);cursor:pointer">
-                  <input type="checkbox" v-model="enableO2" /> O2优化
-                </label>
-              </div>
-
-              <!-- Code editor -->
-              <textarea v-model="code" style="width:100%;height:300px;background:var(--bew-fill-1);color:var(--bew-text-1);border:1px solid var(--bew-border-color);border-radius:var(--bew-radius);padding:12px;font-family:'Cascadia Code','Fira Code',monospace;font-size:var(--bew-base-font-size);resize:vertical;tab-size:4" placeholder="在此输入代码..." spellcheck="false" />
-
-              <!-- Submit button -->
+              <!-- Code editor: CodeMirror + completion + per-problem lang memory -->
+              <CodeEditor
+                ref="codeEditorRef"
+                :languages="LUOGU_LANGUAGES"
+                :model-value="code"
+                @update:model-value="code = $event"
+                :lang="lang"
+                @update:lang="lang = $event"
+                :enable-o2="enableO2"
+                @update:enable-o2="enableO2 = $event"
+                :show-o2="true"
+                :loading="submitLoading"
+                :disabled="!selectedPid"
+                @submit="handleSubmit"
+              />
               <!-- Captcha -->
               <div v-if="captchaSrc" mt-3 flex="~ col gap-2" p-3 bg="$bew-fill-1" rounded="$bew-radius" border="1 $bew-border-color">
                 <img :src="captchaSrc" style="max-width:200px;border-radius:4px" alt="验证码" />
@@ -532,9 +665,32 @@ watch(activeTab, (t) => { if (t === 'ranking' && scoreboard.value.length === 0) 
                 提交成功！
                 <span v-if="submitResult.rid" style="color:var(--bew-theme-color);cursor:pointer;font-weight:600" @click="openRecord(submitResult.rid)">查看记录 #{{ submitResult.rid }}</span>
               </div>
-              <Button type="primary" mt-3 w-full :loading="submitLoading" @click="handleSubmit" :disabled="!selectedPid">
-                <span v-html="renderIcon('mingcute:send-line', 16)" style="display:contents" /> 提交代码
-              </Button>
+              <!-- Self-test panel (ide_submit + ws.luogu, mirrors ProblemDetail) -->
+              <div mt-4 p-4 rounded="$bew-radius" bg="$bew-fill-1" border="1 $bew-border-color">
+                <div flex="~ items-center justify-between" mb-2>
+                  <span fw-bold style="color:var(--bew-text-1);font-size:var(--bew-base-font-size)">自测</span>
+                  <span v-if="testVerdict" text="xs" px-2 py-0.5 rounded-full fw-bold :style="{ background: testVerdict.startsWith('AC') || testVerdict.startsWith('运行完成') ? 'var(--bew-success-color-20)' : 'var(--bew-error-color-20)', color: testVerdict.startsWith('AC') || testVerdict.startsWith('运行完成') ? 'var(--bew-success-color)' : 'var(--bew-error-color)' }">{{ testVerdict }}</span>
+                </div>
+                <div flex="~ col gap-2">
+                  <div>
+                    <div text="xs $bew-text-3" mb-1>自测输入</div>
+                    <textarea v-model="testInput" class="selftest-area" rows="3" placeholder="输入数据..." spellcheck="false" />
+                  </div>
+                  <div>
+                    <Button type="secondary" :loading="testRunning" :disabled="!selectedPid || !isLoggedIn" @click="runSelfTest">
+                      <span v-html="renderIcon('mingcute:play-fill', 16)" style="display:contents" /> {{ testRunning ? '运行中...' : '运行测试' }}
+                    </Button>
+                  </div>
+                  <div>
+                    <div text="xs $bew-text-3" mb-1>期望输出(可选,留空只看实际输出)</div>
+                    <textarea v-model="testExpectedOutput" class="selftest-area" rows="3" placeholder="期望输出..." spellcheck="false" />
+                  </div>
+                  <div>
+                    <div text="xs $bew-text-3" mb-1>实际输出</div>
+                    <pre class="selftest-output">{{ testActualOutput }}</pre>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
 
@@ -546,36 +702,54 @@ watch(activeTab, (t) => { if (t === 'ranking' && scoreboard.value.length === 0) 
             <div v-if="!rankingLoading && scoreboard.length === 0" text="center" p-8 style="color:var(--bew-text-3);font-size:var(--bew-base-font-size)">
               <span v-html="renderIcon('mingcute:chart-bar-line', 48)" style="display:contents" /><p mt-2>暂无排名数据{{ contestStatus.upcoming ? '（比赛尚未开始）' : '' }}</p>
             </div>
-            <!-- Scoreboard table -->
-            <div v-if="scoreboard.length > 0" class="rank-scroll" style="overflow-x:auto">
+            <!-- Scoreboard: color-block matrix + medal ribbon -->
+            <div v-if="scoreboard.length > 0" class="rank-scroll" style="max-height:calc(100vh - var(--bew-top-bar-height) - 170px);overflow:auto">
               <table class="rank-table" style="width:100%;border-collapse:collapse;font-size:var(--bew-base-font-size)">
                 <thead>
-                  <tr bg="$bew-fill-1" text="left">
-                    <th class="rk">#</th>
-                    <th class="rk">选手</th>
-                    <th v-for="(_p, pi) in problems" :key="pi" class="rk" text="center">{{ problemLabel(pi) }}</th>
-                    <th class="rk" text="right">总分</th>
+                  <tr class="rank-head" text="left">
+                    <th class="rk rk-rank">#</th>
+                    <th class="rk rk-user">选手</th>
+                    <th v-for="(_p, pi) in problems" :key="pi" class="rk rk-prob" text="center">{{ problemLabel(pi) }}</th>
+                    <th class="rk rk-total" text="right">总分</th>
                   </tr>
                 </thead>
                 <tbody>
-                  <!-- 置顶:我的排名(高亮),原位行也保留并高亮 -->
-                  <tr v-if="myRow" class="rank-mine" cursor="pointer" @click="openUser(myRow.user.uid)">
-                    <td class="rk" fw-bold style="color:var(--bew-theme-color)">{{ myRow.rank }}</td>
-                    <td class="rk" flex="~ items-center gap-2">
-                      <img :src="myRow.user.avatar" style="width:24px;height:24px;border-radius:50%;object-fit:cover;flex-shrink:0" @error="(e:any) => e.target.style.display='none'" />
-                      <span class="rk-name" style="color:var(--bew-theme-color);font-weight:700">{{ myRow.user.name }}<span style="color:var(--bew-text-3);font-weight:400">（我）</span></span>
+                  <!-- 我的排名:置顶且 sticky,向下滚动时固定在屏幕上方 -->
+                  <tr v-if="myRow" class="rank-row rank-mine rank-sticky stagger-row" :style="{ '--row-index': 0 }" cursor="pointer" @click="openUser(myRow.user.uid)">
+                    <td class="rk rk-rank" text="center" :style="rankAccent(myRow.rank, true)">
+                      <span class="rk-inline">
+                        <span v-if="rankInfo(myRow.rank).icon" v-html="renderIcon(rankInfo(myRow.rank).icon, 14)" :style="{ color: rankInfo(myRow.rank).color }" />
+                        <span fw-bold style="color:var(--bew-theme-color)">{{ myRow.rank }}</span>
+                      </span>
                     </td>
-                    <td v-for="(s, si) in myRow.scores" :key="si" class="rk" text="center" fw-bold :style="{ color: s != null && s >= (problems[si]?.score||100) ? 'var(--bew-success-color)' : s != null ? 'var(--bew-error-color)' : 'var(--bew-text-4)' }">{{ s != null ? s : '-' }}</td>
-                    <td class="rk" text="right" fw-bold style="color:var(--bew-theme-color)">{{ myRow.score }}</td>
+                    <td class="rk rk-user">
+                      <span class="rk-inline">
+                        <img :src="myRow.user.avatar" style="width:22px;height:22px;border-radius:50%;object-fit:cover;flex-shrink:0" @error="(e:any) => e.target.style.display='none'" />
+                        <span class="rk-name" style="color:var(--bew-theme-color);font-weight:700">{{ myRow.user.name }}<span style="color:var(--bew-text-3);font-weight:400">（我）</span></span>
+                      </span>
+                    </td>
+                    <td v-for="(s, si) in myRow.scores" :key="si" class="rk rk-prob" text="center">
+                      <span class="score-block" :style="scoreBlockStyle(s, problems[si]?.score || 100)">{{ s != null ? s : '-' }}</span>
+                    </td>
+                    <td class="rk rk-total" text="right" fw-bold style="color:var(--bew-theme-color)">{{ myRow.score }}</td>
                   </tr>
-                  <tr v-for="(row, idx) in scoreboardView" :key="row.rank" class="stagger-row" :class="{ 'rank-mine': row.user.uid === myUid }" :style="{ '--row-index': idx }" border="b-1 $bew-border-color" duration-150 cursor="pointer" @click="openUser(row.user.uid)">
-                    <td class="rk" fw-bold :style="{ color: row.rank <= 3 ? 'var(--bew-warning-color)' : 'var(--bew-text-1)' }">{{ row.rank }}</td>
-                    <td class="rk" flex="~ items-center gap-2">
-                      <img :src="row.user.avatar" style="width:24px;height:24px;border-radius:50%;object-fit:cover;flex-shrink:0" @error="(e:any) => e.target.style.display='none'" />
-                      <span class="rk-name" :style="{ color: row.user.color ? `var(--bew-${row.user.color})` : 'var(--bew-text-1)', fontWeight: 600 }">{{ row.user.name }}</span>
+                  <tr v-for="(row, idx) in scoreboardView" :key="row.rank" class="rank-row stagger-row" :class="{ 'rank-mine': row.user.uid === myUid }" :style="{ '--row-index': idx + 1, background: rankInfo(row.rank).bg }" border="b-1 $bew-border-color" duration-150 cursor="pointer" @click="openUser(row.user.uid)">
+                    <td class="rk rk-rank" text="center" :style="rankAccent(row.rank, false)">
+                      <span class="rk-inline">
+                        <span v-if="rankInfo(row.rank).icon" v-html="renderIcon(rankInfo(row.rank).icon, 14)" :style="{ color: rankInfo(row.rank).color }" />
+                        <span fw-bold :style="{ color: rankInfo(row.rank).color }">{{ row.rank }}</span>
+                      </span>
                     </td>
-                    <td v-for="(s, si) in row.scores" :key="si" class="rk" text="center" fw-bold :style="{ color: s != null && s >= (problems[si]?.score||100) ? 'var(--bew-success-color)' : s != null ? 'var(--bew-error-color)' : 'var(--bew-text-4)' }">{{ s != null ? s : '-' }}</td>
-                    <td class="rk" text="right" fw-bold style="color:var(--bew-text-1)">{{ row.score }}</td>
+                    <td class="rk rk-user">
+                      <span class="rk-inline">
+                        <img :src="row.user.avatar" style="width:22px;height:22px;border-radius:50%;object-fit:cover;flex-shrink:0" @error="(e:any) => e.target.style.display='none'" />
+                        <span class="rk-name" :style="{ color: row.user.color ? `var(--bew-${row.user.color})` : 'var(--bew-text-1)', fontWeight: 600 }">{{ row.user.name }}</span>
+                      </span>
+                    </td>
+                    <td v-for="(s, si) in row.scores" :key="si" class="rk rk-prob" text="center">
+                      <span class="score-block" :style="scoreBlockStyle(s, problems[si]?.score || 100)">{{ s != null ? s : '-' }}</span>
+                    </td>
+                    <td class="rk rk-total" text="right" fw-bold style="color:var(--bew-text-1)">{{ row.score }}</td>
                   </tr>
                 </tbody>
               </table>
@@ -587,6 +761,7 @@ watch(activeTab, (t) => { if (t === 'ranking' && scoreboard.value.length === 0) 
         </div>
       </div>
     </Transition>
+    <VerdictStamp :result="verdictResult" @dismiss="verdictResult = null" />
   </div>
 </template>
 
@@ -594,13 +769,41 @@ watch(activeTab, (t) => { if (t === 'ranking' && scoreboard.value.length === 0) 
 .hover-row { transition: background .15s; }
 .hover-row:hover { background: var(--bew-fill-2); }
 /* 比赛排名表:窄屏紧凑 + 用户名省略 + 我的行高亮(置顶与原位) */
-.rank-table .rk { padding: 10px 16px; color: var(--bew-text-2); font-weight: 600; white-space: nowrap; }
+.rank-table { font-variant-numeric: tabular-nums; }
+.rank-table .rk { padding: 9px 14px; color: var(--bew-text-2); font-weight: 600; white-space: nowrap; }
+.rank-table .rk-rank { text-align: center; min-width: 46px; }
+.rank-table .rk-prob { text-align: center; padding-left: 5px; padding-right: 5px; }
+.rank-table .rk-total { min-width: 58px; }
+.rank-table tr.rank-head th { color: var(--bew-text-3); font-size: .82em; letter-spacing: .03em; background: var(--bew-fill-1); }
 .rank-table .rk-name { display: inline-block; max-width: 9rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; vertical-align: middle; }
 .rank-table tr.rank-mine td { background: var(--bew-theme-color-20); }
-.rank-table tr.rank-mine td:first-child { box-shadow: inset 3px 0 0 var(--bew-theme-color); }
+/* color-block matrix cell */
+.score-block {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-width: 34px; height: 24px; padding: 0 6px;
+  border-radius: 6px; font-weight: 700; font-variant-numeric: tabular-nums;
+  font-size: .82em; line-height: 1;
+}
+/* inline-flex wrapper inside td: keeps td a proper table-cell (so columns line
+   up with <th>) while laying out avatar+name / medal+rank horizontally. */
+.rank-table .rk-inline { display: inline-flex; align-items: center; gap: 6px; vertical-align: middle; }
+/* Scoreboard = fixed-height scroll panel (overflow:auto + max-height, set
+   inline on .rank-scroll): horizontal scroll returns AND sticky resolves
+   against the panel. Header + my-rank pin to the panel top.
+   Backgrounds are layered opaque: --bew-bg is solid, --bew-content is
+   translucent (glass), so content-over-bg reads as the card colour while
+   staying opaque — scrolled rows can't show through. Set on th/td, not tr:
+   tr backgrounds don't paint in border-collapse tables. */
+.rank-table thead tr.rank-head th { position: sticky; top: 0; z-index: 11; height: 38px; box-sizing: border-box; background-color: var(--bew-bg); background-image: linear-gradient(var(--bew-content), var(--bew-content)); }
+.rank-table tr.rank-sticky { position: sticky; top: 38px; z-index: 10; }
+/* Opaque pin: var(--bew-bg) is solid (the translucent --bew-content glass sits
+   on top via a solid gradient). Set on td — tr backgrounds don't paint in
+   border-collapse tables. High z-index stays above body rows. */
+.rank-table tr.rank-sticky td { background-color: var(--bew-bg); background-image: linear-gradient(var(--bew-theme-color-20), var(--bew-theme-color-20)), linear-gradient(var(--bew-content), var(--bew-content)); }
 @media (max-width: 768px) {
-  .rank-table .rk { padding: 6px 8px; }
+  .rank-table .rk { padding: 6px 7px; }
   .rank-table .rk-name { max-width: 5.5rem; }
+  .score-block { min-width: 28px; height: 22px; font-size: .78em; }
 }
 .markdown-body {
   :deep(h1) { font-size: 1.4em; font-weight: 700; margin: 1em 0 .5em; }
@@ -621,5 +824,19 @@ watch(activeTab, (t) => { if (t === 'ranking' && scoreboard.value.length === 0) 
     max-height: calc(100vh - var(--bew-top-bar-height) - 72px);
     overflow-y: auto;
   }
+}
+
+.selftest-area {
+  width: 100%; background: var(--bew-bg); color: var(--bew-text-1);
+  border: 1px solid var(--bew-border-color); border-radius: var(--bew-radius-half);
+  padding: 8px 10px; font-family: 'Cascadia Code','Fira Code',monospace;
+  font-size: .85em; resize: vertical; outline: none;
+  &:focus { border-color: var(--bew-theme-color); }
+}
+.selftest-output {
+  margin: 0; padding: 8px 10px; background: var(--bew-bg); color: var(--bew-text-1);
+  border: 1px solid var(--bew-border-color); border-radius: var(--bew-radius-half);
+  font-family: 'Cascadia Code','Fira Code',monospace; font-size: .85em;
+  white-space: pre-wrap; word-break: break-all; max-height: 200px; overflow: auto;
 }
 </style>

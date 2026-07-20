@@ -4,7 +4,7 @@ import { useCodeMirror } from '~/composables/useCodeMirror'
 import { AppPage } from '~/enums/appEnums'
 import { renderIcon } from '~/utils/icons'
 import type { LuoguLanguage } from '~/utils/luogu-api'
-import { extractProblemData, fetchProblemData, isLoggedIn as checkLuoguLogin, LUOGU_LANGUAGES, submitCode } from '~/utils/luogu-api'
+import { extractProblemData, fetchProblemData, isLoggedIn as checkLuoguLogin, ideExecLabel, LUOGU_LANGUAGES, parseErrorLines, parseIdeExecute, RECORD_STATUS_MAP, submitCode } from '~/utils/luogu-api'
 import { timeAgo } from '~/utils/main'
 import { injectKatexCSS, parseProblemMarkdown } from '~/utils/markdown'
 
@@ -109,7 +109,7 @@ async function loadSolutions() {
       })
     }
   }
-  catch (e) {}
+  catch (e) { console.warn('[GuluGulu]', e) }
   solutionsLoading.value = false
 }
 
@@ -120,11 +120,20 @@ const codeContent = ref('')
 
 // CodeMirror 6 编辑器宿主(分屏 IDE 视图内挂载/卸载)
 const cmHost = ref<HTMLElement>()
-useCodeMirror({
+const cm = useCodeMirror({
   host: cmHost,
   value: codeContent,
   lang: computed(() => selectedLang.value.aceMode),
 })
+
+// CE/RE 报错定位:从报错文本解析行号 → 编辑器高亮 + 跳转(仅 IDE 编辑器已挂载时生效)
+function highlightErrorLines(msg: string | null | undefined) {
+  const ls = parseErrorLines(msg)
+  if (ls.length) {
+    cm.highlightLines(ls)
+    cm.jumpToLine(ls[0])
+  }
+}
 
 // 本地代码草稿(按 pid)。洛谷只通过自家编辑器存服务端草稿,本扩展 IDE 从未回写,
 // 导致退出即丢。这里把编辑器镜像到 localStorage,草稿即可跨刷新/退出存活;载入时
@@ -141,7 +150,7 @@ function loadLocalCode(pid: string): { code: string, lang: number } | null {
     if (typeof v?.code === 'string')
       return { code: v.code, lang: typeof v.lang === 'number' ? v.lang : 28 }
   }
-  catch {}
+  catch (e) { console.warn('[GuluGulu]', e) }
   return null
 }
 let pendingSavePid: string | null = null
@@ -155,7 +164,7 @@ function flushLocalCode() {
   try {
     localStorage.setItem(localCodeKey(pid), JSON.stringify({ code: codeContent.value, lang: selectedLang.value.id, ts: Date.now() }))
   }
-  catch {}
+  catch (e) { console.warn('[GuluGulu]', e) }
 }
 function scheduleLocalSave() {
   pendingSavePid = problemId.value
@@ -179,7 +188,7 @@ function ensureTagMap() {
           if (typeof t?.id === 'number' && typeof t.name === 'string')
             tagMap.set(t.id, t.name)
       }
-      catch {}
+      catch (e) { console.warn('[GuluGulu]', e) }
     })()
   }
   return tagMapPromise
@@ -342,7 +351,7 @@ function copyText(text: string) {
   try {
     document.execCommand('copy')
   }
-  catch {}
+  catch (e) { console.warn('[GuluGulu]', e) }
   document.body.removeChild(el)
 }
 
@@ -353,7 +362,7 @@ function cleanupWs() {
   if (activeWsTimeout) { clearTimeout(activeWsTimeout); activeWsTimeout = null }
   if (activeWs) {
     try { activeWs.close() }
-    catch {}; activeWs = null
+    catch (e) { console.warn('[GuluGulu]', e) }; activeWs = null
   }
 }
 
@@ -396,22 +405,24 @@ async function _runTest() {
       return
     try {
       const msg = JSON.parse(event.data)
+      console.debug('[GuluGulu] ide ws msg', msg)
       if (msg._ws_type === 'server_broadcast' && msg.type === 'execute') {
         resolved = true; cleanupWs(); testRunning.value = false
-        const exec = msg.execute || {}
-        if (exec.error) { testVerdict.value = 'RE'; testActualOutput.value = exec.error }
-        else if (exec.exit_code != null) {
-          if (exec.exit_code !== 0) { testVerdict.value = `RE (exit ${exec.exit_code})`; testActualOutput.value = msg.output ?? '(no output)' }
-          else {
-            const out = msg.output ?? ''
-            testActualOutput.value = out || '(no output)'
-            const exp = testExpectedOutput.value.trim()
-            testVerdict.value = exp ? (out.trim() === exp ? 'AC' : 'WA') : `运行完成 (${exec.cpu_time ?? 0}ms, ${exec.memory ?? 0}KB)`
-          }
-        }
+        console.debug('[GuluGulu] ide execute', msg)
+        const ideRes = parseIdeExecute(msg.execute || {}, msg, testExpectedOutput.value.trim())
+        testVerdict.value = ideExecLabel(ideRes)
+        testActualOutput.value = ideRes.output
+        if (ideRes.verdict === 'CE' && ideRes.message)
+          highlightErrorLines(ideRes.message)
+      }
+      else if (msg._ws_type === 'server_broadcast' && msg.desc) {
+        resolved = true; cleanupWs(); testRunning.value = false
+        testVerdict.value = 'CE · 编译错误'
+        testActualOutput.value = String(msg.desc)
+        highlightErrorLines(String(msg.desc))
       }
     }
-    catch {}
+    catch (e) { console.warn('[GuluGulu]', e) }
   }
   ws.onerror = () => { if (!resolved) { resolved = true; cleanupWs(); testRunning.value = false; testVerdict.value = '错误'; testActualOutput.value = 'WebSocket 连接失败' } }
   ws.onclose = () => { if (!resolved) { resolved = true; cleanupWs(); testRunning.value = false; testVerdict.value = '错误'; testActualOutput.value = 'WebSocket 连接关闭' } }
@@ -439,7 +450,7 @@ async function fetchContestProblems() {
       }))
     }
   }
-  catch {}
+  catch (e) { console.warn('[GuluGulu]', e) }
 }
 
 function switchToProblem(pid: string) {
@@ -460,6 +471,26 @@ const copiedMarkdown = ref(false)
 const copiedSample = ref<string | null>(null)
 const submitResult = ref('')
 const lastRid = ref<number | null>(null)
+const myRecordsVisible = ref(false)
+const myRecords = ref<any[]>([])
+const myRecordsLoading = ref(false)
+function recStatus(s: number) {
+  return RECORD_STATUS_MAP[s] || { label: '?', color: '#909399' }
+}
+async function toggleMyRecords() {
+  myRecordsVisible.value = true
+  if (myRecords.value.length)
+    return
+  myRecordsLoading.value = true
+  try {
+    const uid = (window as any).__guly_user?.uid
+    const res = await fetch(`https://www.luogu.com.cn/record/list?pid=${problemId.value}&user=${uid}&_contentOnly=1`, { credentials: 'same-origin' })
+    const j = await res.json()
+    myRecords.value = j?.data?.records?.result || j?.currentData?.records?.result || []
+  }
+  catch (e) { console.warn('[GuluGulu]', e) }
+  myRecordsLoading.value = false
+}
 const submitHistory = ref<Array<{ rid: number, pid: string, time: number }>>([])
 const captchaSrc = ref('')
 const captchaCode = ref('')
@@ -540,11 +571,11 @@ async function handleSubmit() {
   if (result.status === 200 && result.rid) {
     captchaSrc.value = ''; captchaCode.value = ''
     lastRid.value = result.rid
-    submitResult.value = `提交成功！评测记录 #${result.rid}`
     submitHistory.value.unshift({ rid: result.rid, pid: problemId.value, time: Date.now() })
     if (submitHistory.value.length > 5)
       submitHistory.value.pop()
-    window.open(`https://www.luogu.com.cn/record/${result.rid}`, '_blank')
+    // Jump to the record page; the AC-stamp plays there once judging finishes.
+    navigateTo(AppPage.Record, `https://www.luogu.com.cn/record/${result.rid}?from=submit`)
     return
   }
 
@@ -839,9 +870,13 @@ onUnmounted(() => {
               <img v-if="problem.provider.avatar" :src="problem.provider.avatar" style="width:16px;height:16px;border-radius:50%" @error="(e:any)=>{e.target.style.display='none'}" />
               <span text="$bew-theme-color">{{ problem.provider.name }}</span>
             </span>
+            <span flex="~ items-center gap-1" cursor="pointer" text="$bew-theme-color" @click="toggleMyRecords">
+              <span style="display:contents" v-html="renderIcon('mingcute:chart-bar-line', 14)" />
+              我的提交
+            </span>
           </div>
           <button
-            v-if="!isSplitView" class="ml-auto md:ml-0" flex="~ items-center gap-1" p="x-3 y-2" rounded="$bew-radius-half" text="sm"
+            v-if="!isSplitView" class="ml-auto" flex="~ items-center gap-1" p="x-3 y-2" rounded="$bew-radius-half" text="sm"
             border="none"
             :disabled="!isLoggedIn"
             :title="isLoggedIn ? '' : '请先登录洛谷后再使用 IDE'"
@@ -1380,6 +1415,32 @@ onUnmounted(() => {
         </Transition>
       </div>
     </Transition>
+    <Dialog v-if="myRecordsVisible" v-model:visible="myRecordsVisible" title="我的提交记录 · 本题" :show-footer="false" append-to-body :width="520">
+      <div v-if="myRecordsLoading" py-4 text="center $bew-text-3">
+        加载中…
+      </div>
+      <div v-else-if="!myRecords.length" py-4 text="center $bew-text-3">
+        暂无提交记录
+      </div>
+      <div v-else>
+        <div
+          v-for="r in myRecords" :key="r.id"
+          flex="~ items-center justify-between" py-2 cursor="pointer"
+          style="border-bottom:1px solid var(--bew-border-color)"
+          @click="navigateTo(AppPage.Record, `https://www.luogu.com.cn/record/${r.id}`)"
+        >
+          <span flex="~ items-center gap-2">
+            <span fw-bold :style="{ color: recStatus(r.status).color, minWidth: '36px' }">{{ recStatus(r.status).label }}</span>
+            <span text="xs $bew-text-2">#{{ r.id }}</span>
+          </span>
+          <span flex="~ items-center gap-3" text="xs $bew-text-3">
+            <span v-if="r.score != null">{{ r.score }}分</span>
+            <span v-if="r.time != null">{{ r.time }}ms</span>
+            <span>{{ new Date((r.submitTime || 0) * 1000).toLocaleString() }}</span>
+          </span>
+        </div>
+      </div>
+    </Dialog>
   </div>
 </template>
 

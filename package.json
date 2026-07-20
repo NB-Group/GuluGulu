@@ -44,6 +44,7 @@
     "@codemirror/lang-python": "^6",
     "@codemirror/language": "^6",
     "@codemirror/legacy-modes": "^6",
+    "@codemirror/lint": "^6.9.7",
     "@codemirror/search": "^6",
     "@codemirror/state": "^6",
     "@codemirror/theme-one-dark": "^6",

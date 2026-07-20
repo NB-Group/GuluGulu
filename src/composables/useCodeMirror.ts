@@ -1,16 +1,17 @@
-import { closeBrackets, closeBracketsKeymap } from '@codemirror/autocomplete'
+import { autocompletion, closeBrackets, closeBracketsKeymap, completionKeymap } from '@codemirror/autocomplete'
 import { defaultKeymap, history, historyKeymap, indentWithTab } from '@codemirror/commands'
 import { cpp } from '@codemirror/lang-cpp'
 import { java } from '@codemirror/lang-java'
 import { javascript } from '@codemirror/lang-javascript'
 import { python } from '@codemirror/lang-python'
-import { bracketMatching, defaultHighlightStyle, indentUnit, StreamLanguage, syntaxHighlighting } from '@codemirror/language'
+import { bracketMatching, defaultHighlightStyle, indentUnit, StreamLanguage, syntaxHighlighting, syntaxTree } from '@codemirror/language'
 import { pascal } from '@codemirror/legacy-modes/mode/pascal'
 import { search, searchKeymap } from '@codemirror/search'
 import type { Extension } from '@codemirror/state'
-import { Compartment, EditorState } from '@codemirror/state'
+import { Compartment, EditorState, StateEffect, StateField } from '@codemirror/state'
 import { oneDarkHighlightStyle } from '@codemirror/theme-one-dark'
-import { drawSelection, EditorView, highlightActiveLine, keymap, lineNumbers } from '@codemirror/view'
+import { linter, lintGutter } from '@codemirror/lint'
+import { Decoration, DecorationSet, drawSelection, EditorView, highlightActiveLine, keymap, lineNumbers } from '@codemirror/view'
 import { onUnmounted, type Ref, ref, watch } from 'vue'
 
 // aceMode -> CodeMirror 语言扩展(洛谷 LUOGU_LANGUAGES[i].aceMode)
@@ -31,6 +32,7 @@ const baseTheme = EditorView.theme({
   '.cm-gutters': { backgroundColor: 'var(--bew-fill-1)', color: 'var(--bew-text-4)', border: 'none' },
   '&.cm-focused': { outline: 'none' },
   '.cm-activeLine': { backgroundColor: 'transparent' },
+  '.cm-errline': { backgroundColor: 'rgba(228,64,76,0.18)' },
   '.cm-selectionBackground, ::selection': { background: 'var(--bew-theme-color-30)' },
 })
 
@@ -41,6 +43,47 @@ const baseTheme = EditorView.theme({
  * host 通常在 `v-if` 内,故用 `watch(host)`(flush:post)管理生命周期:
  * 出现即 `new EditorView`,消失即 `destroy()`——`onMounted` 抓不到 v-if 延迟出现的宿主。
  */
+// 实时语法检查:标记 Lezer 语法树里的错误节点(波浪线)。只对带 Lezer 文法的语言
+// (c_cpp/python/java/javascript)生效;plain_text/pascal 无文法则不报。
+const syntaxLinter = linter((view) => {
+  const diags: Array<{ from: number, to: number, severity: 'warning', message: string }> = []
+  try {
+    syntaxTree(view.state).iterate({
+      enter(node) {
+        const t = node.type as any
+        if (t && t.isError && node.to > node.from)
+          diags.push({ from: node.from, to: node.to, severity: 'warning', message: '语法错误' })
+      },
+    })
+  }
+  catch { /* never let lint break the editor */ }
+  return diags.slice(0, 50)
+})
+
+// 报错行高亮:外部把 CE/RE 报错解析出的行号喂进来,编辑器高亮对应行。
+const setHighlight = StateEffect.define<number[]>()
+const highlightField = StateField.define<DecorationSet>({
+  create: () => Decoration.none,
+  update(deco, tr) {
+    deco = deco.map(tr.changes)
+    for (const e of tr.effects) {
+      if (e.is(setHighlight)) {
+        if (!e.value.length)
+          return Decoration.none
+        const decos: any[] = []
+        for (const ln of e.value) {
+          if (ln < 1 || ln > tr.state.doc.lines)
+            continue
+          decos.push(Decoration.line({ class: 'cm-errline' }).range(tr.state.doc.line(ln).from))
+        }
+        return Decoration.set(decos, true)
+      }
+    }
+    return deco
+  },
+  provide: f => EditorView.decorations.from(f),
+})
+
 export function useCodeMirror(opts: {
   host: Ref<HTMLElement | undefined>
   value: Ref<string>
@@ -74,6 +117,7 @@ export function useCodeMirror(opts: {
           drawSelection(),
           history(),
           closeBrackets(),
+          autocompletion(),
           bracketMatching(),
           search({ top: true }),
           indentUnit.of('    '),
@@ -81,6 +125,7 @@ export function useCodeMirror(opts: {
           EditorView.lineWrapping,
           keymap.of([
             ...closeBracketsKeymap,
+            ...completionKeymap,
             ...defaultKeymap,
             ...searchKeymap,
             ...historyKeymap,
@@ -88,6 +133,9 @@ export function useCodeMirror(opts: {
           ]),
           langComp.of(langExtension()),
           themeComp.of(themeExtension()),
+          lintGutter(),
+          syntaxLinter,
+          highlightField,
           baseTheme,
           EditorView.updateListener.of((u) => {
             if (u.docChanged && view && view.state.doc.toString() !== opts.value.value)
@@ -135,5 +183,15 @@ export function useCodeMirror(opts: {
     stopLang()
   })
 
-  return { requestMeasure: () => view?.requestMeasure() }
+  return {
+    requestMeasure: () => view?.requestMeasure(),
+    highlightLines: (lines: number[]) => view?.dispatch({ effects: setHighlight.of(lines.filter(l => l >= 1)) }),
+    clearHighlights: () => view?.dispatch({ effects: setHighlight.of([]) }),
+    jumpToLine: (n: number) => {
+      if (!view || n < 1)
+        return
+      const line = view.state.doc.line(n)
+      view.dispatch({ effects: EditorView.scrollIntoView(line.from, { y: 'center' }), selection: { anchor: line.from } })
+    },
+  }
 }

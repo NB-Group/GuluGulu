@@ -7,6 +7,8 @@ import python from 'highlight.js/lib/languages/python'
 import { useGulyApp } from '~/composables/useAppProvider'
 import { AppPage } from '~/enums/appEnums'
 import { renderIcon } from '~/utils/icons'
+import type { VerdictKind, VerdictResult } from '~/utils/luogu-api'
+import { RECORD_STATUS_MAP as statusMap } from '~/utils/luogu-api'
 import { friendlyError, LUOGU_LANGUAGES } from '~/utils/luogu-api'
 import { timeAgo } from '~/utils/main'
 
@@ -29,23 +31,6 @@ function highlightCode(code: string, lang: string): string {
 // ============================================================
 // Status maps — record-level AND test-case-level
 // ============================================================
-const statusMap: Record<number, { label: string, color: string }> = {
-  0: { label: 'Waiting', color: '#909399' },
-  1: { label: 'Judging', color: '#3498db' },
-  2: { label: 'Compiling', color: '#3498db' },
-  3: { label: 'Running', color: '#3498db' },
-  4: { label: 'AC', color: '#52c41a' },
-  5: { label: 'WA', color: '#e74c3c' },
-  6: { label: 'WA', color: '#e74c3c' },
-  7: { label: 'TLE', color: '#f39c12' },
-  8: { label: 'MLE', color: '#f39c12' },
-  9: { label: 'RE', color: '#e74c3c' },
-  10: { label: 'CE', color: '#e74c3c' },
-  11: { label: 'OLE', color: '#f39c12' },
-  12: { label: 'AC', color: '#52c41a' },
-  14: { label: 'WA', color: '#e74c3c' },
-}
-
 // Test case status codes (different from record-level!)
 const tcStatusMap: Record<number, { label: string, color: string }> = {
   0: { label: '?', color: '#909399' },
@@ -182,7 +167,7 @@ async function fetchDetail(id: number) {
     const json = await res.json()
     detail.value = json?.data?.record || json?.currentData?.record || null
   }
-  catch {}
+  catch (e) { console.warn('[GuluGulu]', e) }
   detailLoading.value = false
   // Keep polling every 2s while still judging; stop on final status, navigation
   // away, unmount, or after ~3 min (90 tries) as a runaway safety cap.
@@ -191,6 +176,42 @@ async function fetchDetail(id: number) {
     detailPollTimer = setTimeout(() => fetchDetail(id), 2000)
   }
 }
+
+// AC-stamp: only when arriving from a fresh submit (?from=submit). Plays once when
+// the verdict turns final; browsing old records stays quiet.
+let prevStampStatus: number | null = null
+const stampResult = ref<VerdictResult | null>(null)
+function verdictFromDetail(record: any): VerdictResult {
+  const st = Number(record?.status)
+  const label = statusMap[st]?.label || 'Unknown'
+  const verdict = (['AC', 'WA', 'TLE', 'MLE', 'RE', 'CE', 'OLE', 'UKE'].includes(label) ? label : 'Unknown') as VerdictKind
+  const time = record?.time ?? null
+  const memory = record?.memory ?? null
+  const timeStr = time == null ? '' : `${time}ms`
+  const memStr = memory == null ? '' : memory >= 1024 ? `${(memory / 1024).toFixed(2)}MB` : `${memory}KB`
+  const extra = [timeStr, memStr].filter(Boolean).join(' ')
+  return {
+    rid: record?.id ?? recordId.value ?? 0,
+    state: 'done',
+    verdict,
+    score: record?.score ?? null,
+    time,
+    memory,
+    compileMessage: record?.detail?.compileResult?.message || null,
+    failedCase: null,
+    summary: extra ? `${label} · ${extra}` : label,
+  }
+}
+watch(() => detail.value?.status, (st) => {
+  if (st == null) { prevStampStatus = null; return }
+  if (stampResult.value || PENDING_STATUS.has(st)) { prevStampStatus = st; return }
+  const wasPending = prevStampStatus != null && PENDING_STATUS.has(prevStampStatus)
+  const submitTime = detail.value?.submitTime
+  const fresh = typeof submitTime === 'number' && (Date.now() / 1000 - submitTime) < 30
+  if (wasPending || fresh)
+    stampResult.value = verdictFromDetail(detail.value)
+  prevStampStatus = st
+})
 
 // Normalize subtasks/testCases into display-ready groups
 const testCaseGroups = computed(() => {
@@ -254,7 +275,7 @@ function loadContent() {
   else { detail.value = null; listPage.value = 1; records.value = []; fetchRecords() }
 }
 onMounted(loadContent)
-watch(recordId, () => loadContent())
+watch(recordId, () => { stampResult.value = null; prevStampStatus = null; loadContent() })
 
 // Infinite scroll observer
 let obs: IntersectionObserver | null = null
@@ -451,6 +472,7 @@ onUnmounted(() => {
         {{ hoveredTc.desc }}
       </div>
     </Transition>
+    <VerdictStamp :result="stampResult" @dismiss="stampResult = null" />
   </div>
 </template>
 

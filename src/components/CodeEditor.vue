@@ -1,5 +1,7 @@
 <script setup lang="ts">
+import { ref, computed, watch } from 'vue'
 import type { LuoguLanguage } from '~/utils/luogu-api'
+import { useCodeMirror } from '~/composables/useCodeMirror'
 
 const props = defineProps<{
   languages: LuoguLanguage[]
@@ -21,9 +23,23 @@ const emit = defineEmits<{
   submit: []
 }>()
 
-function onInput(e: Event) {
-  emit('update:modelValue', (e.target as HTMLTextAreaElement).value)
-}
+// CodeMirror host + a local code ref two-way synced with modelValue.
+const host = ref<HTMLElement>()
+const code = ref(props.modelValue)
+const aceMode = computed(() => props.languages.find(l => l.id === props.lang)?.aceMode || 'plain_text')
+
+const editor = useCodeMirror({ host, value: code, lang: aceMode })
+
+defineExpose({
+  highlightLines: (lines: number[]) => editor.highlightLines(lines),
+  clearHighlights: () => editor.clearHighlights(),
+  jumpToLine: (n: number) => editor.jumpToLine(n),
+})
+
+// parent -> local (load lastCode / reset) without echo loop
+watch(() => props.modelValue, v => { if (v !== code.value) code.value = v })
+// local (CM edits) -> parent
+watch(code, v => { if (v !== props.modelValue) emit('update:modelValue', v) })
 </script>
 
 <template>
@@ -56,15 +72,9 @@ function onInput(e: Event) {
       </label>
     </div>
 
-    <!-- Code textarea -->
+    <!-- CodeMirror editor -->
     <div mb-4>
-      <textarea
-        :value="modelValue"
-        class="code-area"
-        :placeholder="placeholder || '在此输入代码...'"
-        spellcheck="false"
-        @input="onInput"
-      />
+      <div ref="host" class="code-area-cm"></div>
     </div>
 
     <!-- Submit button + messages -->
@@ -86,21 +96,13 @@ function onInput(e: Event) {
 </template>
 
 <style lang="scss" scoped>
-.code-area {
-  width: 100%;
+.code-area-cm {
   height: 360px;
-  background: var(--bew-fill-1);
-  color: var(--bew-text-1);
   border: 1px solid var(--bew-border-color);
   border-radius: var(--bew-radius);
-  padding: 12px 16px;
-  font-family: 'Cascadia Code', 'Fira Code', 'JetBrains Mono', monospace;
-  font-size: var(--bew-base-font-size);
-  line-height: 1.6;
-  resize: vertical;
-  tab-size: 4;
-  outline: none;
-  &:focus { border-color: var(--bew-theme-color); box-shadow: 0 0 0 2px var(--bew-theme-color-20); }
+  overflow: hidden;
+  background: var(--bew-fill-1);
+  &:focus-within { border-color: var(--bew-theme-color); box-shadow: 0 0 0 2px var(--bew-theme-color-20); }
 }
 .lang-select:focus { border-color: var(--bew-theme-color); }
 </style>
