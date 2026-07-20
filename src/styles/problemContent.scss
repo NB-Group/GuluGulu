@@ -48,9 +48,9 @@
     border: 1px solid var(--bew-border-color);
   }
 
-  // Code blocks
+  // Code blocks — solid theme-aware bg (matches CodeMirror IDE) for crisp contrast
   pre {
-    background: var(--bew-fill-1);
+    background: var(--code-bg);
     border: 1px solid var(--bew-border-color);
     border-radius: var(--bew-radius);
     padding: 16px;
@@ -62,7 +62,7 @@
       font-family: 'Cascadia Code', 'Fira Code', 'JetBrains Mono', 'Consolas', monospace;
       font-size: 0.875em;
       line-height: 1.6;
-      color: var(--bew-text-1);
+      color: var(--code-text);
       background: none;
       padding: 0;
       border: none;
@@ -70,31 +70,31 @@
     }
   }
 
-  // Highlight.js theme — custom, using CSS variables
+  // Highlight.js tokens — theme-aware via --code-* (light = GitHub light, dark = One Dark)
   .hljs {
-    color: var(--bew-text-1);
+    color: var(--code-text);
     background: none;
   }
 
-  .hljs-keyword    { color: #c678dd; }
-  .hljs-string     { color: #98c379; }
-  .hljs-number     { color: #d19a66; }
-  .hljs-comment    { color: var(--bew-text-4); font-style: italic; }
-  .hljs-function   { color: #61afef; }
-  .hljs-title      { color: #61afef; }
-  .hljs-type       { color: #e5c07b; }
-  .hljs-built_in   { color: #e5c07b; }
-  .hljs-params     { color: var(--bew-text-1); }
-  .hljs-literal    { color: #d19a66; }
-  .hljs-meta       { color: #e06c75; }
-  .hljs-attr       { color: #d19a66; }
-  .hljs-variable   { color: #e06c75; }
-  .hljs-selector-class { color: #e06c75; }
-  .hljs-selector-tag   { color: #e06c75; }
-  .hljs-name       { color: #e06c75; }
-  .hljs-tag        { color: var(--bew-text-1); }
-  .hljs-addition   { color: #98c379; }
-  .hljs-deletion   { color: #e06c75; }
+  .hljs-keyword    { color: var(--code-keyword); }
+  .hljs-string     { color: var(--code-string); }
+  .hljs-number     { color: var(--code-number); }
+  .hljs-comment    { color: var(--code-comment); font-style: italic; }
+  .hljs-function   { color: var(--code-func); }
+  .hljs-title      { color: var(--code-func); }
+  .hljs-type       { color: var(--code-type); }
+  .hljs-built_in   { color: var(--code-type); }
+  .hljs-params     { color: var(--code-text); }
+  .hljs-literal    { color: var(--code-number); }
+  .hljs-meta       { color: var(--code-meta); }
+  .hljs-attr       { color: var(--code-number); }
+  .hljs-variable   { color: var(--code-meta); }
+  .hljs-selector-class { color: var(--code-meta); }
+  .hljs-selector-tag   { color: var(--code-meta); }
+  .hljs-name       { color: var(--code-meta); }
+  .hljs-tag        { color: var(--code-text); }
+  .hljs-addition   { color: var(--code-string); }
+  .hljs-deletion   { color: var(--code-meta); }
 
   // Lists
   ul, ol {

@@ -167,9 +167,20 @@ watch(pid, () => fetchSolutions())
     background: var(--bew-fill-2); padding: 2px 6px; border-radius: 4px; font-size: .9em;
   }
   :deep(pre) {
-    background: var(--bew-fill-1); padding: 12px 16px; border-radius: var(--bew-radius); overflow-x: auto;
-    code { background: none; padding: 0; }
+    background: var(--code-bg); padding: 12px 16px; border-radius: var(--bew-radius); overflow-x: auto; border: 1px solid var(--bew-border-color);
+    code { background: none; padding: 0; color: var(--code-text); }
   }
+  // hljs token colors — theme-aware (light = GitHub light, dark = One Dark), matches CodeMirror IDE
+  :deep(.hljs) { color: var(--code-text); background: none; }
+  :deep(.hljs-keyword) { color: var(--code-keyword); }
+  :deep(.hljs-string), :deep(.hljs-addition) { color: var(--code-string); }
+  :deep(.hljs-number), :deep(.hljs-literal), :deep(.hljs-attr) { color: var(--code-number); }
+  :deep(.hljs-comment) { color: var(--code-comment); font-style: italic; }
+  :deep(.hljs-function), :deep(.hljs-title) { color: var(--code-func); }
+  :deep(.hljs-type), :deep(.hljs-built_in) { color: var(--code-type); }
+  :deep(.hljs-meta), :deep(.hljs-variable), :deep(.hljs-name), :deep(.hljs-selector-class), :deep(.hljs-selector-tag) { color: var(--code-meta); }
+  :deep(.hljs-params), :deep(.hljs-tag) { color: var(--code-text); }
+  :deep(.hljs-deletion) { color: var(--code-meta); }
   :deep(blockquote) {
     border-left: 3px solid var(--bew-theme-color); padding: 4px 12px; margin: .5em 0;
     color: var(--bew-text-2); background: var(--bew-fill-1); border-radius: 0 var(--bew-radius) var(--bew-radius) 0;

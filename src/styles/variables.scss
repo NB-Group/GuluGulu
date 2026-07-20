@@ -121,12 +121,24 @@
   --bew-text-1: hsl(217 19% 10%);
 
   // It can also be used for the text that is followed or subscribed to
-  --bew-text-2: hsl(215 19% 14% / 95%);
+  --bew-text-2: hsl(215 19% 22% / 92%);
 
-  --bew-text-3: hsl(215 19% 18% / 88%);
+  --bew-text-3: hsl(215 19% 25% / 82%);
 
   // It can also be used for the text that is disabled
   --bew-text-4: hsl(215 19% 36% / 40%);
+  // #endregion
+
+  // #region Code block syntax palette (theme-aware; matches CodeMirror IDE)
+  --code-bg: #f6f8fa;
+  --code-text: #24292f;
+  --code-comment: #6e7781;
+  --code-keyword: #cf222e;
+  --code-string: #0a3069;
+  --code-number: #0550ae;
+  --code-func: #8250df;
+  --code-type: #953800;
+  --code-meta: #953800;
   // #endregion
 
   // #region Webpage background colors
@@ -217,9 +229,20 @@
 
   --bew-text-auto: black;
   --bew-text-1: hsl(215 19% 98%);
-  --bew-text-2: hsl(215 19% 96% / 95%);
-  --bew-text-3: hsl(215 19% 92% / 88%);
+  --bew-text-2: hsl(215 19% 92% / 92%);
+  --bew-text-3: hsl(215 19% 85% / 82%);
   --bew-text-4: hsl(215 19% 74% / 40%);
+
+  // Code block syntax palette — One Dark (matches CodeMirror oneDarkHighlightStyle)
+  --code-bg: #282c34;
+  --code-text: #abb2bf;
+  --code-comment: #7f848e;
+  --code-keyword: #c678dd;
+  --code-string: #98c379;
+  --code-number: #d19a66;
+  --code-func: #61afef;
+  --code-type: #e5c07b;
+  --code-meta: #e06c75;
 
   --bew-bg: hsl(230 12% 4%);
   --bew-homepage-bg: hsl(230 12% 4%);
