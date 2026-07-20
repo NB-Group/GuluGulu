@@ -93,6 +93,9 @@ async function fetchProblems(append = false) {
     if (data?.error) {
       errorMsg.value = data.error
     }
+    else if (data?.__needLogin) {
+      errorMsg.value = '需要登录洛谷才能查看'
+    }
     else if (data?.data?.problems) {
       const result = data.data.problems
       const items = (result.result || []).map((p: any) => ({

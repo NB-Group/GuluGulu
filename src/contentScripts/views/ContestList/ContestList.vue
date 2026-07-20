@@ -19,6 +19,7 @@ async function fetchContests() {
   try {
     const data = await browser.runtime.sendMessage({ contentScriptQuery: 'CONTEST.getList' })
     if (data?.error) { errorMsg.value = data.error }
+    else if (data?.__needLogin) { errorMsg.value = '需要登录洛谷才能查看' }
     else if (data?.data?.contests) {
       const r = data.data.contests
       contests.value = (r.result || []).map((c: any) => ({

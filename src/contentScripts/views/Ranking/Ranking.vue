@@ -39,6 +39,7 @@ async function fetchRanking(append = false) {
   try {
     const data = await browser.runtime.sendMessage({ contentScriptQuery: 'RANKING.getList', page: currentPage.value })
     if (data?.error) { errorMsg.value = data.error }
+    else if (data?.__needLogin) { errorMsg.value = '需要登录洛谷才能查看' }
     else if (data?.data?.ranking) {
       const r = data.data.ranking
       const items = (r.result || []).map((u: any) => ({
