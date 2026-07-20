@@ -12,3 +12,4 @@ key.pem
 .claude/
 gulugulu-*.zip
 *.cpp
+.reports/
