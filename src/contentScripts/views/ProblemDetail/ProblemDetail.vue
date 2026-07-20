@@ -4,13 +4,14 @@ import { useCodeMirror } from '~/composables/useCodeMirror'
 import { AppPage } from '~/enums/appEnums'
 import { renderIcon } from '~/utils/icons'
 import type { LuoguLanguage } from '~/utils/luogu-api'
-import { extractProblemData, fetchProblemData, isLoggedIn as checkLuoguLogin, LUOGU_LANGUAGES, parseErrorLines, RECORD_STATUS_MAP, submitCode } from '~/utils/luogu-api'
+import { extractProblemData, fetchProblemData, isLoggedIn as checkLuoguLogin, LUOGU_LANGUAGES, parseErrorLines } from '~/utils/luogu-api'
 import { injectKatexCSS, parseProblemMarkdown } from '~/utils/markdown'
 import { useSelfTest } from './composables/useSelfTest'
 import SolutionsTab from './components/SolutionsTab.vue'
 import DiscussionsTab from './components/DiscussionsTab.vue'
 import { useCodePersistence } from './composables/useCodePersistence'
 import { useContestMode } from './composables/useContestMode'
+import { useProblemSubmit } from './composables/useProblemSubmit'
 
 const props = defineProps<{
   pid?: string
@@ -330,39 +331,10 @@ function copyText(text: string) {
 }
 // 竞赛模式:题目列表 + 切换器抽到 useContestMode(setup 时按 contestId 自动拉取/重拉)
 const { contestProblems, showProblemSwitcher, showTags, switchToProblem } = useContestMode(contestId)
-const submitting = ref(false)
-const submitError = ref('')
+// 提交态 / 验证码 / 提交历史 / 我的提交记录抽到 useProblemSubmit
+const { submitting, submitError, submitResult, submitHistory, captchaSrc, captchaCode, loadCaptcha, handleSubmit, resetSubmit, myRecordsVisible, myRecords, myRecordsLoading, recStatus, toggleMyRecords } = useProblemSubmit({ code: codeContent, isLoggedIn, problemId, inContestMode, contestId, lang: selectedLang, enableO2 })
 const copiedMarkdown = ref(false)
 const copiedSample = ref<string | null>(null)
-const submitResult = ref('')
-const lastRid = ref<number | null>(null)
-const myRecordsVisible = ref(false)
-const myRecords = ref<any[]>([])
-const myRecordsLoading = ref(false)
-function recStatus(s: number) {
-  return RECORD_STATUS_MAP[s] || { label: '?', color: '#909399' }
-}
-async function toggleMyRecords() {
-  myRecordsVisible.value = true
-  if (myRecords.value.length)
-    return
-  myRecordsLoading.value = true
-  try {
-    const uid = (window as any).__guly_user?.uid
-    const res = await fetch(`https://www.luogu.com.cn/record/list?pid=${problemId.value}&user=${uid}&_contentOnly=1`, { credentials: 'same-origin' })
-    const j = await res.json()
-    myRecords.value = j?.data?.records?.result || j?.currentData?.records?.result || []
-  }
-  catch (e) { console.warn('[GuluGulu]', e) }
-  myRecordsLoading.value = false
-}
-const submitHistory = ref<Array<{ rid: number, pid: string, time: number }>>([])
-const captchaSrc = ref('')
-const captchaCode = ref('')
-function loadCaptcha() {
-  captchaCode.value = ''
-  captchaSrc.value = `https://www.luogu.com.cn/api/verify/captcha?_t=${Date.now()}`
-}
 
 function onLangChange(lang: LuoguLanguage) {
   selectedLang.value = lang
@@ -413,60 +385,6 @@ const renderedHint = computed(() => parseProblemMarkdown(problem.value.hint))
 // ============================================================
 // Actions
 // ============================================================
-async function handleSubmit() {
-  if (!codeContent.value.trim()) { submitError.value = '请输入代码'; return }
-  if (!isLoggedIn.value) { submitError.value = '请先登录洛谷'; return }
-
-  submitting.value = true
-  submitError.value = ''
-  submitResult.value = ''
-
-  const result = await submitCode({
-    pid: problemId.value,
-    contestId: inContestMode.value ? contestId.value : undefined,
-    code: codeContent.value,
-    lang: selectedLang.value.id,
-    enableO2: enableO2.value && selectedLang.value.canO2,
-    captcha: captchaCode.value || undefined,
-  })
-
-  submitting.value = false
-
-  // --- Success ---
-  if (result.status === 200 && result.rid) {
-    captchaSrc.value = ''; captchaCode.value = ''
-    lastRid.value = result.rid
-    submitHistory.value.unshift({ rid: result.rid, pid: problemId.value, time: Date.now() })
-    if (submitHistory.value.length > 5)
-      submitHistory.value.pop()
-    // Jump to the record page; the AC-stamp plays there once judging finishes.
-    navigateTo(AppPage.Record, `https://www.luogu.com.cn/record/${result.rid}?from=submit`)
-    return
-  }
-
-  // --- Captcha needed ---
-  if (result.needCaptcha) {
-    submitResult.value = ''
-    submitError.value = '需要输入验证码才能提交'
-    loadCaptcha()
-    return
-  }
-
-  // --- Cloudflare / network errors ---
-  if (result.status === 503 || result.status === 0) {
-    submitError.value = result.errorMessage || '网络异常，请检查洛谷是否可访问'
-    return
-  }
-
-  // --- Auth / permission errors ---
-  if (result.status === 403) {
-    submitError.value = result.errorMessage || '请先登录洛谷'
-    return
-  }
-
-  // --- Unknown error ---
-  submitError.value = result.errorMessage || `提交失败 (${result.status})`
-}
 function copyWithFeedback(key: string, text: string) {
   copyText(text)
   copiedSample.value = key
@@ -591,12 +509,8 @@ watch(problemId, (newPid, oldPid) => {
     flushLocalCode() // 在编辑器被新题目覆盖前,先把上一题草稿落盘
     loadError.value = false
     loading.value = true
-    submitError.value = ''
-    submitResult.value = ''
-    captchaSrc.value = ''
-    captchaCode.value = ''
     resetTest()
-    submitHistory.value = []
+    resetSubmit()
     loadRealData()
   }
 })
