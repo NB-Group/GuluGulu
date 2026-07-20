@@ -4,14 +4,20 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Build & Run
 
+> Package manager is **pnpm** (`packageManager: pnpm@9.5.0` in `package.json`). `npm` will fail — use `pnpm`.
+
 ```bash
-npm install          # install dependencies
-npm run build        # production build → extension/
-npm run dev          # dev mode with HMR (Chrome)
-npm run dev-firefox  # dev mode (Firefox)
-npm run typecheck    # vue-tsc --noEmit
-npm run lint         # eslint
-npm run pack         # package extension.zip + extension.crx
+pnpm install         # install dependencies
+pnpm build           # production build → extension/ (Chrome)
+pnpm build-firefox   # production build → extension-firefox/
+pnpm dev             # dev mode with HMR (Chrome)
+pnpm dev-firefox     # dev mode (Firefox)
+pnpm typecheck       # vue-tsc (no --noEmit flag; ~58 pre-existing errors, watch the delta)
+pnpm lint            # eslint
+pnpm lint:fix        # eslint --fix
+pnpm test            # vitest test
+pnpm knip            # find unused exports / dependencies
+pnpm pack            # package extension.zip + extension.crx
 ```
 
 Load unpacked: Chrome → `chrome://extensions` → Developer mode → Load unpacked → select `extension/`.
@@ -75,6 +81,6 @@ The largest component (~900 lines). Key features:
 - **Team homework**: Stored under `data.trainings` key. Items: `{id, name, type, deadline, problemCount, markCount}`.
 - **Team usages**: `usages.training` covers both training + homework; no separate `usages.homework`.
 - **C3VK WAF (2026-07)**: list pages (`/problem/list`, `/ranking`, `/contest/list`) are gated by an nginx WAF — no `C3VK` cookie ⇒ HTTP 302, no `lentille-context`. Background SW fetch needs `credentials:'include'`; content-script fetch is same-origin so `credentials:'same-origin'` is enough. `home.ts` already preserves `C3VK`.
-- **Submit endpoints (2026-07)**: problem submit = `POST /fe/api/problem/submit/{pid}`; **contest submit is a different endpoint** = `POST /fe/api/contest/submit/{contestId}/{pid}`. `submitCode()` in `src/utils/luogu-api.ts` routes between them via an optional `contestId` arg and shares captcha / Cloudflare(503) / auth(403) / network(0) handling for both.
+- **Submit endpoints (2026-07)**: both problem and contest submit use `POST /fe/api/problem/submit/{pid}`; a contest submit appends `?contestId={id}` as a query param (the old `POST /fe/api/contest/submit/{cid}/{pid}` route 404s). `submitCode()` in `src/utils/luogu-api.ts` routes via an optional `contestId` arg, lazily refreshes CSRF (`refreshCsrf()`) on 403 / 会话超时, and shares captcha / Cloudflare(503) / auth(403) / network(0) handling.
 - **lentille-context paths (new format `{instance,template,data,user,time}`)**: problem list → `data.problems.result[]`, count → `data.problems.count`; problem detail → `data.problem`; `fetchLentilleContext()` returns the raw ctx, so front-end reads `ctx.data.*`.
 - **`src/utils/luogu-api.ts` is content-script only**: it has module-level Vue refs and `document`/`window` references, so it CANNOT be imported in the background SW — keep hand-written `fetch` in background handlers.
