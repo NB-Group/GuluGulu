@@ -13,6 +13,8 @@ import { useCodePersistence } from './composables/useCodePersistence'
 import { useContestMode } from './composables/useContestMode'
 import { useProblemSubmit } from './composables/useProblemSubmit'
 import { useProblemData } from './composables/useProblemData'
+import { useSolutions } from './composables/useSolutions'
+import { useSplitView } from './composables/useSplitView'
 
 const props = defineProps<{
   pid?: string
@@ -35,33 +37,8 @@ const problemId = computed(() => props.pid || extractPidFromUrl())
 
 
 const loadingTimer: ReturnType<typeof setTimeout> | null = null
-const solutions = ref<Array<{ id: number, title: string, author: any, time: number, votes: number }>>([])
-const solutionsLoading = ref(false)
-async function loadSolutions() {
-  if (solutionsLoading.value)
-    return
-  solutionsLoading.value = true
-  try {
-    const res = await fetch(`https://www.luogu.com.cn/problem/solution/${problemId.value}`, { credentials: 'same-origin' })
-    const html = await res.text()
-    const m = html.match(/<script\s+id="lentille-context"\s+type="application\/json"[^>]*>([^<]*)<\/script>/)
-    if (m?.[1]) {
-      const ctx = JSON.parse(m[1])
-      const list = ctx?.data?.solutions?.result || ctx?.currentData?.solutions?.result || []
-      solutions.value = list.map((s) => {
-        return {
-          id: s.id || 0,
-          title: s.title || '',
-          author: s.author || {},
-          time: s.time || 0,
-          votes: s.votes || s.thumbUp || 0,
-        }
-      })
-    }
-  }
-  catch (e) { console.warn('[GuluGulu]', e) }
-  solutionsLoading.value = false
-}
+// 题解列表(懒加载,切 tab 触发)抽到 useSolutions
+const { solutions, solutionsLoading, loadSolutions } = useSolutions(problemId)
 
 // Code editor state — declared early to avoid use-before-define with functions below
 const selectedLang = ref(LUOGU_LANGUAGES.find(l => l.id === 28) || LUOGU_LANGUAGES[0])
@@ -106,34 +83,9 @@ const inContestMode = computed(() => !!contestId.value)
 const ideMode = ref(inContestMode.value || window.location.hash === '#ide')
 const isSplitView = computed(() => isLoggedIn.value && ideMode.value)
 
-// Resizable split
-const splitRatio = ref(40)
-const isDragging = ref(false)
-let cleanupResize: (() => void) | null = null
-function startResize(e: MouseEvent) {
-  isDragging.value = true
-  const container = (e.target as HTMLElement).parentElement!
-  const startPct = splitRatio.value
-  const startX = e.clientX
-  const totalW = container.offsetWidth
-  const onMove = (ev: MouseEvent) => {
-    const dx = ev.clientX - startX
-    splitRatio.value = Math.max(25, Math.min(65, startPct + (dx / totalW) * 100))
-  }
-  const onUp = () => {
-    isDragging.value = false
-    document.removeEventListener('mousemove', onMove)
-    document.removeEventListener('mouseup', onUp)
-    cleanupResize = null
-  }
-  cleanupResize = () => {
-    isDragging.value = false
-    document.removeEventListener('mousemove', onMove)
-    document.removeEventListener('mouseup', onUp)
-  }
-  document.addEventListener('mousemove', onMove)
-  document.addEventListener('mouseup', onUp)
-}
+// 可拖拽分屏比例抽到 useSplitView(自持 onUnmounted 清理)
+const { splitRatio, isDragging, startResize } = useSplitView()
+
 
 // 自测(IDE 运行):逻辑抽到 useSelfTest,这里只解构模板需要的响应式状态 + runTest/resetTest
 const {
@@ -332,7 +284,6 @@ onUnmounted(() => {
   window.removeEventListener('pagehide', flushLocalCode)
   if (loadingTimer)
     clearTimeout(loadingTimer)
-  cleanupResize?.()
 })
 </script>
 
