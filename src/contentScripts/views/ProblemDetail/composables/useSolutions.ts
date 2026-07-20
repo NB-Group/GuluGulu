@@ -2,9 +2,9 @@ import { ref, type Ref } from 'vue'
 
 /**
  * 题解列表:懒加载(切到「题解」标签页时触发)。
- * 用 _contentOnly=1 JSON 接口(同 fetchProblemData),比 regex 抠 HTML 稳。
- * 洛谷题解需登录:未登录返回 401 / currentData.errorCode → solutionsNeedLogin。
- * 从 ProblemDetail 抽出(R5),本次改 _contentOnly + 登录态识别。
+ * 直接 fetch 题解页 HTML(题解数据在 HTML 的 lentille-context 里,与独立 Solution.vue
+ * 同路径;?_contentOnly=1 的 JSON 不含 solutions),正则取出后读 cd.solutions.result。
+ * 洛谷题解需登录:未登录返回 401 → solutionsNeedLogin。
  */
 export function useSolutions(problemId: Ref<string>) {
   const solutions = ref<Array<{ id: number, title: string, author: any, time: number, votes: number }>>([])
@@ -17,19 +17,19 @@ export function useSolutions(problemId: Ref<string>) {
     solutionsLoading.value = true
     solutionsNeedLogin.value = false
     try {
-      const res = await fetch(`https://www.luogu.com.cn/problem/solution/${problemId.value}?_contentOnly=1`, { credentials: 'same-origin' })
+      const res = await fetch(`https://www.luogu.com.cn/problem/solution/${problemId.value}`, { credentials: 'same-origin' })
       if (res.status === 401) {
         solutionsNeedLogin.value = true
       }
       else {
-        const j = await res.json()
-        if (j?.currentData?.errorCode || j?.data?.errorCode) {
-          solutionsNeedLogin.value = true
-        }
-        else {
-          const list = j?.currentData?.solutions?.result || j?.data?.solutions?.result || []
-          solutions.value = list.map((s: any) => ({
-            id: s.id || 0,
+        const html = await res.text()
+        const m = html.match(/<script\s+id="lentille-context"\s+type="application\/json"[^>]*>([^<]*)<\/script>/)
+        if (m?.[1]) {
+          const ctx = JSON.parse(m[1])
+          const cd = ctx?.data || ctx?.currentData || {}
+          const list = cd.solutions?.result || cd.solutions || []
+          solutions.value = (Array.isArray(list) ? list : []).map((s: any) => ({
+            id: s.id || s.sid || 0,
             title: s.title || '',
             author: s.author || {},
             time: s.time || 0,
