@@ -5,6 +5,7 @@ import { renderIcon } from '~/utils/icons'
 import { friendlyError } from '~/utils/luogu-api'
 
 const { navigateTo } = useGulyApp()
+const props = withDefaults(defineProps<{ embedded?: boolean }>(), { embedded: false })
 
 const contests = ref<any[]>([])
 const loading = ref(true); const errorMsg = ref('')
@@ -28,8 +29,8 @@ function timeStr(ts: number) { return new Date(ts*1000).toLocaleDateString('zh-C
 </script>
 
 <template>
-  <div class="page-container" w-full h-full p="x-4 md:x-8 lg:x-16">
-    <div bg="$bew-content" rounded="$bew-radius" p-6 mb-6 shadow="[var(--bew-shadow-1)]" border="1 $bew-border-color">
+  <div :class="{ 'page-container': !props.embedded }" w-full h-full :p="props.embedded ? '' : 'x-4 md:x-8 lg:x-16'">
+    <div bg="$bew-content" rounded="$bew-radius" p-6 mb-6 shadow="[var(--bew-shadow-1)]" border="1 $bew-border-color" v-if="!props.embedded">
       <h1 style="font-size:1.5rem;color:var(--bew-text-1);font-weight:700">我的比赛</h1>
     </div>
     <Loading v-if="loading" />

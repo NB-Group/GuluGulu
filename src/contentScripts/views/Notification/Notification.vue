@@ -3,6 +3,7 @@ import { renderIcon } from '~/utils/icons'
 import { timeAgo } from '~/utils/main'
 
 const items = ref<any[]>([])
+const props = withDefaults(defineProps<{ embedded?: boolean }>(), { embedded: false })
 const loading = ref(true)
 
 onMounted(async () => {
@@ -14,14 +15,14 @@ onMounted(async () => {
       const raw = JSON.parse(m[1])?.data?.notifications
       items.value = Array.isArray(raw) ? raw : (raw?.result || [])
     }
-  } catch {}
+  } catch (e) { console.warn('[GuluGulu]', e) }
   loading.value = false
 })
 </script>
 
 <template>
-  <div class="page-container" w-full h-full p="x-4 md:x-8 lg:x-16">
-    <div bg="$bew-content" rounded="$bew-radius" p-6 mb-6 shadow="[var(--bew-shadow-1)]" border="1 $bew-border-color">
+  <div :class="{ 'page-container': !props.embedded }" w-full h-full :p="props.embedded ? '' : 'x-4 md:x-8 lg:x-16'">
+    <div bg="$bew-content" rounded="$bew-radius" p-6 mb-6 shadow="[var(--bew-shadow-1)]" border="1 $bew-border-color" v-if="!props.embedded">
       <h1 style="font-size:1.5rem;color:var(--bew-text-1);font-weight:700">通知</h1>
     </div>
     <Loading v-if="loading" />

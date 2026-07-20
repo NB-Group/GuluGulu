@@ -5,8 +5,11 @@ import { renderIcon } from '~/utils/icons'
 import { diffLabel, diffColor } from '~/utils/difficulty'
 
 const { navigateTo, currentUrl } = useGulyApp()
+const props = withDefaults(defineProps<{ embedded?: boolean, uid?: number | null }>(), { embedded: false, uid: null })
 
 const uid = computed(() => {
+  if (props.uid)
+    return props.uid
   const m = (currentUrl.value || document.URL).match(/\/user\/(\d+)\/practice/)
   return m ? Number(m[1]) : null
 })
@@ -29,14 +32,14 @@ onMounted(async () => {
       const s = ctx?.data?.submitted
       submitted.value = Array.isArray(s) ? s : (s?.result || [])
     }
-  } catch {}
+  } catch (e) { console.warn('[GuluGulu]', e) }
   loading.value = false
 })
 </script>
 
 <template>
-  <div class="page-container" w-full h-full p="x-4 md:x-8 lg:x-16">
-    <div bg="$bew-content" rounded="$bew-radius" p-6 mb-6 shadow="[var(--bew-shadow-1)]" border="1 $bew-border-color">
+  <div :class="{ 'page-container': !props.embedded }" w-full h-full :p="props.embedded ? '' : 'x-4 md:x-8 lg:x-16'">
+    <div bg="$bew-content" rounded="$bew-radius" p-6 mb-6 shadow="[var(--bew-shadow-1)]" border="1 $bew-border-color" v-if="!props.embedded">
       <h1 style="font-size:1.5rem;color:var(--bew-text-1);font-weight:700">练习情况</h1>
     </div>
     <Loading v-if="loading" />

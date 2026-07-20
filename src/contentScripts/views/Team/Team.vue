@@ -7,6 +7,7 @@ import { AppPage } from '~/enums/appEnums'
 import { useGulyApp } from '~/composables/useAppProvider'
 
 const { currentUrl, navigateTo } = useGulyApp()
+const props = withDefaults(defineProps<{ embedded?: boolean }>(), { embedded: false })
 
 // ============================================================
 // List view
@@ -75,7 +76,7 @@ async function fetchTeamDetail(id: number) {
         }
       }
     }
-  } catch {}
+  } catch (e) { console.warn('[GuluGulu]', e) }
   detailLoading.value = false
   // usages.training is a combined (trainings+homework) quota, not a per-type
   // count — fetch each sub-page's real count so 题单/作业 show correct numbers.
@@ -97,7 +98,7 @@ async function fetchTeamSubCount(id: number, path: string): Promise<number | nul
       const t = ctx?.data?.trainings
       if (t && typeof t === 'object') return t.count ?? t.result?.length ?? 0
     }
-  } catch {}
+  } catch (e) { console.warn('[GuluGulu]', e) }
   return null
 }
 
@@ -221,7 +222,7 @@ watch(() => currentUrl.value, () => loadContent())
 </script>
 
 <template>
-  <div class="page-container" w-full h-full p="x-4 md:x-8 lg:x-16" pos="relative">
+  <div :class="{ 'page-container': !props.embedded }" w-full h-full :p="props.embedded ? '' : 'x-4 md:x-8 lg:x-16'" pos="relative">
     <Loading v-if="loading" />
 
     <!-- ============================================================ -->

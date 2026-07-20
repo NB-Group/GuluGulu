@@ -6,6 +6,7 @@ import { timeAgo } from '~/utils/main'
 import { friendlyError } from '~/utils/luogu-api'
 
 const { navigateTo } = useGulyApp()
+const props = withDefaults(defineProps<{ embedded?: boolean }>(), { embedded: false })
 
 interface ProblemItem {
   pid: string; title: string; difficulty: number; passedCount: number; submittedCount: number
@@ -35,8 +36,8 @@ function openProblem(pid: string) { navigateTo(AppPage.ProblemDetail, 'https://w
 </script>
 
 <template>
-  <div class="page-container" w-full h-full p="x-4 md:x-8 lg:x-16">
-    <div bg="$bew-content" rounded="$bew-radius" p-6 mb-6 shadow="[var(--bew-shadow-1)]" border="1 $bew-border-color">
+  <div :class="{ 'page-container': !props.embedded }" w-full h-full :p="props.embedded ? '' : 'x-4 md:x-8 lg:x-16'">
+    <div bg="$bew-content" rounded="$bew-radius" p-6 mb-6 shadow="[var(--bew-shadow-1)]" border="1 $bew-border-color" v-if="!props.embedded">
       <h1 style="font-size:1.5rem;color:var(--bew-text-1);font-weight:700">我的题库</h1>
       <p text="$bew-text-2" mt-1>共 {{ totalCount }} 题</p>
     </div>
