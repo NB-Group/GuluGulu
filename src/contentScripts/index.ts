@@ -10,6 +10,7 @@ import { setupApp } from '~/logic/common-setup'
 import RESET_GULY_CSS from '~/styles/reset.css?raw'
 import { builtInFontsCSS } from '~/styles/injectBuildInFonts'
 import { runWhenIdle } from '~/utils/lazyLoad'
+import { ensureKatex } from '~/utils/markdown'
 import { compareVersions, injectCSS, isHomePage, isInIframe } from '~/utils/main'
 import { SVG_ICONS } from '~/utils/svgIcons'
 
@@ -443,10 +444,11 @@ function injectApp() {
     const cssUrl = browser.runtime.getURL('dist/contentScripts/style.css')
     fetch(cssUrl)
       .then(r => r.text())
-      .then((css) => {
+      .then(async (css) => {
         const s = document.createElement('style')
         s.textContent = css
         shadowDOM.insertBefore(s, root)
+        await ensureKatex()
         mountApp()
       })
       .catch(() => {

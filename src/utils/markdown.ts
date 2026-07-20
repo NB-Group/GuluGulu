@@ -42,8 +42,22 @@ hljs.registerLanguage('json', json)
 hljs.registerLanguage('yaml', yaml)
 hljs.registerLanguage('markdown', markdownLang)
 hljs.registerLanguage('plaintext', plaintext)
-import katex from 'katex'
 import browser from 'webextension-polyfill'
+
+// katex 外置:不静态打包进内容脚本 IIFE,运行时从 web-accessible 的 /assets/katex.mjs
+// 按需加载(内容脚本启动、Vue 挂载前由 ensureKatex() 预取)。renderLatexRaw 仍同步,
+// 在 katex 就绪前直接返回原文(降级)。585KB 从主包移出。
+type Katex = typeof import('katex')['default']
+let katex: Katex | null = null
+export async function ensureKatex(): Promise<Katex | null> {
+  if (!katex) {
+    try {
+      katex = (await import(/* @vite-ignore */ browser.runtime.getURL('/assets/katex.mjs'))).default
+    }
+    catch (e) { console.warn('[GuluGulu] katex load failed:', e) }
+  }
+  return katex
+}
 // @ts-ignore
 import katexCSSRaw from 'katex/dist/katex.min.css?raw'
 // @ts-ignore
@@ -124,16 +138,19 @@ marked.setOptions({
 // LaTeX rendering (on raw text — before markdown parsing)
 // ============================================================
 function renderLatexRaw(text: string): string {
+  const k = katex
+  if (!k)
+    return text
   // Block math: $$...$$
   text = text.replace(/\$\$([^$]+)\$\$/g, (_match, formula) => {
     try {
-      return katex.renderToString(formula.trim(), { displayMode: true, throwOnError: false, trust: true })
+      return k.renderToString(formula.trim(), { displayMode: true, throwOnError: false, trust: true })
     } catch { return _match }
   })
   // Inline math: $...$ (single $ only)
   text = text.replace(/\$([^$]+?)\$/g, (_match, formula) => {
     try {
-      return katex.renderToString(formula.trim(), { displayMode: false, throwOnError: false, trust: true })
+      return k.renderToString(formula.trim(), { displayMode: false, throwOnError: false, trust: true })
     } catch { return _match }
   })
   return text

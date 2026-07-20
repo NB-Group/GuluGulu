@@ -40,6 +40,8 @@ function writeManifest() {
 
 fs.ensureDirSync(r(isFirefox ? 'extension-firefox' : isSafari ? 'extension-safari' : 'extension'))
 fs.copySync(r('assets'), r(isFirefox ? 'extension-firefox/assets' : isSafari ? 'extension-safari/assets' : 'extension/assets'))
+// katex 外置:运行时按需 import,需作为 web-accessible 资源随扩展发布(assets/* 已在 war)
+fs.copySync(r('node_modules/katex/dist/katex.mjs'), r(isFirefox ? 'extension-firefox/assets/katex.mjs' : isSafari ? 'extension-safari/assets/katex.mjs' : 'extension/assets/katex.mjs'))
 writeManifest()
 
 if (isDev) {
