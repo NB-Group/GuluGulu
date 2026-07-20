@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Build & Run
 
-> Package manager is **pnpm** (`packageManager: pnpm@9.5.0` in `package.json`). `npm` will fail — use `pnpm`.
+> Package manager is **pnpm** (`packageManager: pnpm@9.5.0` in `package.json`). `npm` will fail — use `pnpm`. If `pnpm` itself is broken (corepack version mismatch), the underlying tools run fine straight from `node_modules/.bin/` — e.g. `node_modules/.bin/vite build --config vite.config.content.ts`, `node_modules/.bin/esno scripts/ascii.ts`, `node_modules/.bin/vue-tsc --noEmit`.
 
 ```bash
 pnpm install         # install dependencies
@@ -44,6 +44,8 @@ npm run build:
   3. vite build --config vite.config.content.ts  → content script (index.global.js)
   4. tsup                   → background worker
   5. scripts/ascii.ts       → escapes non-ASCII for Chrome CSP
+
+`scripts/prepare.ts` also copies `katex/dist/katex.mjs` + its woff2 fonts into `extension/assets/`. katex is **externalized** — loaded at runtime from this web-accessible resource (not bundled in the content IIFE), saving ~270KB. See `ensureKatex()` in `src/utils/markdown.ts`. (Externalizing CodeMirror the same way was measured-and-rejected — the re-export bundle loses tree-shaking.)
 ```
 
 ### Data Flow
@@ -56,6 +58,7 @@ Luogu pages embed server data in `<script id="lentille-context" type="applicatio
 ### Key Patterns
 
 - **Colors** — All use `var(--bew-*)` which auto-switch with `.dark`: `--bew-content` (card bg), `--bew-fill-1` (input bg), `--bew-text-1/2/3` (text), `--bew-border-color`, `--bew-theme-color`.
+- **Code block palette** — `--code-*` vars (`src/styles/variables.scss`) are theme-aware: light = GitHub light (`--code-keyword #d73a49` …), dark = One Dark (`#c678dd` …), matching the CodeMirror IDE (`useCodeMirror.ts`: `isDark ? oneDarkHighlightStyle : defaultHighlightStyle`). Code blocks use a **solid** `var(--code-bg)` (`#f6f8fa` / `#282c34`), not the translucent `--bew-fill-1`. Note: `problemContent.scss` is `@import`ed into ProblemDetail's scoped `<style>`, so its `.hljs-*` rules do **not** pierce `v-html` spans — `Solution.vue` uses `:deep()` instead, which does.
 - **UnoCSS attributify** — `bg="$bew-content"`, `rounded="$bew-radius"`, `flex="~ items-center gap-2"`, `border="1 $bew-border-color"`.
 - **CSRF** — Token from `<meta name="csrf-token">`, stored in `window.__guly_user.csrfToken`, used in `X-CSRF-TOKEN` header for POST/DELETE.
 
@@ -65,12 +68,13 @@ Luogu pages embed server data in `<script id="lentille-context" type="applicatio
 
 ### ProblemDetail & IDE Mode
 
-The largest component (~900 lines). Key features:
-- Problem statement with markdown (`marked` + `highlight.js` + `katex`)
+The largest view (~960 lines, decomposed into 7 composables under `composables/` — `useProblemData`, `useProblemSubmit`, `useSelfTest`, `useCodePersistence`, `useContestMode`, `useSolutions`, `useSplitView` — plus `components/SolutionsTab.vue` & `DiscussionsTab.vue`). Key features:
+- Problem statement with markdown (`marked` + `highlight.js` + externalized `katex`)
 - Code submission via `POST /fe/api/problem/submit/{pid}` with CSRF
 - **IDE split-view**: toggled by `ideMode` ref (or auto for `?contestId=`). Left panel = problem statement, right panel = code editor with lang selector, self-test input/output/expected panels, submit button. Toggle via `showTestPanel` ref.
 - **Saved code**: reads `data.lastCode` / `data.lastLanguage` from lentille-context on mount
 - **Contest mode**: detects `?contestId=` in URL, hides solutions/discussions tabs, shows problem switcher (A/B/C/D/E)
+- **Solutions tab**: lazy-loaded by `useSolutions` — fetches `/problem/solution/{pid}` **HTML** (solutions live in the lentille-context, NOT in the `?_contentOnly=1` JSON); a 401 → "需要登录". A standalone full-page `Solution.vue` (`AppPage.Solution`, route `/problem/solution/*`) renders the same content with `.markdown-body` code blocks.
 
 ### Luogu API Notes (as of 2026-07)
 
