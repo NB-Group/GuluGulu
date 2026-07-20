@@ -4,9 +4,11 @@ import { useCodeMirror } from '~/composables/useCodeMirror'
 import { AppPage } from '~/enums/appEnums'
 import { renderIcon } from '~/utils/icons'
 import type { LuoguLanguage } from '~/utils/luogu-api'
-import { extractProblemData, fetchProblemData, isLoggedIn as checkLuoguLogin, ideExecLabel, LUOGU_LANGUAGES, parseErrorLines, parseIdeExecute, RECORD_STATUS_MAP, submitCode } from '~/utils/luogu-api'
-import { timeAgo } from '~/utils/main'
+import { extractProblemData, fetchProblemData, isLoggedIn as checkLuoguLogin, LUOGU_LANGUAGES, parseErrorLines, RECORD_STATUS_MAP, submitCode } from '~/utils/luogu-api'
 import { injectKatexCSS, parseProblemMarkdown } from '~/utils/markdown'
+import { useSelfTest } from './composables/useSelfTest'
+import SolutionsTab from './components/SolutionsTab.vue'
+import DiscussionsTab from './components/DiscussionsTab.vue'
 
 const props = defineProps<{
   pid?: string
@@ -330,13 +332,16 @@ function startResize(e: MouseEvent) {
   document.addEventListener('mouseup', onUp)
 }
 
-// Test samples for IDE mode
-const testInput = ref('')
-const testExpectedOutput = ref('')
-const testActualOutput = ref('')
-const testRunning = ref(false)
-const testVerdict = ref('')
-const showTestPanel = ref(true)
+// 自测(IDE 运行):逻辑抽到 useSelfTest,这里只解构模板需要的响应式状态 + runTest/resetTest
+const {
+  testInput, testExpectedOutput, testActualOutput, testRunning, testVerdict, showTestPanel,
+  runTest, resetTest,
+} = useSelfTest({
+  code: codeContent,
+  langId: computed(() => selectedLang.value.id),
+  enableO2,
+  onCompileError: highlightErrorLines,
+})
 
 const isLoggedIn = computed(() => checkLuoguLogin())
 
@@ -353,79 +358,6 @@ function copyText(text: string) {
   }
   catch (e) { console.warn('[GuluGulu]', e) }
   document.body.removeChild(el)
-}
-
-let activeWs: WebSocket | null = null
-let activeWsTimeout: ReturnType<typeof setTimeout> | null = null
-
-function cleanupWs() {
-  if (activeWsTimeout) { clearTimeout(activeWsTimeout); activeWsTimeout = null }
-  if (activeWs) {
-    try { activeWs.close() }
-    catch (e) { console.warn('[GuluGulu]', e) }; activeWs = null
-  }
-}
-
-async function _runTest() {
-  if (!codeContent.value.trim()) { testVerdict.value = '无代码'; return }
-  if (!isLoggedIn.value) { testVerdict.value = '请先登录'; return }
-  if (testRunning.value)
-    return
-  testRunning.value = true; testVerdict.value = ''; testActualOutput.value = '编译运行中…'
-  cleanupWs()
-  const csrf = (window as any).__guly_user?.csrfToken || ''
-  let resolved = false
-  activeWs = new WebSocket('wss://ws.luogu.com.cn/ws')
-  const ws = activeWs
-  activeWsTimeout = setTimeout(() => { if (!resolved) { resolved = true; cleanupWs(); testRunning.value = false; testVerdict.value = '超时'; testActualOutput.value = '评测超时，请重试' } }, 25000)
-  ws.onopen = () => {
-    const xhr = new XMLHttpRequest()
-    xhr.open('POST', 'https://www.luogu.com.cn/api/ide_submit')
-    xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded')
-    xhr.setRequestHeader('X-CSRF-TOKEN', csrf)
-    xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest')
-    xhr.withCredentials = true
-    xhr.onload = () => {
-      if (resolved)
-        return
-      try {
-        const j = JSON.parse(xhr.responseText)
-        const rid = String(j?.data?.rid ?? '')
-        if (rid) { ws.send(JSON.stringify({ type: 'join_channel', channel: 'ide.track', channel_param: rid })) }
-        else { resolved = true; cleanupWs(); testRunning.value = false; testVerdict.value = '失败'; testActualOutput.value = j?.errorMessage || 'IDE 提交失败' }
-      }
-      catch { resolved = true; cleanupWs(); testRunning.value = false; testVerdict.value = '失败'; testActualOutput.value = 'IDE 返回异常' }
-    }
-    xhr.onerror = () => { if (!resolved) { resolved = true; cleanupWs(); testRunning.value = false; testVerdict.value = '失败'; testActualOutput.value = '请求失败，请检查网络连接或洛谷状态' } }
-    const body = new URLSearchParams({ lang: String(selectedLang.value.id), code: codeContent.value, input: testInput.value, o2: enableO2.value ? '1' : '0', 'csrf-token': csrf })
-    xhr.send(body.toString())
-  }
-  ws.onmessage = (event) => {
-    if (resolved)
-      return
-    try {
-      const msg = JSON.parse(event.data)
-      console.debug('[GuluGulu] ide ws msg', msg)
-      if (msg._ws_type === 'server_broadcast' && msg.type === 'execute') {
-        resolved = true; cleanupWs(); testRunning.value = false
-        console.debug('[GuluGulu] ide execute', msg)
-        const ideRes = parseIdeExecute(msg.execute || {}, msg, testExpectedOutput.value.trim())
-        testVerdict.value = ideExecLabel(ideRes)
-        testActualOutput.value = ideRes.output
-        if (ideRes.verdict === 'CE' && ideRes.message)
-          highlightErrorLines(ideRes.message)
-      }
-      else if (msg._ws_type === 'server_broadcast' && msg.desc) {
-        resolved = true; cleanupWs(); testRunning.value = false
-        testVerdict.value = 'CE · 编译错误'
-        testActualOutput.value = String(msg.desc)
-        highlightErrorLines(String(msg.desc))
-      }
-    }
-    catch (e) { console.warn('[GuluGulu]', e) }
-  }
-  ws.onerror = () => { if (!resolved) { resolved = true; cleanupWs(); testRunning.value = false; testVerdict.value = '错误'; testActualOutput.value = 'WebSocket 连接失败' } }
-  ws.onclose = () => { if (!resolved) { resolved = true; cleanupWs(); testRunning.value = false; testVerdict.value = '错误'; testActualOutput.value = 'WebSocket 连接关闭' } }
 }
 const contestProblems = ref<Array<{ no: string, pid: string, title: string, score: number }>>([])
 const showProblemSwitcher = ref(false)
@@ -730,10 +662,8 @@ watch(problemId, (newPid, oldPid) => {
     submitResult.value = ''
     captchaSrc.value = ''
     captchaCode.value = ''
-    testVerdict.value = ''
-    testActualOutput.value = ''
+    resetTest()
     submitHistory.value = []
-    cleanupWs()
     loadRealData()
   }
 })
@@ -744,7 +674,6 @@ onUnmounted(() => {
   if (loadingTimer)
     clearTimeout(loadingTimer)
   cleanupResize?.()
-  cleanupWs()
 })
 </script>
 
@@ -1064,7 +993,7 @@ onUnmounted(() => {
                   <span>自测输入</span>
                   <span flex="~ items-center gap-1">
                     <span v-if="testVerdict" style="padding:0 6px;border-radius:999px;font-size:.75em;font-weight:700;line-height:1.5" :style="{ background: testVerdict.startsWith('AC') || testVerdict.startsWith('运行完成') ? 'var(--bew-success-color-20)' : 'var(--bew-error-color-20)', color: testVerdict.startsWith('AC') || testVerdict.startsWith('运行完成') ? 'var(--bew-success-color)' : 'var(--bew-error-color)' }">{{ testVerdict }}</span>
-                    <button :disabled="testRunning" style="display:flex;align-items:center;gap:4px;background:var(--bew-theme-color);color:#fff;border:none;border-radius:var(--bew-radius-half);padding:2px 8px;cursor:pointer;font-size:.82em;font-weight:600;white-space:nowrap" @click="_runTest">
+                    <button :disabled="testRunning" style="display:flex;align-items:center;gap:4px;background:var(--bew-theme-color);color:#fff;border:none;border-radius:var(--bew-radius-half);padding:2px 8px;cursor:pointer;font-size:.82em;font-weight:600;white-space:nowrap" @click="runTest">
                       <span style="display:contents" v-html="renderIcon('mingcute:play-fill', 12)" />
                       {{ testRunning ? '…' : '运行测试' }}
                     </button>
@@ -1313,105 +1242,12 @@ onUnmounted(() => {
           <!-- ============================================================ -->
           <!-- Discussions Tab -->
           <!-- ============================================================ -->
-          <div
-            v-else-if="activeTab === 'discussions'"
-            key="discussions"
-            bg="$bew-content" rounded="$bew-radius" p-6
-            shadow="[var(--bew-shadow-1),var(--bew-shadow-edge-glow-1)]"
-            border="1 $bew-border-color"
-            style="backdrop-filter: var(--bew-filter-glass-1)"
-          >
-            <div
-              v-if="discussions.length === 0" flex="~ col" items="center" justify="center" py-12
-              text="$bew-text-2"
-            >
-              <span style="display:contents" v-html="renderIcon('mingcute:comment-line', 48)" />
-              <p text="lg" mt-4 mb-2>
-                暂无讨论
-              </p>
-              <p text="sm $bew-text-3" mb-4>
-                这道题目还没有人发起讨论
-              </p>
-            </div>
-            <div v-else>
-              <div
-                v-for="(d, idx) in discussions" :key="d.id"
-                class="stagger-row hover:bg-$bew-fill-2"
-                :style="{ '--row-index': idx }"
-                p="x-4 y-3" flex="~ items-center gap-4"
-                border="b-1 $bew-border-color" cursor="pointer" duration-200
-                @click="navigateTo(AppPage.Blog, `https://www.luogu.com.cn/discuss/${d.id}`)"
-              >
-                <div flex="~ items-center gap-2" shrink-0>
-                  <img :src="d.author?.avatar" style="width:24px;height:24px;border-radius:50%;object-fit:cover" @error="(e:any) => { e.target.style.display = 'none' }">
-                  <span :style="{ color: d.author?.color ? `var(--bew-${d.author.color})` : 'var(--bew-text-1)', fontWeight: 600, fontSize: 'var(--bew-base-font-size)' }">{{ d.author?.name }}</span>
-                </div>
-                <div flex="1" min-w-0>
-                  <div style="font-size:var(--bew-base-font-size);color:var(--bew-text-1);font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">
-                    {{ d.title }}
-                  </div>
-                </div>
-                <div flex="~ items-center gap-2" shrink-0 style="font-size:.8em;color:var(--bew-text-3)">
-                  <span flex="~ items-center gap-1"><span style="display:contents" v-html="renderIcon('mingcute:comment-line', 14)" />{{ d.replyCount }}</span>
-                  <span>{{ timeAgo(d.time) }}</span>
-                </div>
-              </div>
-            </div>
-          </div>
+          <DiscussionsTab v-else-if="activeTab === 'discussions'" key="discussions" :discussions="discussions" />
 
           <!-- ============================================================ -->
           <!-- Solutions Tab -->
           <!-- ============================================================ -->
-          <div
-            v-else-if="activeTab === 'solutions'"
-            key="solutions"
-            bg="$bew-content" rounded="$bew-radius" p-6
-            shadow="[var(--bew-shadow-1),var(--bew-shadow-edge-glow-1)]"
-            border="1 $bew-border-color"
-            style="backdrop-filter: var(--bew-filter-glass-1)"
-          >
-            <Loading v-if="solutionsLoading" />
-            <div
-              v-else-if="solutions.length === 0" flex="~ col" items="center" justify="center" py-12
-              text="$bew-text-2"
-            >
-              <span style="display:contents" v-html="renderIcon('mingcute:bulb-line', 48)" />
-              <p text="lg" mt-4 mb-2>
-                暂无题解
-              </p>
-              <p text="sm $bew-text-3" mb-4>
-                这道题目还没有题解
-              </p>
-            </div>
-            <div v-else>
-              <h2 mb-4 style="font-size:var(--bew-base-font-size);font-weight:700;color:var(--bew-text-1)">
-                题解 ({{ solutions.length }})
-              </h2>
-              <div
-                v-for="(s, idx) in solutions" :key="s.id"
-                class="stagger-row hover:bg-$bew-fill-2"
-                :style="{ '--row-index': idx }"
-                p="x-4 y-3" flex="~ items-center gap-4"
-                border="b-1 $bew-border-color" cursor="pointer" duration-200
-                @click="navigateTo(AppPage.Solution, `https://www.luogu.com.cn/problem/solution/${problemId}?sid=${s.id}`)"
-              >
-                <div flex="1" min-w-0>
-                  <div style="font-size:var(--bew-base-font-size);color:var(--bew-text-1);font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">
-                    {{ s.title }}
-                  </div>
-                  <div flex="~ items-center gap-2" mt-1>
-                    <img :src="s.author?.avatar" style="width:20px;height:20px;border-radius:50%;object-fit:cover" @error="(e:any) => { e.target.style.display = 'none' }">
-                    <span text="xs" :style="{ color: s.author?.color ? `var(--bew-${s.author.color})` : 'var(--bew-text-2)' }">{{ s.author?.name }}</span>
-                    <span text="xs $bew-text-3">{{ timeAgo(s.time) }}</span>
-                  </div>
-                </div>
-                <div flex="~ items-center gap-1" shrink-0 text="sm $bew-text-3">
-                  <span style="display:contents" v-html="renderIcon('mingcute:thumb-up-line', 14)" />
-                  {{ s.votes }}
-                </div>
-              </div>
-            </div>
-          </div>
+          <SolutionsTab v-else-if="activeTab === 'solutions'" key="solutions" :solutions="solutions" :solutions-loading="solutionsLoading" :problem-id="problemId" />
         </Transition>
       </div>
     </Transition>
