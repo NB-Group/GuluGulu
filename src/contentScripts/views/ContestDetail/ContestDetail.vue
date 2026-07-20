@@ -812,6 +812,25 @@ watch(activeTab, (t) => { if (t === 'ranking' && scoreboard.value.length === 0) 
   :deep(p) { margin: .4em 0; }
   :deep(a) { color: var(--bew-theme-color); }
   :deep(ul), :deep(ol) { padding-left: 1.5em; }
+  :deep(code) {
+    font-family: 'Cascadia Code','Fira Code','JetBrains Mono',monospace;
+    background: var(--bew-fill-2); padding: 2px 6px; border-radius: 4px; font-size: .9em;
+  }
+  :deep(pre) {
+    background: var(--code-bg); padding: 12px 16px; border-radius: var(--bew-radius); overflow-x: auto; border: 1px solid var(--bew-border-color);
+    :deep(code) { background: none; padding: 0; color: var(--code-text); }
+  }
+  // hljs token colors — theme-aware (light = GitHub light, dark = One Dark), matches CodeMirror IDE
+  :deep(.hljs) { color: var(--code-text); background: none; }
+  :deep(.hljs-keyword) { color: var(--code-keyword); }
+  :deep(.hljs-string), :deep(.hljs-addition) { color: var(--code-string); }
+  :deep(.hljs-number), :deep(.hljs-literal), :deep(.hljs-attr) { color: var(--code-number); }
+  :deep(.hljs-comment) { color: var(--code-comment); font-style: italic; }
+  :deep(.hljs-function), :deep(.hljs-title) { color: var(--code-func); }
+  :deep(.hljs-type), :deep(.hljs-built_in) { color: var(--code-type); }
+  :deep(.hljs-meta), :deep(.hljs-variable), :deep(.hljs-name), :deep(.hljs-selector-class), :deep(.hljs-selector-tag) { color: var(--code-meta); }
+  :deep(.hljs-params), :deep(.hljs-tag) { color: var(--code-text); }
+  :deep(.hljs-deletion) { color: var(--code-meta); }
 }
 
 /* Contest meta sidebar: sticky only on lg+ (two-column mode).

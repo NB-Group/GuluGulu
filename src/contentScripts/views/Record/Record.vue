@@ -544,27 +544,24 @@ onUnmounted(() => {
   transform: translate(-50%, calc(-100% + 4px));
 }
 
-:deep(pre code) {
-  font-family: "Cascadia Code", "Fira Code", "JetBrains Mono", monospace;
-  font-size: 0.875em;
+/* Source-code <pre>: override the template's UnoCSS bg="$bew-fill-1" attribute
+   (template attr, can't edit) with the theme-aware --code-bg so it matches the
+   CodeMirror IDE. Scoped `pre[data-v-xxx]` (0,1,1) beats UnoCSS's attributify
+   selector (0,1,0). Inline style on the <pre> still wins for font-family /
+   font-size / color, so we only set background + border here. */
+pre {
+  background: var(--code-bg);
+  border: 1px solid var(--bew-border-color);
 }
-:deep(.hljs-keyword) {
-  color: #c678dd;
-}
-:deep(.hljs-string) {
-  color: #98c379;
-}
-:deep(.hljs-number) {
-  color: #d19a66;
-}
-:deep(.hljs-comment) {
-  color: var(--bew-text-4);
-  font-style: italic;
-}
-:deep(.hljs-function) {
-  color: #61afef;
-}
-:deep(.hljs-built_in) {
-  color: #e5c07b;
-}
+/* hljs token colors — theme-aware (light = GitHub light, dark = One Dark), matches CodeMirror IDE */
+:deep(.hljs) { color: var(--code-text); background: none; }
+:deep(.hljs-keyword) { color: var(--code-keyword); }
+:deep(.hljs-string), :deep(.hljs-addition) { color: var(--code-string); }
+:deep(.hljs-number), :deep(.hljs-literal), :deep(.hljs-attr) { color: var(--code-number); }
+:deep(.hljs-comment) { color: var(--code-comment); font-style: italic; }
+:deep(.hljs-function), :deep(.hljs-title) { color: var(--code-func); }
+:deep(.hljs-type), :deep(.hljs-built_in) { color: var(--code-type); }
+:deep(.hljs-meta), :deep(.hljs-variable), :deep(.hljs-name), :deep(.hljs-selector-class), :deep(.hljs-selector-tag) { color: var(--code-meta); }
+:deep(.hljs-params), :deep(.hljs-tag) { color: var(--code-text); }
+:deep(.hljs-deletion) { color: var(--code-meta); }
 </style>
