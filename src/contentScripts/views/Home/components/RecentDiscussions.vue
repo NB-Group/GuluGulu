@@ -31,7 +31,7 @@ async function fetchPosts() {
         author: p.author || { uid: 0, avatar: '', name: '', color: '' },
       }))
     }
-  } catch {}
+  } catch (e) { console.warn('[GuluGulu]', e) }
   loading.value = false
 }
 function openPost(id: number) { navigateTo(AppPage.Blog, `https://www.luogu.com.cn/discuss/${id}`) }

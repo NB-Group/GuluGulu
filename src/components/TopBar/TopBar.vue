@@ -24,7 +24,7 @@ async function logoutAndSwitch() {
   // Clear Luogu session, then go to homepage (shows login button)
   try {
     await browser.runtime.sendMessage({ contentScriptQuery: 'HOME.logout' })
-  } catch {}
+  } catch (e) { console.warn('[GuluGulu]', e) }
   location.href = 'https://www.luogu.com.cn/'
 }
 
@@ -70,7 +70,7 @@ onMounted(async () => {
       if (user.color) userColor.value = user.color
       ;(window as any).__guly_user = { uid: String(user.uid), name: user.name || '', color: user.color || '', csrfToken: '' }
     }
-  } catch {}
+  } catch (e) { console.warn('[GuluGulu]', e) }
 })
 
 // === Message notification polling ===

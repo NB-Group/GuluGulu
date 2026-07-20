@@ -99,7 +99,7 @@ export function injectKatexCSS() {
 
       cssInjected = true
     }
-  } catch {}
+  } catch (e) { console.warn('[GuluGulu]', e) }
 }
 
 // ============================================================

@@ -29,7 +29,7 @@ async function fetchProblems() {
         accepted: p.totalAccepted || p.acceptedCount || 0, submitted: p.totalSubmit || p.submittedCount || 1,
       }))
     }
-  } catch {}
+  } catch (e) { console.warn('[GuluGulu]', e) }
   loading.value = false
 }
 

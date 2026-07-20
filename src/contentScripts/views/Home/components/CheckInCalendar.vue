@@ -88,7 +88,7 @@ onMounted(async () => {
       checkInDone.value = true
       saveCheckInState()
     }
-  } catch {}
+  } catch (e) { console.warn('[GuluGulu]', e) }
   checkInLoading.value = false
 })
 
@@ -113,7 +113,7 @@ async function handleCheckIn() {
       // freshly-unlocked fortune from the homepage so it shows without refresh.
       try {
         fortuneResult.value = data?.html ? parsePunchHtml(data.html) : await fetchFortuneFromHome()
-      } catch {}
+      } catch (e) { console.warn('[GuluGulu]', e) }
     } else if (data?.code === 201 || data?.message?.includes('已经打过') || data?.message?.includes('已经打卡')) {
       checkInDone.value = true
       saveCheckInState()

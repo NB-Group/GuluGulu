@@ -77,7 +77,7 @@ async function fetchDetail(id: number) {
         }
       })
     }
-  } catch {}
+  } catch (e) { console.warn('[GuluGulu]', e) }
   detailLoading.value = false
 }
 

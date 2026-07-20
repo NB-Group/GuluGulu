@@ -19,7 +19,7 @@ onMounted(async () => {
     const html = await res.text()
     const m = html.match(/<img[^>]+src="(https:\/\/ipic\.luogu\.com\.cn\/[^"]*(?:banner|Banner|hero)[^"]*)"/)
     if (m) bannerUrl.value = m[1]
-  } catch {}
+  } catch (e) { console.warn('[GuluGulu]', e) }
 })
 
 const activatedPage = ref<HomeSubPage>(HomeSubPage.Trending)

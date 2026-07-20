@@ -49,7 +49,7 @@ async function fetchData() {
         .slice(0, 4)
         .map((c: any) => ({ id: c.id, name: c.name || c.title || '', startTime: c.startTime || 0, endTime: c.endTime || 0, rated: !!(c.rated && c.rated > 0) }))
     }
-  } catch {}
+  } catch (e) { console.warn('[GuluGulu]', e) }
   try {
     // Discussions — frontend fetch
     const dr = await fetch('https://www.luogu.com.cn/discuss', { credentials: 'same-origin' })
@@ -64,7 +64,7 @@ async function fetchData() {
         }
       }
     }
-  } catch {}
+  } catch (e) { console.warn('[GuluGulu]', e) }
 
   list.sort((a, b) => b.time - a.time)
   items.value = list.slice(0, 20)
@@ -98,7 +98,7 @@ async function fetchNewest() {
         pid: p.pid || '', title: p.name || p.title || '', difficulty: p.difficulty || 0,
       }))
     }
-  } catch {}
+  } catch (e) { console.warn('[GuluGulu]', e) }
   newestLoading.value = false
 }
 

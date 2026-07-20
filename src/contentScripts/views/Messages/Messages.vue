@@ -167,9 +167,9 @@ async function openChat(uid: number, user?: ChatUser) {
       })
       const idx = conversations.value.findIndex(c => c.user.uid === uid)
       if (idx !== -1) conversations.value[idx] = { ...conversations.value[idx], unread: 0 }
-    } catch {}
+    } catch (e) { console.warn('[GuluGulu]', e) }
     resetUnread()
-  } catch {}
+  } catch (e) { console.warn('[GuluGulu]', e) }
   chatLoading.value = false
   scrollToBottom()
 }
@@ -207,7 +207,7 @@ async function loadOlderMessages() {
         listEl.scrollTop = listEl.scrollHeight - prevScrollHeight
       }
     }
-  } catch {}
+  } catch (e) { console.warn('[GuluGulu]', e) }
   loadingOlder.value = false
 }
 

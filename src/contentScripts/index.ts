@@ -189,7 +189,7 @@ if (/https?:\/\/(?:www\.)?luogu\.com(?:\.cn)?/.test(currentUrl)
     }
     // cachedDark === '0' means light mode — do nothing
   }
-  catch {}
+  catch (e) { console.warn('[GuluGulu]', e) }
 
   // Give the MAIN document a persistent, opaque background that flips with the
   // `.dark` class. The visible app background (AppBackground) lives inside the
@@ -271,7 +271,7 @@ async function onDOMLoaded() {
         userName = user.name || ''
       }
     }
-    catch {}
+    catch (e) { console.warn('[GuluGulu]', e) }
 
     // Wait up to 2s for Luogu's punch card to render, then extract it
     for (let i = 0; i < 20; i++) {
@@ -282,7 +282,7 @@ async function onDOMLoaded() {
           break
         }
       }
-      catch {}
+      catch (e) { console.warn('[GuluGulu]', e) }
       await new Promise(r => setTimeout(r, 100))
     }
 
@@ -292,7 +292,7 @@ async function onDOMLoaded() {
       if (lcEl?.textContent?.trim()) {
         (window as any).__guly_lentille = JSON.parse(lcEl.textContent)
       }
-    } catch {}
+    } catch (e) { console.warn('[GuluGulu]', e) }
 
     // Try to find and preserve the Luogu top bar
     originalTopBar = document.querySelector<HTMLElement>(
@@ -403,7 +403,7 @@ function injectApp() {
       document.documentElement.classList.add('dark')
     }
   }
-  catch {}
+  catch (e) { console.warn('[GuluGulu]', e) }
   const root = document.createElement('div')
   const shadowDOM = container.attachShadow?.({ mode: 'open' }) || container
   const resetStyleEl = document.createElement('style')

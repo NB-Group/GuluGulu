@@ -38,7 +38,7 @@ async function fetchContests() {
         }
       })
     }
-  } catch {}
+  } catch (e) { console.warn('[GuluGulu]', e) }
   loading.value = false
 }
 

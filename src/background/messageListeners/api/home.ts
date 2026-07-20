@@ -10,7 +10,7 @@ const API_HOME = {
           await browser.cookies.remove({ name: c.name, url: `https://www.luogu.com.cn${c.path}` })
         }
       }
-    } catch {}
+    } catch (e) { console.warn('[GuluGulu]', e) }
     return { ok: true }
   },
 }
