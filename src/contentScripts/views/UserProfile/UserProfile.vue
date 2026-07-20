@@ -158,6 +158,19 @@ const guScores = computed(() => {
   ]
 })
 
+// 竞赛 rating(eloValue)分层着色,近似洛谷/CP 通行分段
+function ratingColor(elo: number | null): string {
+  if (elo == null)
+    return 'var(--bew-text-3)'
+  if (elo >= 2500) return '#8B0000'
+  if (elo >= 2200) return '#e74c3c'
+  if (elo >= 1900) return '#f39c12'
+  if (elo >= 1600) return '#9b59b6'
+  if (elo >= 1400) return '#3498db'
+  if (elo >= 1200) return '#52c41a'
+  return '#909399'
+}
+
 function colorVar(c: string): string {
   const m: Record<string, string> = {
     Red: '#e74c3c',
@@ -418,6 +431,25 @@ watch(uid, () => {
                 >
                   {{ ccfLabel(user.ccfLevel) }}
                 </span>
+                <span
+                  v-if="user.eloValue != null"
+                  text="xs"
+                  fw-bold
+                  px-2
+                  py-0.5
+                  rounded-full
+                  :style="{ background: `${ratingColor(user.eloValue)}20`, color: ratingColor(user.eloValue) }"
+                >Rating {{ user.eloValue }}</span>
+                <span
+                  v-if="gu?.rating"
+                  text="xs"
+                  fw-bold
+                  px-2
+                  py-0.5
+                  rounded-full
+                  bg="$bew-fill-1"
+                  style="color: var(--bew-warning-color)"
+                >咕值 {{ gu.rating }}</span>
                 <span
                   v-if="relationshipLabel"
                   text="xs"
