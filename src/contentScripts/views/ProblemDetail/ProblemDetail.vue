@@ -9,6 +9,8 @@ import { injectKatexCSS, parseProblemMarkdown } from '~/utils/markdown'
 import { useSelfTest } from './composables/useSelfTest'
 import SolutionsTab from './components/SolutionsTab.vue'
 import DiscussionsTab from './components/DiscussionsTab.vue'
+import { useCodePersistence } from './composables/useCodePersistence'
+import { useContestMode } from './composables/useContestMode'
 
 const props = defineProps<{
   pid?: string
@@ -137,45 +139,12 @@ function highlightErrorLines(msg: string | null | undefined) {
   }
 }
 
-// 本地代码草稿(按 pid)。洛谷只通过自家编辑器存服务端草稿,本扩展 IDE 从未回写,
-// 导致退出即丢。这里把编辑器镜像到 localStorage,草稿即可跨刷新/退出存活;载入时
-// 洛谷服务端草稿优先。
-function localCodeKey(pid: string) {
-  return `guly:code:${pid}`
-}
-function loadLocalCode(pid: string): { code: string, lang: number } | null {
-  try {
-    const raw = localStorage.getItem(localCodeKey(pid))
-    if (!raw)
-      return null
-    const v = JSON.parse(raw)
-    if (typeof v?.code === 'string')
-      return { code: v.code, lang: typeof v.lang === 'number' ? v.lang : 28 }
-  }
-  catch (e) { console.warn('[GuluGulu]', e) }
-  return null
-}
-let pendingSavePid: string | null = null
-let saveTimer: ReturnType<typeof setTimeout> | null = null
-function flushLocalCode() {
-  if (saveTimer) { clearTimeout(saveTimer); saveTimer = null }
-  const pid = pendingSavePid
-  pendingSavePid = null
-  if (!pid)
-    return
-  try {
-    localStorage.setItem(localCodeKey(pid), JSON.stringify({ code: codeContent.value, lang: selectedLang.value.id, ts: Date.now() }))
-  }
-  catch (e) { console.warn('[GuluGulu]', e) }
-}
-function scheduleLocalSave() {
-  pendingSavePid = problemId.value
-  if (saveTimer)
-    clearTimeout(saveTimer)
-  saveTimer = setTimeout(flushLocalCode, 600)
-}
-watch(codeContent, scheduleLocalSave)
-watch(() => selectedLang.value.id, scheduleLocalSave)
+// 本地代码草稿(按 pid):存取 + 防抖落盘抽到 useCodePersistence
+const { loadLocalCode, flushLocalCode } = useCodePersistence({
+  code: codeContent,
+  lang: selectedLang,
+  problemId,
+})
 
 // 洛谷标签 id→算法名 字典(题目数据常只给数字 id)。懒加载、同源拉取 _lfe/tags,会话内缓存。
 const tagMap = new Map<number, string>()
@@ -359,44 +328,8 @@ function copyText(text: string) {
   catch (e) { console.warn('[GuluGulu]', e) }
   document.body.removeChild(el)
 }
-const contestProblems = ref<Array<{ no: string, pid: string, title: string, score: number }>>([])
-const showProblemSwitcher = ref(false)
-const showTags = ref(false)
-
-async function fetchContestProblems() {
-  if (!contestId.value)
-    return
-  try {
-    const res = await fetch(`https://www.luogu.com.cn/contest/${contestId.value}`, { credentials: 'same-origin' })
-    const html = await res.text()
-    const m = html.match(/<script\s+id="lentille-context"\s+type="application\/json"[^>]*>([^<]+)<\/script>/)
-    if (m?.[1]) {
-      const ctx = JSON.parse(m[1])
-      const cd = ctx?.data || ctx?.currentData || {}
-      const all = cd?.contestProblems || []
-      contestProblems.value = all.map((p: any) => ({
-        no: p.no || '',
-        pid: p.problem?.pid || p.pid || '',
-        title: p.problem?.name || p.title || '',
-        score: p.score || 0,
-      }))
-    }
-  }
-  catch (e) { console.warn('[GuluGulu]', e) }
-}
-
-function switchToProblem(pid: string) {
-  if (pid)
-    navigateTo(AppPage.ProblemDetail, `https://www.luogu.com.cn/problem/${pid}?contestId=${contestId.value}`)
-}
-
-// Initial load + SPA navigation: re-fetch when contestId changes
-if (inContestMode.value)
-  fetchContestProblems()
-watch(contestId, (newId) => {
-  if (newId)
-    fetchContestProblems()
-})
+// 竞赛模式:题目列表 + 切换器抽到 useContestMode(setup 时按 contestId 自动拉取/重拉)
+const { contestProblems, showProblemSwitcher, showTags, switchToProblem } = useContestMode(contestId)
 const submitting = ref(false)
 const submitError = ref('')
 const copiedMarkdown = ref(false)
