@@ -8,6 +8,7 @@ import Loading from '~/components/Loading.vue'
 defineProps<{
   solutions: Array<{ id: number, title: string, author: any, time: number, votes: number }>
   solutionsLoading: boolean
+  needLogin?: boolean
   problemId: string
 }>()
 
@@ -22,6 +23,18 @@ const { navigateTo } = useGulyApp()
     style="backdrop-filter: var(--bew-filter-glass-1)"
   >
     <Loading v-if="solutionsLoading" />
+    <div
+      v-else-if="needLogin" flex="~ col" items="center" justify="center" py-12
+      text="$bew-text-2"
+    >
+      <span style="display:contents" v-html="renderIcon('mingcute:lock-line', 48)" />
+      <p text="lg" mt-4 mb-2>
+        需要登录
+      </p>
+      <p text="sm $bew-text-3" mb-4>
+        登录洛谷后才能查看题解
+      </p>
+    </div>
     <div
       v-else-if="solutions.length === 0" flex="~ col" items="center" justify="center" py-12
       text="$bew-text-2"

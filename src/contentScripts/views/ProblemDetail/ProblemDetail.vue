@@ -38,7 +38,7 @@ const problemId = computed(() => props.pid || extractPidFromUrl())
 
 const loadingTimer: ReturnType<typeof setTimeout> | null = null
 // 题解列表(懒加载,切 tab 触发)抽到 useSolutions
-const { solutions, solutionsLoading, loadSolutions } = useSolutions(problemId)
+const { solutions, solutionsLoading, solutionsNeedLogin, loadSolutions } = useSolutions(problemId)
 
 // Code editor state — declared early to avoid use-before-define with functions below
 const selectedLang = ref(LUOGU_LANGUAGES.find(l => l.id === 28) || LUOGU_LANGUAGES[0])
@@ -857,7 +857,7 @@ onUnmounted(() => {
           <!-- ============================================================ -->
           <!-- Solutions Tab -->
           <!-- ============================================================ -->
-          <SolutionsTab v-else-if="activeTab === 'solutions'" key="solutions" :solutions="solutions" :solutions-loading="solutionsLoading" :problem-id="problemId" />
+          <SolutionsTab v-else-if="activeTab === 'solutions'" key="solutions" :solutions="solutions" :solutions-loading="solutionsLoading" :need-login="solutionsNeedLogin" :problem-id="problemId" />
         </Transition>
       </div>
     </Transition>
