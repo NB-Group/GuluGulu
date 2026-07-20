@@ -183,14 +183,14 @@ watch(() => [settings.value.disableFrostedGlass, settings.value.reduceFrostedGla
 
 // Listen to Luogu's own SPA navigation (hooked by inject/index.js)
 function onHistoryChange() {
-  console.log('[historyChange] navigatingFromUs:', navigatingFromUs)
+  import.meta.env.DEV && console.log('[historyChange] navigatingFromUs:', navigatingFromUs)
   if (navigatingFromUs) return
   const url = window.location.href
-  console.log('[historyChange] url:', url, 'currentUrl:', currentUrl.value)
+  import.meta.env.DEV && console.log('[historyChange] url:', url, 'currentUrl:', currentUrl.value)
   if (url !== currentUrl.value) {
     currentUrl.value = url
     const page = getPageFromUrl()
-    console.log('[historyChange] page:', page, 'activatedPage:', activatedPage.value)
+    import.meta.env.DEV && console.log('[historyChange] page:', page, 'activatedPage:', activatedPage.value)
     if (page === null) {
       // Navigated to a Luogu page GuluGulu has no view for — reload so the
       // content script re-evaluates isSupportedPages() and lets the native
@@ -200,17 +200,17 @@ function onHistoryChange() {
     }
     if (page !== activatedPage.value) {
       activatedPage.value = page
-      console.log('[historyChange] changed to:', page)
+      import.meta.env.DEV && console.log('[historyChange] changed to:', page)
     }
   }
 }
 window.addEventListener('historyChange', onHistoryChange)
 // Handle browser back/forward buttons
 function onPopState() {
-  console.log('[popstate] url:', window.location.href, 'currentUrl:', currentUrl.value)
+  import.meta.env.DEV && console.log('[popstate] url:', window.location.href, 'currentUrl:', currentUrl.value)
   currentUrl.value = window.location.href
   const page = getPageFromUrl()
-  console.log('[popstate] page:', page, 'activatedPage:', activatedPage.value)
+  import.meta.env.DEV && console.log('[popstate] page:', page, 'activatedPage:', activatedPage.value)
   if (page === null) {
     // Back/forward to an unsupported Luogu page — reload to render it natively.
     window.location.reload()
@@ -218,7 +218,7 @@ function onPopState() {
   }
   if (page !== activatedPage.value) {
     activatedPage.value = page
-    console.log('[popstate] changed to:', page)
+    import.meta.env.DEV && console.log('[popstate] changed to:', page)
   }
 }
 window.addEventListener('popstate', onPopState)

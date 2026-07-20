@@ -29,7 +29,7 @@ async function logoutAndSwitch() {
 }
 
 function handleSearch(keyword: string) {
-  console.log('[GuluGulu TopBar] search:', keyword)
+  import.meta.env.DEV && console.log('[GuluGulu TopBar] search:', keyword)
   searchKeyword.value = keyword
   ;(window as any).__guly_search_pending = keyword
   if (activatedPage.value === AppPage.ProblemList) {
@@ -192,11 +192,11 @@ onKeyStroke('/', (e: KeyboardEvent) => {
     if (!(node instanceof HTMLElement)) continue
     const tag = node.tagName
     if (tag === 'TEXTAREA' || tag === 'INPUT' || tag === 'SELECT' || node.isContentEditable || node.getAttribute('contenteditable') === 'true') {
-      console.log('[TopBar] / blocked by:', tag)
+      import.meta.env.DEV && console.log('[TopBar] / blocked by:', tag)
       return
     }
   }
-  console.log('[TopBar] / triggering search')
+  import.meta.env.DEV && console.log('[TopBar] / triggering search')
   toggleTopBarVisible(true)
 })
 

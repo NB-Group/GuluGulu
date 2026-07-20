@@ -114,7 +114,7 @@ function toggleHideDock(hide: boolean) {
 }
 
 function handleDockItemClick($event: MouseEvent, dockItem: DockItem) {
-  console.log('[GuluGulu Dock] click:', dockItem.page)
+  import.meta.env.DEV && console.log('[GuluGulu Dock] click:', dockItem.page)
   if ($event.ctrlKey || $event.metaKey) {
     openDockItemInNewTab(dockItem)
     return
