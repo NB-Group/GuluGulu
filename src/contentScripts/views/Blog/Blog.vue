@@ -242,7 +242,7 @@ onUnmounted(() => obs?.disconnect())
       <div v-if="!loading && posts.length>0" bg="$bew-content" rounded="$bew-radius" shadow="[var(--bew-shadow-1),var(--bew-shadow-edge-glow-1)]" border="1 $bew-border-color" style="backdrop-filter:var(--bew-filter-glass-1)" overflow="hidden">
         <div v-for="(post, idx) in posts" :key="post.id" class="stagger-row hover:bg-$bew-fill-2" :style="{ '--row-index': idx }" p="x-6 y-4" flex="~ col gap-2" cursor="pointer" border="b-1 $bew-border-color" duration-200 @click="openPost(post.id)">
           <div flex="~ items-center gap-2">
-            <span v-if="post.topped" text="xs white" px-1.5 py-0.5 rounded-full bg="var(--bew-error-color)" fw-bold shrink-0>置顶</span>
+            <span v-if="post.topped" text="xs white" px-1.5 py-0.5 rounded-full shrink-0 style="background:var(--bew-error-color)" fw-bold>置顶</span>
             <span v-if="post.locked" text="xs $bew-text-3" px-1.5 py-0.5 rounded-full bg="$bew-fill-2" shrink-0>已锁定</span>
             <span text="xs" px-1.5 py-0.5 rounded-full shrink-0 :style="{background:({red:'#e74c3c',orange:'#f39c12',green:'#52c41a',blue:'#1890ff',cyan:'#13c2c2',purple:'#722ed1',pink:'#eb2f96',gray:'#909399',grey:'#909399',brown:'#a0522d',black:'#595959'})[post.forum.color]||'var(--bew-theme-color)',color:'#fff'}" fw-bold>{{ post.forum.name }}</span>
             <h3 text="base $bew-text-1" fw-bold overflow-hidden style="text-overflow:ellipsis;white-space:nowrap">{{ post.title }}</h3>
