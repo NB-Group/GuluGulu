@@ -84,12 +84,13 @@ function done() {
   // black outside (overlay visible = OLD). 8% feather for a soft diffusion edge.
   mask: radial-gradient(circle var(--r) at var(--rx, 50%) var(--ry, 50%), transparent 92%, black);
   -webkit-mask: radial-gradient(circle var(--r) at var(--rx, 50%) var(--ry, 50%), transparent 92%, black);
-  animation: theme-diffuse 0.85s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  animation: theme-diffuse 0.9s cubic-bezier(0.33, 0, 0.67, 1) forwards;
 }
 
 @keyframes theme-diffuse {
-  from { --r: 0px; }
-  to { --r: var(--max-r); }
+  0%   { --r: 0px; opacity: 1; }
+  80%  { --r: var(--max-r); opacity: 1; } // fully spread, overlay at full opacity
+  100% { --r: var(--max-r); opacity: 0; } // gracefully fade out the overlay
 }
 
 @media (prefers-reduced-motion: reduce) {
