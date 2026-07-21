@@ -1,4 +1,5 @@
 import { usePreferredDark } from '@vueuse/core'
+import browser from 'webextension-polyfill'
 
 import { settings } from '~/logic'
 import { runWhenIdle } from '~/utils/lazyLoad'
@@ -46,9 +47,17 @@ export function useDark() {
   // Cycles auto -> explicit -> auto. The theme flips immediately (reactive);
   // we just dispatch the click coords so ThemeReveal can diffuse from the
   // pressed button (the overlay is purely visual).
-  function toggleDark(e?: MouseEvent) {
+  async function toggleDark(e?: MouseEvent) {
     if (e)
       window.dispatchEvent(new CustomEvent('global.themeRevealOrigin', { detail: { x: e.clientX, y: e.clientY } }))
+    // 翻转前先截当前(旧主题)画面,ThemeReveal 用它做扩散圆外的真实旧内容覆盖层。
+    // 必须在 flip 之前截,否则截到的是新主题。截图失败则回退到平涂色块覆盖。
+    try {
+      const res = await browser.runtime.sendMessage({ contentScriptQuery: 'CAPTURE_TAB' })
+      if (res?.ok && typeof res.url === 'string')
+        window.dispatchEvent(new CustomEvent('global.themeRevealSnapshot', { detail: res.url }))
+    }
+    catch {}
     if (currentAppColorScheme.value !== currentSystemColorScheme.value)
       settings.value.themeMode = 'auto'
     else
