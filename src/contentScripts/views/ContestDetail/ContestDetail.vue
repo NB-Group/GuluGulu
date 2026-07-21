@@ -5,8 +5,9 @@ import type { VerdictResult } from '~/utils/luogu-api'
 import { parseMarkdownContent } from '~/utils/markdown'
 import { useGulyApp } from '~/composables/useAppProvider'
 import { useTween } from '~/composables/useTween'
+import { AppPage } from '~/enums/appEnums'
 
-const { currentUrl } = useGulyApp()
+const { currentUrl, navigateTo } = useGulyApp()
 
 // ============================================================
 // Contest ID from URL
@@ -437,7 +438,7 @@ function scoreBlockStyle(sc: number | null, max: number): Record<string, string>
 
 function openUser(uid: number) { window.open(`https://www.luogu.com.cn/user/${uid}`, '_blank') }
 function openOriginal() { window.open(`https://www.luogu.com.cn/contest/${contestId.value}`, '_blank') }
-function openRecord(rid: number) { window.open(`https://www.luogu.com.cn/record/${rid}`, '_blank') }
+function openRecord(rid: number) { navigateTo(AppPage.Record, `https://www.luogu.com.cn/record/${rid}`) }
 
 // Current user's per-problem scores (from the scoreboard), so the problem list
 // shows real attainment instead of the always-100 max. Null until the

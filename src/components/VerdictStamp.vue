@@ -4,10 +4,19 @@ import { computed, onBeforeUnmount, ref, watch } from 'vue'
 
 import { useGulyApp } from '~/composables/useAppProvider'
 import type { VerdictResult } from '~/utils/luogu-api'
+import { AppPage } from '~/enums/appEnums'
 
 const props = defineProps<{ result: VerdictResult | null }>()
 const emit = defineEmits<{ dismiss: [] }>()
-const { mainAppRef } = useGulyApp()
+const { mainAppRef, navigateTo } = useGulyApp()
+
+// 查看记录:in-SPA 跳转到 Record 页(而非 target=_blank 开新标签,后者体验割裂)
+function viewRecord() {
+  if (props.result?.rid != null) {
+    navigateTo(AppPage.Record, `https://www.luogu.com.cn/record/${props.result.rid}`)
+    emit('dismiss')
+  }
+}
 
 interface Meta { color: string, label: string, celebrate?: boolean }
 const META: Record<string, Meta> = {
@@ -125,9 +134,9 @@ reduced.value = !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matche
             </button>
             <pre v-if="showCompile" class="vs-ce">{{ result.compileMessage }}</pre>
           </template>
-          <a class="vs-link" :href="`https://www.luogu.com.cn/record/${result.rid}`" target="_blank" rel="noreferrer">
+          <button class="vs-link" @click="viewRecord">
             查看记录 #{{ result.rid }}
-          </a>
+          </button>
         </div>
       </div>
     </div>
@@ -168,7 +177,7 @@ reduced.value = !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matche
 .vs-summary { margin-top: 6px; font-size: 12px; color: var(--bew-text-3); }
 .vs-toggle { margin-top: 12px; font-size: 12px; color: var(--bew-theme-color); background: transparent; border: none; cursor: pointer; }
 .vs-ce { margin-top: 8px; padding: 10px; max-height: 160px; overflow: auto; background: var(--bew-fill-1); border-radius: 8px; font-family: 'Cascadia Code', 'Fira Code', Consolas, monospace; font-size: 11.5px; line-height: 1.5; color: var(--bew-text-2); text-align: left; white-space: pre-wrap; word-break: break-word; }
-.vs-link { display: inline-block; margin-top: 14px; font-size: 12px; color: var(--bew-text-3); text-decoration: none; }
+.vs-link { display: inline-block; margin-top: 14px; font-size: 12px; color: var(--bew-text-3); text-decoration: none; border: none; background: transparent; cursor: pointer; font: inherit; }
 .vs-link:hover { color: var(--bew-theme-color); }
 
 .vs-splat { position: absolute; inset: 0; pointer-events: none; }
