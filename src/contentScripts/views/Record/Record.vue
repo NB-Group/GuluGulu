@@ -174,7 +174,9 @@ async function fetchDetail(id: number) {
   detailLoading.value = false
   // Keep polling every 2s while still judging; stop on final status, navigation
   // away, unmount, or after ~3 min (90 tries) as a runaway safety cap.
-  if (detail.value && PENDING_STATUS.has(detail.value.status) && detailPollCount < 90) {
+  // compileResult 出现即 CE 终态(洛谷有时 status 卡在 Compiling 但 compileResult 已回),
+  // 立刻停轮询,避免 Record 页一直显示 Compiling。
+  if (detail.value && PENDING_STATUS.has(detail.value.status) && !detail.value?.detail?.compileResult && detailPollCount < 90) {
     detailPollCount++
     detailPollTimer = setTimeout(() => fetchDetail(id), 2000)
   }
