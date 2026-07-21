@@ -76,7 +76,7 @@
 .stagger-row {
   opacity: 0;
   animation: stagger-fade-in 0.45s ease forwards;
-  animation-delay: calc(var(--row-index, 0) * 40ms + 0.05s);
+  animation-delay: calc(min(var(--row-index, 0), 10) * 40ms + 0.05s); // cap so long lists (200 rows) don't drag
 }
 
 @keyframes stagger-fade-in {
@@ -94,5 +94,52 @@
 .stagger-card {
   opacity: 0;
   animation: stagger-fade-in 0.4s ease forwards;
-  animation-delay: calc(var(--card-index, 0) * 60ms + 0.05s);
+  animation-delay: calc(min(var(--card-index, 0), 8) * 60ms + 0.05s); // cap
+}
+
+// Page switch (route change) — replaces page-fade. Outgoing fades + settles down
+// with a slight blur; incoming fades in and rises 6px. Use with mode="out-in".
+.page-switch-enter-active {
+  transition: opacity 0.3s ease, transform 0.3s cubic-bezier(0.22, 1, 0.36, 1), filter 0.25s ease;
+}
+.page-switch-leave-active {
+  transition: opacity 0.2s ease, transform 0.2s ease, filter 0.2s ease;
+}
+.page-switch-enter-from {
+  opacity: 0;
+  transform: translateY(6px);
+}
+.page-switch-leave-to {
+  opacity: 0;
+  transform: translateY(-4px) scale(0.99);
+  filter: blur(3px);
+}
+
+// Shared button micro-interaction. Apply `btn-press` to primary action buttons
+// for a consistent hover-lift / press / focus-ring feel. (The Dock already has
+// its own hover:scale-110 — don't stack this on it.)
+.btn-press {
+  transition: transform 0.15s cubic-bezier(0.34, 2, 0.6, 1), box-shadow 0.15s ease, background 0.15s ease;
+  &:hover {
+    transform: translateY(-1px);
+  }
+  &:active {
+    transform: translateY(0) scale(0.97);
+  }
+  &:focus-visible {
+    outline: 2px solid var(--bew-theme-color);
+    outline-offset: 2px;
+  }
+}
+
+// Respect users who prefer reduced motion — kill non-essential animation app-wide.
+@media (prefers-reduced-motion: reduce) {
+  .page-switch-enter-active,
+  .page-switch-leave-active,
+  .content-reveal-enter-active,
+  .stagger-row,
+  .stagger-card {
+    transition: none !important;
+    animation: none !important;
+  }
 }

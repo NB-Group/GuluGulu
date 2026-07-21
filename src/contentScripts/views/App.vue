@@ -359,6 +359,9 @@ provide<GulyAppProvider>('GULY_APP', {
       <AppBackground :activated-page="activatedPage" />
     </template>
 
+    <!-- Theme switch reveal (top-down wipe; zoom-safe — no View Transition snapshot) -->
+    <ThemeReveal />
+
     <!-- Settings -->
     <KeepAlive>
       <Settings v-if="showSettings" z-10002 @close="showSettings = false" />
@@ -407,7 +410,7 @@ provide<GulyAppProvider>('GULY_APP', {
                 w="lg:[calc(100%-200px)] [calc(100%-150px)]"
                 :style="settings.dockCollapsed ? { width: 'calc(100% - 40px)' } : undefined"
               >
-                <Transition name="page-fade">
+                <Transition name="page-switch" mode="out-in">
                   <Component :is="pages[activatedPage]" :key="activatedPage" />
                 </Transition>
               </div>
