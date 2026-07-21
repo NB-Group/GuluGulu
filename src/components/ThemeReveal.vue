@@ -79,11 +79,11 @@ function done() {
   inset: 0;
   z-index: 9999;
   pointer-events: none;
-  opacity: 0.25; // page content shows through outside the circle
+  opacity: 1; // 不透明:圆外=旧主题(原色),圆孔内露出新主题,扩散把旧色替换成新色
   --r: 0px;
-  // transparent inside the growing circle (overlay hidden → NEW and page show fully),
-  // black outside (overlay at 25% opacity = faint old-theme wash → page visible through).
-  // 3% feather (= hard-ish edge, no lingering ring → no "callback" second phase).
+  // transparent inside the growing circle (overlay hidden → NEW theme shows),
+  // black outside (overlay fully opaque = OLD theme covers page). As --r grows,
+  // the new-theme hole expands outward, replacing old with new — one diffusion.
   mask: radial-gradient(circle var(--r) at var(--rx, 50%) var(--ry, 50%), transparent 97%, black);
   -webkit-mask: radial-gradient(circle var(--r) at var(--rx, 50%) var(--ry, 50%), transparent 97%, black);
   animation: theme-diffuse 0.9s cubic-bezier(0.33, 0, 0.67, 1) forwards;
