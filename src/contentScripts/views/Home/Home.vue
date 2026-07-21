@@ -115,7 +115,7 @@ function toggleTabContentLoading(loading: boolean) {
             />
           </Transition>
         </div>
-        <div class="home-sidebar" w-full lg="280px" flex-shrink-0 display="none lg:block">
+        <div class="home-sidebar" w="280px" flex-shrink-0 display="none md:block">
           <Sidebar />
         </div>
       </div>
