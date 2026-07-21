@@ -7,6 +7,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 > Package manager is **pnpm** (`packageManager: pnpm@9.5.0` in `package.json`). `npm` will fail — use `pnpm`. If `pnpm` itself is broken (corepack version mismatch), the underlying tools run fine straight from `node_modules/.bin/` — e.g. `node_modules/.bin/vite build --config vite.config.content.ts`, `node_modules/.bin/esno scripts/ascii.ts`, `node_modules/.bin/vue-tsc --noEmit`.
 >
 > **Manual build chain needs `NODE_ENV=production`.** `pnpm build` sets it via `cross-env`; when running the steps yourself via `node_modules/.bin/`, you MUST prefix each with `NODE_ENV=production`. `scripts/prepare.ts` checks `isDev = process.env.NODE_ENV !== 'production'` and enters `chokidar.watch` (never exits) in dev mode — without it the chain hangs forever at `build:prepare`. Full manual build: `NODE_ENV=production node_modules/.bin/rimraf --glob extension 'extension.*' && NODE_ENV=production node_modules/.bin/vite build && NODE_ENV=production node_modules/.bin/esno scripts/prepare.ts && NODE_ENV=production node_modules/.bin/vite build --config vite.config.content.ts && NODE_ENV=production node_modules/.bin/tsup && NODE_ENV=production node_modules/.bin/esno scripts/ascii.ts`.
+>
+> **vitest**: `node_modules/.bin/vitest run <path>`(单进程跑;长任务给 `timeout`)。`vite.config.ts` 的 `test:{globals:true,environment:'jsdom'}` + AutoImport → 测试里 `ref/computed` 自动导入、`document/window` 可用。⚠️ vitest **root=src**(sharedConfig),测试文件**必须在 src 下**才被 `**/*.{test,spec}.*` include 命中(放项目根 `test/` 会 "No test files found")。用显式 `import { describe, it, expect } from 'vitest'`(globals 类型未进 tsconfig `types`),否则 vue-tsc 报错。测试文件不被生产 entry 引用 → 不进 content IIFE,typecheck 计数不变。
 
 ```bash
 pnpm install         # install dependencies
@@ -61,7 +63,7 @@ Luogu pages embed server data in `<script id="lentille-context" type="applicatio
 
 - **Colors** — All use `var(--bew-*)` which auto-switch with `.dark`: `--bew-content` (card bg), `--bew-fill-1` (input bg), `--bew-text-1/2/3` (text), `--bew-border-color`, `--bew-theme-color`.
 - **Code block palette** — `--code-*` vars (`src/styles/variables.scss`) are theme-aware: light = GitHub light (`--code-keyword #d73a49` …), dark = One Dark (`#c678dd` …), matching the CodeMirror IDE (`useCodeMirror.ts`: `isDark ? oneDarkHighlightStyle : defaultHighlightStyle`). Code blocks use a **solid** `var(--code-bg)` (`#f6f8fa` / `#282c34`), not the translucent `--bew-fill-1`. Note: `problemContent.scss` is `@import`ed into ProblemDetail's scoped `<style>`, so its `.hljs-*` rules do **not** pierce `v-html` spans — `Solution.vue` uses `:deep()` instead, which does.
-- **UnoCSS attributify** — `bg="$bew-content"`, `rounded="$bew-radius"`, `flex="~ items-center gap-2"`, `border="1 $bew-border-color"`.
+- **UnoCSS attributify** — `bg="$bew-content"`, `rounded="$bew-radius"`, `flex="~ items-center gap-2"`, `border="1 $bew-border-color"`. ⚠️ attributify **不认裸 `var()`**:`bg="var(--bew-error-color)"` 不生成规则 → 背景缺失(白字透明)。用别名 `bg="$bew-error-color"` 或 inline `style="background:var(--bew-error-color)"`。
 - **CSRF** — Token from `<meta name="csrf-token">`, stored in `window.__guly_user.csrfToken`, used in `X-CSRF-TOKEN` header for POST/DELETE.
 
 ### URL → Page Routing
@@ -73,7 +75,7 @@ Luogu pages embed server data in `<script id="lentille-context" type="applicatio
 The largest view (~960 lines, decomposed into 7 composables under `composables/` — `useProblemData`, `useProblemSubmit`, `useSelfTest`, `useCodePersistence`, `useContestMode`, `useSolutions`, `useSplitView` — plus `components/SolutionsTab.vue` & `DiscussionsTab.vue`). Key features:
 - Problem statement with markdown (`marked` + `highlight.js` + externalized `katex`)
 - Code submission via `POST /fe/api/problem/submit/{pid}` with CSRF
-- **IDE split-view**: toggled by `ideMode` ref (or auto for `?contestId=`). Left panel = problem statement, right panel = code editor with lang selector, self-test input/output/expected panels, submit button. Toggle via `showTestPanel` ref.
+- **IDE split-view**: toggled by `ideMode` ref. **Manual only** (`ideMode = ref(false)`): 进 IDE 只靠顶栏 IDE 按钮或 URL `#ide` hash 手动触发;曾因 `?contestId=`/`#ide` 自动进,已按需求(所有题目默认普通页)移除。Left panel = problem statement, right panel = code editor with lang selector, self-test input/output/expected panels, submit button. Toggle via `showTestPanel` ref.
 - **Saved code**: reads `data.lastCode` / `data.lastLanguage` from lentille-context on mount
 - **Contest mode**: detects `?contestId=` in URL, hides solutions/discussions tabs, shows problem switcher (A/B/C/D/E)
 - **Solutions tab**: lazy-loaded by `useSolutions` — fetches `/problem/solution/{pid}` **HTML** (solutions live in the lentille-context, NOT in the `?_contentOnly=1` JSON); a 401 → "需要登录". A standalone full-page `Solution.vue` (`AppPage.Solution`, route `/problem/solution/*`) renders the same content with `.markdown-body` code blocks.
@@ -85,6 +87,7 @@ The largest view (~960 lines, decomposed into 7 composables under `composables/`
 - **Problem samples**: Raw `[[input, output], ...]` tuples, parsed to `{input, output, explanation}` objects.
 - **Contest problems**: `contestProblems` array in lentille-context: `{score, problem: {pid, name, difficulty}, no: "A"}`.
 - **Team homework**: Stored under `data.trainings` key. Items: `{id, name, type, deadline, problemCount, markCount}`.
+- **Record detail** (2026-07-22 实测): `/record/{rid}` 的 lentille `data.record` 含 `detail.{compileResult,judgeResult}`(`judgeResult.subtasks[].testCases[].status` 用与 record 级相同的 0-14 枚举:12=AC/7=TLE/8=MLE/9=RE/5,6,14=WA/10=CE);`pollRecordVerdict` 同源已验证。⚠️ `?_contentOnly=1` 对 record **详情**可能返回卡 Compiling 的陈旧 status → `Record.vue` 的 `fetchDetail` 优先 `fetchLentilleContext`(live),回退 `_contentOnly=1`。洛谷 CE 时 `record.status` 常卡 Compiling(2) 不翻 → 用 `derivedRecordStatus(record)`(luogu-api.ts,已导出)从 `detail` 推导真实终态;`effectiveStatus` 与轮询条件都改用它。verdict 逻辑有单元测试 `src/utils/luogu-api.verdict.test.ts`。
 - **Team usages**: `usages.training` covers both training + homework; no separate `usages.homework`.
 - **C3VK WAF (2026-07)**: list pages (`/problem/list`, `/ranking`, `/contest/list`) are gated by an nginx WAF — no `C3VK` cookie ⇒ HTTP 302, no `lentille-context`. Background SW fetch needs `credentials:'include'`; content-script fetch is same-origin so `credentials:'same-origin'` is enough. `home.ts` already preserves `C3VK`.
 - **Submit endpoints (2026-07)**: both problem and contest submit use `POST /fe/api/problem/submit/{pid}`; a contest submit appends `?contestId={id}` as a query param (the old `POST /fe/api/contest/submit/{cid}/{pid}` route 404s). `submitCode()` in `src/utils/luogu-api.ts` routes via an optional `contestId` arg, lazily refreshes CSRF (`refreshCsrf()`) on 403 / 会话超时, and shares captcha / Cloudflare(503) / auth(403) / network(0) handling.
