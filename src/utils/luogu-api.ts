@@ -331,6 +331,12 @@ function flattenCases(subtasks: any): any[] {
 // Done when compile failed (CE) or all cases judged. Only `12 = AC` and the
 // non-terminal nature of status 0..4 are assumed; the rest is structural.
 function recordDone(record: any, total: number): boolean {
+  // Luogu record.status: 0-3 = pending(Wait/Judging/Compiling/Running),其余为终态
+  // (CE/AC/WA/TLE/MLE/RE/OLE/UKE)。CE 记录有时 status 已终态但 detail.compileResult
+  // 尚未回填——仅靠 compileResult 判断会轮询到 60s 超时(评测卡住不动)。按终态 status 短路。
+  const st = Number(record?.status)
+  if (!Number.isNaN(st) && st > 3)
+    return true
   const d = record?.detail
   if (!d) return false
   // CE: compile produced a result but there's no judging to wait for. Don't
