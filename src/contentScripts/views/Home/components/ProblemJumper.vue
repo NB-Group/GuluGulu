@@ -21,8 +21,20 @@ function handleGo() {
   navigateTo(AppPage.ProblemDetail, `https://www.luogu.com.cn/problem/${pid}`)
 }
 
-function handleRandom() {
-  navigateTo(AppPage.ProblemDetail, 'https://www.luogu.com.cn/problem/random')
+async function handleRandom() {
+  // 洛谷 /problem/random 服务端 302 到真实题号;先 fetch 解析最终 URL 再 SPA 跳转,
+  // 失败则整页刷新走原生 302(绝对正确,代价是短暂白屏)。
+  try {
+    const res = await fetch('https://www.luogu.com.cn/problem/random', { credentials: 'same-origin', redirect: 'follow' })
+    const pid = res.url.match(/\/problem\/(\w+)/)?.[1]
+    if (pid)
+      navigateTo(AppPage.ProblemDetail, res.url)
+    else
+      window.location.href = 'https://www.luogu.com.cn/problem/random'
+  }
+  catch {
+    window.location.href = 'https://www.luogu.com.cn/problem/random'
+  }
 }
 
 function handleKeyup(event: KeyboardEvent) {
