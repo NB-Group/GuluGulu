@@ -16,6 +16,14 @@ export default defineConfig({
     'ps',
     'container',
   ],
+  theme: {
+    duration: {
+      fast: '180ms',
+      normal: '280ms',
+      cozy: '330ms',
+      slow: '550ms',
+    },
+  },
   presets: [
     presetUno(),
     presetAttributify(),

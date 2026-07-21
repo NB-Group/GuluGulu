@@ -11,10 +11,13 @@
 
   // #region Filters
   // Use this in all components (except dialogs) if you want to add a frosted glass effect
-  --bew-filter-glass-1: blur(20px) saturate(180%);
+  --bew-filter-glass-1: blur(24px) saturate(180%) brightness(1.04);
 
   // Use this in dialogs if you want to add a frosted glass effect
-  --bew-filter-glass-2: blur(30px) saturate(180%);
+  --bew-filter-glass-2: blur(36px) saturate(190%) brightness(1.05);
+
+  // Use this for the hero card (top-most surface, e.g. landing hero / featured card)
+  --bew-filter-glass-3: blur(44px) saturate(200%) brightness(1.06);
 
   // Apply this to the Bilibili icon if it is an image with the brand's original blue or pink color
   // Change it to glow effect to matches the user's theme color
@@ -45,6 +48,25 @@
   --bew-shadow-edge-glow-2: inset 1px 1px 1px -0.5px rgba(255, 255, 255, 0.34),
     inset -1px -1px 1px -0.5px rgba(255, 255, 255, 0.14), inset 0 0 14px rgba(255, 255, 255, 0.62);
 
+  // #endregion
+
+  // #region Motion tokens
+  // Animation duration scale — the "cozy 10% slower" is baked into each step so
+  // transitions feel unhurried without authors re-deriving it each time.
+  --bew-dur-fast: 180ms;
+  --bew-dur-normal: 280ms;
+  --bew-dur-cozy: 330ms;
+  --bew-dur-slow: 550ms;
+  --bew-dur-page: 660ms;
+
+  // Easing curves — `smooth` for most UI, `overshoot` for playful enter states.
+  --bew-ease-smooth: cubic-bezier(0.22, 1, 0.36, 1);
+  --bew-ease-overshoot: cubic-bezier(0.34, 2, 0.6, 1);
+
+  // Active-state accents — other agents apply these on :active / :focus-visible.
+  --bew-active-glow: 0 4px 16px var(--bew-theme-color-40);
+  --bew-active-lift: translateY(-1px) scale(1.03);
+  --bew-active-ring: 0 0 0 2px var(--bew-theme-color-30);
   // #endregion
 
   // #region Theme Color & Status Colors
@@ -151,7 +173,7 @@
   --bew-homepage-bg-mask: hsl(240 31% 96% / var(--bew-homepage-bg-mask-opacity));
   // #endregion
 
-  --bew-content-opacity: 0.68;
+  --bew-content-opacity: 0.62;
 
   // #region Content colors, used to buttons, cards, popover and so on
   // Variable names that don't contain `solid` are used to frosted glass effect elements
@@ -217,8 +239,8 @@
   --bew-shadow-4: 0 34px 50px -20px rgb(0 0 0 / 0.24), 0 32px 45px -12px rgb(0 0 0 / 0.2),
     0 30px 40px -8px rgb(0 0 0 / 0.22);
 
-  --bew-shadow-edge-glow-1: inset 1px 1px 1px -0.5px rgba(255, 255, 255, 0.12),
-    inset -1px -1px 1px -0.5px rgba(255, 255, 255, 0.04), inset 0 0 10px rgba(255, 255, 255, 0.04);
+  --bew-shadow-edge-glow-1: inset 1px 1px 1px -0.5px rgba(255, 255, 255, 0.18),
+    inset -1px -1px 1px -0.5px rgba(255, 255, 255, 0.06), inset 0 0 10px rgba(255, 255, 255, 0.06);
   --bew-shadow-edge-glow-2: inset 1px 1px 1px -0.5px rgba(255, 255, 255, 0.12),
     inset -1px -1px 1px -0.5px rgba(255, 255, 255, 0.04), inset 0 0 14px rgba(255, 255, 255, 0.06);
   // #endregion
@@ -867,3 +889,16 @@
   --Lb7_rgb: 88, 177, 212;
 }
 // #endregion
+
+// Respect users who prefer reduced motion — collapse every duration token to 0
+// so any CSS that consumes `var(--bew-dur-*)` becomes effectively instant.
+@media (prefers-reduced-motion: reduce) {
+  :host,
+  :root {
+    --bew-dur-fast: 0ms;
+    --bew-dur-normal: 0ms;
+    --bew-dur-cozy: 0ms;
+    --bew-dur-slow: 0ms;
+    --bew-dur-page: 0ms;
+  }
+}
