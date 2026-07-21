@@ -154,7 +154,7 @@ Object.entries(topBarItemElements).forEach(([key, val]) => {
 
 // #endregion
 
-watch(() => settings.value.autoHideTopBar, (newVal) => {
+watch(() => settings.value.topBarAutoHide, (newVal) => {
   if (!newVal)
     toggleTopBarVisible(true)
 })
@@ -176,7 +176,7 @@ function handleScroll() {
   if (scrollTop.value === 0)
     toggleTopBarVisible(true)
 
-  if (settings.value.autoHideTopBar && isOutsideTopBar && scrollTop.value !== 0) {
+  if (settings.value.topBarAutoHide && isOutsideTopBar && scrollTop.value !== 0) {
     if (scrollTop.value > oldScrollTop.value)
       toggleTopBarVisible(false)
     else
