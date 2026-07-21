@@ -146,11 +146,17 @@ img {
   --uno: "z-100000";
 }
 
-// Change OverlayScrollbar color
-.os-scrollbar .os-scrollbar-handle {
-  --os-handle-bg: rgba(120, 120, 140, 0.44);
-  --os-handle-bg-hover: rgba(120, 120, 140, 0.55);
-  --os-handle-bg-active: rgba(120, 120, 140, 0.66);
+// Hide ALL scrollbar visuals — OverlayScrollbars handles + native scrollbars.
+// Scrolling still works via wheel / trackpad / touch / drag.
+.os-scrollbar {
+  display: none !important;
+}
+* {
+  scrollbar-width: none; // Firefox
+}
+*::-webkit-scrollbar {
+  width: 0;
+  height: 0;
 }
 
 /* Color Mode transition
