@@ -333,7 +333,12 @@ function flattenCases(subtasks: any): any[] {
 function recordDone(record: any, total: number): boolean {
   const d = record?.detail
   if (!d) return false
-  if (d.compileResult && d.compileResult.success === false) return true
+  // CE: compile produced a result but there's no judging to wait for. Don't
+  // require compileResult.success === false — Luogu's CE record isn't guaranteed
+  // to set that field (it may just carry a message), which left CE polling until
+  // the 60s timeout → the "评测卡住不动" hang.
+  if (d.compileResult && !d.judgeResult) return true
+  if (d.compileResult?.success === false) return true
   const jr = d.judgeResult
   if (!jr) return false
   if (total > 0) return (jr.finishedCaseCount ?? 0) >= total
@@ -346,7 +351,7 @@ function summarizeVerdict(rid: number, record: any, total: number, tlim: number 
   const mem = record?.memory ?? null
   const base = { rid, score, time, memory: mem }
 
-  if (d.compileResult && d.compileResult.success === false)
+  if (d.compileResult && (d.compileResult.success === false || !d.judgeResult))
     return { ...base, state: 'done', verdict: 'CE', compileMessage: d.compileResult.message || null, failedCase: null, summary: 'CE · 编译错误' }
 
   const cases = flattenCases(d.judgeResult?.subtasks)
