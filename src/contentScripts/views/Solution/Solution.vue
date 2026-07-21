@@ -146,7 +146,7 @@ watch(pid, () => fetchSolutions())
 
     <Loading v-if="loadingMore" />
     <div v-if="!loading && solutions.length > 0 && solutions.length < solTotal" text="center" mt-4 mb-4>
-      <button style="background:var(--bew-fill-2);color:var(--bew-text-2);border:1px solid var(--bew-border-color);border-radius:var(--bew-radius);padding:6px 24px;cursor:pointer;font-size:var(--bew-base-font-size)" @click="loadMoreSolutions">加载更多 ({{ solutions.length }}/{{ solTotal }})</button>
+      <button class="btn-press" style="background:var(--bew-fill-2);color:var(--bew-text-2);border:1px solid var(--bew-border-color);border-radius:var(--bew-radius);padding:6px 24px;cursor:pointer;font-size:var(--bew-base-font-size)" @click="loadMoreSolutions">加载更多 ({{ solutions.length }}/{{ solTotal }})</button>
     </div>
 
     <div v-if="!loading && !errorMsg && solutions.length === 0" bg="$bew-content" rounded="$bew-radius" p-8 border="1 $bew-border-color" style="text-align:center;color:var(--bew-text-3);font-size:var(--bew-base-font-size);backdrop-filter:var(--bew-filter-glass-1)">

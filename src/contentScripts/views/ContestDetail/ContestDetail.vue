@@ -4,6 +4,7 @@ import { getCsrfToken, ideExecLabel, isLoggedIn as checkLuoguLogin, LUOGU_LANGUA
 import type { VerdictResult } from '~/utils/luogu-api'
 import { parseMarkdownContent } from '~/utils/markdown'
 import { useGulyApp } from '~/composables/useAppProvider'
+import { useTween } from '~/composables/useTween'
 
 const { currentUrl } = useGulyApp()
 
@@ -462,6 +463,9 @@ const myRow = computed(() => scoreboardView.value.find(r => r.user.uid === myUid
 const myScores = computed(() => myRow.value?.scores ?? null)
 const myRank = computed(() => myRow.value?.rank ?? null)
 const myTotalScore = computed(() => myRow.value?.score ?? null)
+// Animate the centerpiece total score as it loads (0 → final). Counting up a
+// rank would look odd, so only the score tweens.
+const tweenedTotal = useTween(computed(() => myRow.value?.score ?? 0))
 const myPassedCount = computed(() => {
   const s = myScores.value
   if (!s) return 0
@@ -519,7 +523,7 @@ watch(activeTab, (t) => { if (t === 'ranking' && scoreboard.value.length === 0) 
                 </div>
                 <div style="flex:1">
                   <div style="font-size:.7em;color:var(--bew-text-3);margin-bottom:2px">总分</div>
-                  <div style="font-size:1.55rem;font-weight:800;line-height:1;color:var(--bew-theme-color)">{{ myTotalScore != null ? myTotalScore : 0 }}</div>
+                  <div style="font-size:1.55rem;font-weight:800;line-height:1;color:var(--bew-theme-color)">{{ myTotalScore != null ? Math.round(tweenedTotal) : 0 }}</div>
                 </div>
               </div>
               <div>

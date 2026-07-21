@@ -446,6 +446,7 @@ onMessagePoll((json: any) => {
                   @keydown="handleKeydown"
                 />
                 <button
+                  class="btn-press"
                   style="background:var(--bew-theme-color);color:white;border:none;border-radius:var(--bew-radius);padding:8px 16px;cursor:pointer;font-size:var(--bew-base-font-size);font-weight:600;white-space:nowrap"
                   :disabled="sending || !newMsg.trim()"
                   :style="{ opacity: (sending || !newMsg.trim()) ? .5 : 1 }"
