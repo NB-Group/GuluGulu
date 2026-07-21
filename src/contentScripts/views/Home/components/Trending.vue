@@ -88,7 +88,7 @@ function openItem(url: string) {
 async function fetchNewest() {
   newestLoading.value = true
   try {
-    const res = await fetch('https://www.luogu.com.cn/problem/list?_contentOnly=1&order=newest', { credentials: 'same-origin' })
+    const res = await fetch('https://www.luogu.com.cn/problem/list?_contentOnly=1', { credentials: 'same-origin' })
     const ctx = await res.json()
     const list: any[] = ctx?.currentData?.problems?.result || ctx?.data?.problems?.result || []
     newest.value = list.slice(0, 9).map((p: any) => ({

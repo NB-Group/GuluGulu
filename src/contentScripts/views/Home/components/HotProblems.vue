@@ -18,7 +18,7 @@ import { diffLabel, diffColor } from '~/utils/difficulty'
 async function fetchProblems() {
   loading.value = true
   try {
-    const res = await fetch('https://www.luogu.com.cn/problem/list?_contentOnly=1&order=newest', { credentials: 'same-origin' })
+    const res = await fetch('https://www.luogu.com.cn/problem/list?_contentOnly=1', { credentials: 'same-origin' })
     const ctx = await res.json()
     const list: any[] = ctx?.currentData?.problems?.result || ctx?.data?.problems?.result || []
     problems.value = list.slice(0, 12).map((p: any) => ({
