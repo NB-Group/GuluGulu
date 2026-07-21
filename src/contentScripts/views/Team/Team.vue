@@ -12,7 +12,7 @@ const props = withDefaults(defineProps<{ embedded?: boolean }>(), { embedded: fa
 // ============================================================
 // List view
 // ============================================================
-const teams = ref<any[]>([])
+const teams = shallowRef<any[]>([])
 const loading = ref(true)
 const errorMsg = ref('')
 
@@ -45,7 +45,7 @@ function typeLabel(t: number): string {
 // ============================================================
 const teamId = computed(() => { const m = currentUrl.value.match(/\/team\/(\d+)/i); return m ? Number(m[1]) : null })
 const subPath = computed(() => { const m = currentUrl.value.match(/\/team\/\d+\/(\w+)/i); return m ? m[1] : '' })
-const detail = ref<any>(null)
+const detail = shallowRef<any>(null)
 const detailLoading = ref(false)
 
 // Sub-page data
@@ -55,6 +55,14 @@ const subPageError = ref('')
 const subPageTotal = ref(0)
 const subPageCurrent = ref(1)
 const subPageSize = 20
+
+const teamContentTypes: { k: string, l: string, icon: string }[] = [
+  { k: 'problem', l: '题目', icon: 'mingcute:code-line' },
+  { k: 'training', l: '题单', icon: 'mingcute:book-4-line' },
+  { k: 'homework', l: '作业', icon: 'mingcute:file-edit-line' },
+  { k: 'contest', l: '比赛', icon: 'mingcute:trophy-line' },
+  { k: 'file', l: '文件', icon: 'mingcute:folder-line' },
+]
 
 async function fetchTeamDetail(id: number) {
   detailLoading.value = true
@@ -385,13 +393,7 @@ watch(() => currentUrl.value, () => loadContent())
           <div bg="$bew-content" rounded="$bew-radius" p-6 mb-6 shadow="[var(--bew-shadow-1)]" border="1 $bew-border-color" style="backdrop-filter:var(--bew-filter-glass-1)">
             <h2 style="font-size:var(--bew-base-font-size);font-weight:700;color:var(--bew-text-1)" mb-3>团队内容</h2>
             <div grid="~ cols-2 md:cols-3 xl:cols-5" gap-3>
-              <div v-for="item in [
-                {k:'problem',l:'题目',icon:'mingcute:code-line'},
-                {k:'training',l:'题单',icon:'mingcute:book-4-line'},
-                {k:'homework',l:'作业',icon:'mingcute:file-edit-line'},
-                {k:'contest',l:'比赛',icon:'mingcute:trophy-line'},
-                {k:'file',l:'文件',icon:'mingcute:folder-line'},
-              ]" :key="item.k" bg="$bew-fill-1" rounded="$bew-radius" p-4 cursor="pointer" class="usage-card"
+              <div v-for="item in teamContentTypes" :key="item.k" bg="$bew-fill-1" rounded="$bew-radius" p-4 cursor="pointer" class="usage-card"
                 @click="openTeamPage(item.k)">
                 <div flex="~ items-center gap-2" mb-1>
                   <span v-html="renderIcon(item.icon,18)" :style="{color:'var(--bew-theme-color)',display:'contents'}" />
