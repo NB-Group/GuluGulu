@@ -104,9 +104,9 @@ function toggleTabContentLoading(loading: boolean) {
       </header>
 
       <!-- Content area: main + sidebar -->
-      <div flex="~ row" gap-4>
+      <div flex="~ row wrap" gap-4>
         <div flex="1" min-w-0>
-          <Transition name="page-fade" mode="out-in">
+          <Transition name="page-switch" mode="out-in">
             <Component
               :is="pages[activatedPage]" :key="activatedPage"
               ref="tabPageRef"
@@ -115,7 +115,7 @@ function toggleTabContentLoading(loading: boolean) {
             />
           </Transition>
         </div>
-        <div class="home-sidebar" w="280px" flex-shrink-0 display="none md:block">
+        <div class="home-sidebar" w-full lg="280px" flex-shrink-0 display="none lg:block">
           <Sidebar />
         </div>
       </div>
@@ -165,7 +165,7 @@ function toggleTabContentLoading(loading: boolean) {
   border-radius: 9999px;
   cursor: pointer;
   white-space: nowrap;
-  transition: background 0.3s, color 0.3s;
+  transition: background var(--bew-dur-normal, 0.3s) ease, color var(--bew-dur-normal, 0.3s) ease, transform var(--bew-dur-normal, 0.3s) ease, box-shadow var(--bew-dur-normal, 0.3s) ease;
   display: flex;
   align-items: center;
   flex-shrink: 0;
@@ -177,5 +177,7 @@ function toggleTabContentLoading(loading: boolean) {
 .tab-btn--active {
   background: var(--bew-theme-color);
   color: #fff;
+  transform: translateY(-1px);
+  box-shadow: var(--bew-active-glow, 0 4px 12px rgba(0, 0, 0, 0.08));
 }
 </style>

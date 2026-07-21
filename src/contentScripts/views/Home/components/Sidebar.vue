@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import CheckInCalendar from './CheckInCalendar.vue'
+import { renderIcon } from '~/utils/icons'
 
 const announcements = [
   { title: '洛谷新用户必读', url: 'https://www.luogu.com.cn/discuss/241461' },
@@ -35,7 +36,10 @@ const links = {
 
     <!-- 本站公告 -->
     <div class="side-card">
-      <h3 class="side-title">本站公告</h3>
+      <h3 class="side-title">
+        <span v-html="renderIcon('mingcute:notification-line', 16)" class="side-title-icon" />
+        本站公告
+      </h3>
       <div style="display:flex;flex-direction:column;gap:2px;">
         <a
           v-for="item in announcements"
@@ -49,7 +53,10 @@ const links = {
 
     <!-- 友情链接 -->
     <div class="side-card">
-      <h3 class="side-title">友情链接</h3>
+      <h3 class="side-title">
+        <span v-html="renderIcon('mingcute:link-2-line', 16)" class="side-title-icon" />
+        友情链接
+      </h3>
 
       <div style="margin-bottom:12px;">
         <p class="side-subtitle">推荐题库</p>
@@ -107,6 +114,17 @@ const links = {
   font-weight: 700;
   color: var(--bew-text-1);
   margin: 0 0 12px 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.side-title-icon {
+  display: inline-flex;
+  color: var(--bew-theme-color);
+  flex-shrink: 0;
+}
+.side-title-icon :deep(svg) {
+  display: block;
 }
 .side-subtitle {
   font-size: calc(var(--bew-base-font-size) * 0.85);

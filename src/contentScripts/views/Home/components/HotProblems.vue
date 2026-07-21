@@ -18,17 +18,13 @@ import { diffLabel, diffColor } from '~/utils/difficulty'
 async function fetchProblems() {
   loading.value = true
   try {
-    const res = await fetch('https://www.luogu.com.cn/problem/list', { credentials: 'same-origin' })
-    const html = await res.text()
-    const m = html.match(/<script\s+id="lentille-context"\s+type="application\/json"[^>]*>([^<]*)<\/script>/)
-    if (m?.[1]) {
-      const ctx = JSON.parse(m[1])
-      const list: any[] = ctx?.data?.problems?.result || []
-      problems.value = list.slice(0, 12).map((p: any) => ({
-        pid: p.pid || '', title: p.name || p.title || '', difficulty: p.difficulty || 1,
-        accepted: p.totalAccepted || p.acceptedCount || 0, submitted: p.totalSubmit || p.submittedCount || 1,
-      }))
-    }
+    const res = await fetch('https://www.luogu.com.cn/problem/list?_contentOnly=1&order=newest', { credentials: 'same-origin' })
+    const ctx = await res.json()
+    const list: any[] = ctx?.currentData?.problems?.result || ctx?.data?.problems?.result || []
+    problems.value = list.slice(0, 12).map((p: any) => ({
+      pid: p.pid || '', title: p.name || p.title || '', difficulty: p.difficulty || 1,
+      accepted: p.totalAccepted || p.acceptedCount || 0, submitted: p.totalSubmit || p.submittedCount || 1,
+    }))
   } catch (e) { console.warn('[GuluGulu]', e) }
   loading.value = false
 }
@@ -42,9 +38,12 @@ onMounted(fetchProblems)
 <template>
   <div>
     <div style="backdrop-filter:var(--bew-filter-glass-1)" bg="$bew-content" rounded="12px" shadow="[var(--bew-shadow-1),var(--bew-shadow-edge-glow-1)]" border="1 solid $bew-border-color" p="16px" mb="16px">
-      <div mb-4>
-        <h2 style="font-size:var(--bew-base-font-size);color:var(--bew-text-1);font-weight:700">热门题目</h2>
-        <p style="font-size:.85em;color:var(--bew-text-3)" mt-1>洛谷题库</p>
+      <div mb-4 flex="~ items-center gap-2">
+        <span v-html="renderIcon('mingcute:fire-line', 20)" style="display:contents;color:var(--bew-theme-color)" />
+        <div>
+          <h2 style="font-size:var(--bew-base-font-size);color:var(--bew-text-1);font-weight:700">热门题目</h2>
+          <p style="font-size:.85em;color:var(--bew-text-3)" mt-1>洛谷题库</p>
+        </div>
       </div>
       <Loading v-if="loading" />
       <Transition name="content-reveal">

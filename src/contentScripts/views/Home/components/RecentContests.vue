@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { AppPage } from '~/enums/appEnums'
 import { useGulyApp } from '~/composables/useAppProvider'
+import { renderIcon } from '~/utils/icons'
 
 const { navigateTo } = useGulyApp()
 
@@ -56,9 +57,12 @@ onMounted(fetchContests)
 <template>
   <div>
     <div style="backdrop-filter:var(--bew-filter-glass-1)" bg="$bew-content" rounded="12px" shadow="[var(--bew-shadow-1),var(--bew-shadow-edge-glow-1)]" border="1 solid $bew-border-color" p="16px" mb="16px">
-      <div mb-4>
-        <h2 style="font-size:var(--bew-base-font-size);color:var(--bew-text-1);font-weight:700">近期比赛</h2>
-        <p style="font-size:.85em;color:var(--bew-text-3)" mt-1>即将开始和进行中的比赛</p>
+      <div mb-4 flex="~ items-center gap-2">
+        <span v-html="renderIcon('mingcute:trophy-line', 20)" style="display:contents;color:var(--bew-theme-color)" />
+        <div>
+          <h2 style="font-size:var(--bew-base-font-size);color:var(--bew-text-1);font-weight:700">近期比赛</h2>
+          <p style="font-size:.85em;color:var(--bew-text-3)" mt-1>即将开始和进行中的比赛</p>
+        </div>
       </div>
       <Loading v-if="loading" />
       <Transition name="content-reveal">
