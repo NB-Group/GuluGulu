@@ -93,7 +93,7 @@ onUnmounted(() => obs?.disconnect())
 
     <Transition name="content-reveal">
       <div v-if="!loading && users.length>0" bg="$bew-content" rounded="$bew-radius" shadow="[var(--bew-shadow-1),var(--bew-shadow-edge-glow-1)]" border="1 $bew-border-color" style="backdrop-filter:var(--bew-filter-glass-1)">
-        <div flex="~" items="center" p="x-6 y-3" bg="$bew-fill-1" border="b-1 $bew-border-color" text="sm $bew-text-2" fw-bold style="position:sticky;top:calc(var(--bew-top-bar-height) + 10px);z-index:9;border-top-left-radius:var(--bew-radius);border-top-right-radius:var(--bew-radius)">
+        <div flex="~" items="center" p="x-6 y-3" bg="$bew-fill-1" border="b-1 $bew-border-color" text="sm $bew-text-2" fw-bold style="border-top-left-radius:var(--bew-radius);border-top-right-radius:var(--bew-radius)">
           <div w="60px" text-center>#</div><div flex="1">用户</div><div w="80px" text-center>咕值</div><div w="120px" text-center class="hidden md:block">等级</div>
         </div>
         <div overflow="hidden" style="border-bottom-left-radius:var(--bew-radius);border-bottom-right-radius:var(--bew-radius)">
