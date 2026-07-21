@@ -51,7 +51,10 @@ if (isFirefox) {
   window.clearTimeout = window.clearTimeout.bind(window)
 }
 
-const currentUrl = document.URL
+// `let` (not const): on a bfcache restore this module does NOT re-run, so the
+// URL captured here goes stale — the pageshow handler below refreshes it before
+// re-evaluating isSupportedPages().
+let currentUrl = document.URL
 
 function _getActivatedPage(): AppPage {
   // Homepage
@@ -360,6 +363,23 @@ if (document.readyState !== 'loading')
   waitForBodyThenInject()
 else
   document.addEventListener('DOMContentLoaded', () => waitForBodyThenInject())
+
+// bfcache (browser back/forward): Chrome may restore the page WITHOUT re-running
+// this content script. If the restored page is a supported Luogu path GuluGulu
+// hasn't taken over (#guly absent — e.g. the snapshot was a native Luogu page),
+// re-inject so the extension loads. (#guly present = in-app back/forward, already
+// handled by App.vue's popstate listener → leave it alone.)
+window.addEventListener('pageshow', (event) => {
+  if (!event.persisted)
+    return
+  if (document.querySelector('#guly'))
+    return
+  currentUrl = document.URL // refresh stale module-level URL
+  if (!(isSupportedPages() || isSupportedIframePages()))
+    return
+  onDOMLoadedCalled = false // bypass the one-shot guard so onDOMLoaded runs again
+  waitForBodyThenInject()
+})
 
 function _injectAppWhenIdle() {
   return new Promise<void>((resolve) => {
