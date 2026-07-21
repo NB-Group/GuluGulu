@@ -78,9 +78,8 @@ const { problem, loading, loadError, discussions, difficultyColor, passRate, ren
 const activeTab = ref<'statement' | 'submit' | 'solutions' | 'discussions'>('statement')
 const contestId = computed(() => { const m = (currentUrl.value || window.location.href).match(/[?&]contestId=(\d+)/); return m ? m[1] : '' })
 const inContestMode = computed(() => !!contestId.value)
-// 默认进普通题面页;IDE 仅手动进入(顶栏 IDE 按钮 / #ide hash),不再因 contestId 自动进。
-// inContestMode 仍保留,用于隐藏题解与讨论 tab、显示题目切换、contest 提交路由。
-const ideMode = ref(window.location.hash === '#ide')
+// 默认始终普通题面页;IDE 仅手动按钮进入(不再因 #ide hash 或 contestId 自动进)。
+const ideMode = ref(false)
 // 窄屏(<768px)下禁用分屏视图:编辑器和题面会挤到无法阅读,移动端直接走 tab 切换。
 const isNarrow = ref(false)
 if (typeof window !== 'undefined' && window.matchMedia) {
