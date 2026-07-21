@@ -9,7 +9,7 @@ import { AppPage } from '~/enums/appEnums'
 import { renderIcon } from '~/utils/icons'
 import type { VerdictResult } from '~/utils/luogu-api'
 import { RECORD_STATUS_MAP as statusMap } from '~/utils/luogu-api'
-import { friendlyError, LUOGU_LANGUAGES, summarizeVerdict } from '~/utils/luogu-api'
+import { friendlyError, LUOGU_LANGUAGES, summarizeVerdict, derivedRecordStatus } from '~/utils/luogu-api'
 import { timeAgo } from '~/utils/main'
 
 hljs.registerLanguage('cpp', cpp)
@@ -150,14 +150,9 @@ const recordId = computed(() => { const m = currentUrl.value.match(/\/record\/(\
 const detail = ref<any>(null)
 const detailLoading = ref(false)
 const detailErrorMsg = ref('')
-// CE 派生状态:洛谷 CE 时 record.status 常卡在 Compiling(2) 不翻 10,
-// 但 detail.compileResult.success===false 已能判定 CE。UI 据此显示 CE 而非 Compiling。
-const effectiveStatus = computed(() => {
-  const cr = detail.value?.detail?.compileResult
-  if (cr && cr.success === false)
-    return 10 // CE
-  return detail.value?.status
-})
+// 洛谷 record.status 不可靠(评测完成后常卡 Compiling(2))。effectiveStatus 综合
+// compileResult / judgeResult 推导真实状态;推不出(未完成)则回退原 status。
+const effectiveStatus = computed(() => derivedRecordStatus(detail.value) ?? detail.value?.status)
 // Auto-refresh: poll while the record is still being judged.
 const PENDING_STATUS = new Set([0, 1, 2, 3]) // Waiting / Judging / Compiling / Running
 let detailPollTimer: ReturnType<typeof setTimeout> | null = null
@@ -182,12 +177,9 @@ async function fetchDetail(id: number) {
   detailLoading.value = false
   // Keep polling every 2s while still judging; stop on final status, navigation
   // away, unmount, or after ~3 min (90 tries) as a runaway safety cap.
-  // CE 终态:compileResult.success===false 即编译失败,立刻停轮询。
-  // 不能用"compileResult 出现"判停——正常提交编译通过也有 compileResult(success=true),
-  // 那样会在评测中途误停,看不到后续测试点结果。
-  const compileResult = detail.value?.detail?.compileResult
-  const isCE = !!compileResult && compileResult.success === false
-  if (detail.value && PENDING_STATUS.has(detail.value.status) && !isCE && detailPollCount < 90) {
+  // effectiveStatus 已综合 compileResult/judgeResult,处于 pending 才继续轮询;
+  // 一旦推出终态(含 CE)即停,避免 record.status 卡 Compiling 时无限转。
+  if (detail.value && PENDING_STATUS.has(effectiveStatus.value) && detailPollCount < 90) {
     detailPollCount++
     detailPollTimer = setTimeout(() => fetchDetail(id), 2000)
   }

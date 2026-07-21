@@ -390,6 +390,34 @@ export function summarizeVerdict(rid: number, record: any, total: number, tlim: 
 }
 
 /**
+ * 洛谷 /record/{id} 详情的 record 级 status 不可靠——评测完成后 status 偶尔卡在
+ * Compiling(2) 不翻。本函数在评测【确已完成】时从 compileResult/judgeResult 推导真实状态码
+ * (10=CE / 12=AC / 7=TLE / 8=MLE / 9=RE / 5=WA …,即 RECORD_STATUS_MAP 的 key),
+ * 仍未完成(有 pending 测试点)则返回 undefined,让调用方继续显示原 status 并继续轮询。
+ */
+export function derivedRecordStatus(record: any): number | undefined {
+  const d = record?.detail
+  if (!d)
+    return undefined
+  if (d.compileResult?.success === false)
+    return 10
+  const jr = d.judgeResult
+  if (!jr)
+    return undefined
+  const cases = flattenCases(jr.subtasks)
+  if (cases.length === 0)
+    return undefined
+  // 仍有 pending(0-3)测试点 → 还没评完,别提前下结论
+  if (cases.some((c: any) => { const s = Number(c?.status); return s >= 0 && s <= 3 }))
+    return undefined
+  if (cases.every((c: any) => Number(c?.status) === 12))
+    return 12
+  const fc = cases.find((c: any) => Number(c?.status) !== 12)
+  const code = fc ? Number(fc.status) : 12
+  return Number.isNaN(code) ? undefined : code
+}
+
+/**
  * Poll /record/{rid} (via lentille-context) until judging finishes, then return
  * a normalized verdict for the AC-stamp. `timeLimitMs` / `memoryLimitKB` let the
  * caller (e.g. ProblemDetail, which has problem.limits) refine TLE/MLE; without
