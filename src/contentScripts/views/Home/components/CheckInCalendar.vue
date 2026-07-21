@@ -71,6 +71,10 @@ const checkInLoading = ref(true)
 // fortune must be read from the homepage — used both on mount and right after
 // a successful check-in, so the result shows without a manual page refresh.
 async function fetchFortuneFromHome() {
+  // 优先用 contentScripts/index.ts 预抓并缓存的打卡卡 HTML(避免重复 fetch + 脆弱正则)。
+  const cached = (window as any).__guly_punch?.html
+  if (cached && cached.includes('运势'))
+    return parsePunchHtml(cached)
   const res = await fetch('https://www.luogu.com.cn/', { credentials: 'same-origin' })
   const html = await res.text()
   const punchMatch = html.match(/lg-punch[^>]*>([\s\S]*?)<\/div>\s*<\/div>\s*<\/div>/)
