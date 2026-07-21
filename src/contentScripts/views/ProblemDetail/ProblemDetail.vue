@@ -35,8 +35,6 @@ function extractPidFromUrl(): string {
 }
 const problemId = computed(() => props.pid || extractPidFromUrl())
 
-
-const loadingTimer: ReturnType<typeof setTimeout> | null = null
 // 题解列表(懒加载,切 tab 触发)抽到 useSolutions
 const { solutions, solutionsLoading, solutionsNeedLogin, loadSolutions } = useSolutions(problemId)
 
@@ -282,8 +280,6 @@ watch(problemId, (newPid, oldPid) => {
 onUnmounted(() => {
   flushLocalCode()
   window.removeEventListener('pagehide', flushLocalCode)
-  if (loadingTimer)
-    clearTimeout(loadingTimer)
 })
 </script>
 
