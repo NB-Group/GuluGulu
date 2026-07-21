@@ -43,8 +43,12 @@ export function useDark() {
     }
   }
 
-  // Instant toggle - no animation. Cycles auto -> explicit -> auto.
-  function toggleDark(_e?: MouseEvent) {
+  // Cycles auto -> explicit -> auto. The theme flips immediately (reactive);
+  // we just dispatch the click coords so ThemeReveal can diffuse from the
+  // pressed button (the overlay is purely visual).
+  function toggleDark(e?: MouseEvent) {
+    if (e)
+      window.dispatchEvent(new CustomEvent('global.themeRevealOrigin', { detail: { x: e.clientX, y: e.clientY } }))
     if (currentAppColorScheme.value !== currentSystemColorScheme.value)
       settings.value.themeMode = 'auto'
     else
