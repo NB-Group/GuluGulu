@@ -67,7 +67,7 @@ const problemStatement = ref<any>(null)
 const statementLoading = ref(false)
 
 // Ranking
-const scoreboard = ref<ScoreboardRow[]>([])
+const scoreboard = shallowRef<ScoreboardRow[]>([])
 const rankingLoading = ref(false)
 const rankingPage = ref(1)
 const rankingTotal = ref(0)
