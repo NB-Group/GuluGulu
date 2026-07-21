@@ -84,7 +84,7 @@ function done() {
   // black outside (overlay visible = OLD). 8% feather for a soft diffusion edge.
   mask: radial-gradient(circle var(--r) at var(--rx, 50%) var(--ry, 50%), transparent 92%, black);
   -webkit-mask: radial-gradient(circle var(--r) at var(--rx, 50%) var(--ry, 50%), transparent 92%, black);
-  animation: theme-diffuse 0.55s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  animation: theme-diffuse 0.85s cubic-bezier(0.22, 1, 0.36, 1) forwards;
 }
 
 @keyframes theme-diffuse {
