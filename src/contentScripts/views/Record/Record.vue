@@ -102,7 +102,7 @@ interface RecordItem {
   language: string
   submitTime: number
 }
-const records = ref<RecordItem[]>([])
+const records = shallowRef<RecordItem[]>([])
 const loading = ref(true); const loadingMore = ref(false); const errorMsg = ref('')
 const listPage = ref(1); const totalCount = ref(0)
 const perPage = 20 // Luogu API uses 20 per page
