@@ -267,13 +267,12 @@ const msgDelays = computed(() => {
   const n = messages.value.length
   if (n <= 1) return {} as Record<number, number>
   const delays: Record<number, number> = {}
-  // Only animate the tail
+  // Only animate the tail (last MSG_STAGGER_COUNT). Older preloaded messages
+  // are NOT populated here — the template reads `(msgDelays[msg.id] || 0)`, so a
+  // missing key already defaults to 0 (instant). Skipping the prefix keeps this
+  // O(tail) instead of an O(n) walk over the whole conversation history.
   const start = Math.max(0, n - MSG_STAGGER_COUNT)
   const tail = n - start
-  const mid = (tail - 1) / 2
-  for (let i = 0; i < start; i++) {
-    delays[messages.value[i].id] = 0 // preloaded: instant
-  }
   let accum = 0
   for (let i = 0; i < tail; i++) {
     const dist = i > 0 ? Math.abs(i / (tail - 1) - 0.5) * 2 : 0

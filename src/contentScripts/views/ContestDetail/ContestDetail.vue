@@ -442,12 +442,21 @@ function openRecord(rid: number) { window.open(`https://www.luogu.com.cn/record/
 // shows real attainment instead of the always-100 max. Null until the
 // scoreboard loads or if the user isn't on it (not registered / not started).
 const myUid = computed(() => Number((window as any).__guly_user?.uid) || 0)
-// 每行按当前 problems 顺序从 details 派生每题分(洛谷每题分在 row.details[pid].score,
-// 非已弃用的 scores 数组;computed 里对齐避免 fetch 时 problems 未就绪的竞态)。
-const scoreboardView = computed(() => scoreboard.value.map(row => ({
-  ...row,
-  scores: problems.value.map(p => row.details?.[p.pid]?.score ?? null),
-})))
+// 每行按当前 problems 顺序从 details 派生每题分 + 预计算每个格子的色块样式。
+// 派生放 computed 里:① 对齐避免 fetch 时 problems 未就绪的竞态;② memoize 后只在
+// scoreboard/problems 变化时重算——否则进行中的比赛每秒 nowTs tick 触发整组件重渲染,
+// 排名表 200×10 个格子会每秒各调一次 scoreBlockStyle(各自新建对象)。
+const scoreboardView = computed(() => scoreboard.value.map((row) => {
+  const scores = problems.value.map(p => row.details?.[p.pid]?.score ?? null)
+  return {
+    ...row,
+    scores,
+    cells: scores.map((s, i) => ({
+      style: scoreBlockStyle(s, problems.value[i]?.score || 100),
+      text: s != null ? s : '-',
+    })),
+  }
+}))
 // My contest standing — drives the rich "我的成绩" sidebar card + 排名置顶行。
 const myRow = computed(() => scoreboardView.value.find(r => r.user.uid === myUid.value) || null)
 const myScores = computed(() => myRow.value?.scores ?? null)
@@ -750,8 +759,8 @@ watch(activeTab, (t) => { if (t === 'ranking' && scoreboard.value.length === 0) 
                         <span class="rk-name" style="color:var(--bew-theme-color);font-weight:700">{{ myRow.user.name }}<span style="color:var(--bew-text-3);font-weight:400">（我）</span></span>
                       </span>
                     </td>
-                    <td v-for="(s, si) in myRow.scores" :key="si" class="rk rk-prob" text="center">
-                      <span class="score-block" :style="scoreBlockStyle(s, problems[si]?.score || 100)">{{ s != null ? s : '-' }}</span>
+                    <td v-for="(cell, si) in myRow.cells" :key="si" class="rk rk-prob" text="center">
+                      <span class="score-block" :style="cell.style">{{ cell.text }}</span>
                     </td>
                     <td class="rk rk-total" text="right" fw-bold style="color:var(--bew-theme-color)">{{ myRow.score }}</td>
                   </tr>
@@ -768,8 +777,8 @@ watch(activeTab, (t) => { if (t === 'ranking' && scoreboard.value.length === 0) 
                         <span class="rk-name" :style="{ color: row.user.color ? `var(--bew-${row.user.color})` : 'var(--bew-text-1)', fontWeight: 600 }">{{ row.user.name }}</span>
                       </span>
                     </td>
-                    <td v-for="(s, si) in row.scores" :key="si" class="rk rk-prob" text="center">
-                      <span class="score-block" :style="scoreBlockStyle(s, problems[si]?.score || 100)">{{ s != null ? s : '-' }}</span>
+                    <td v-for="(cell, si) in row.cells" :key="si" class="rk rk-prob" text="center">
+                      <span class="score-block" :style="cell.style">{{ cell.text }}</span>
                     </td>
                     <td class="rk rk-total" text="right" fw-bold style="color:var(--bew-text-1)">{{ row.score }}</td>
                   </tr>

@@ -491,6 +491,13 @@ onUnmounted(() => {
   color: #fff;
   font-size: var(--bew-base-font-size);
   line-height: 1.3;
+  // 测试点方块悬停可看详情(tooltip)——给个交互反馈,提升辨识度。
+  cursor: help;
+  transition: transform .12s ease, box-shadow .12s ease;
+  &:hover {
+    transform: translateY(-2px) scale(1.03);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, .25);
+  }
 }
 .tc-line1 {
   font-size: 0.7em;
