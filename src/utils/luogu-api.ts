@@ -350,7 +350,7 @@ function recordDone(record: any, total: number): boolean {
   if (total > 0) return (jr.finishedCaseCount ?? 0) >= total
   return record.score != null
 }
-function summarizeVerdict(rid: number, record: any, total: number, tlim: number | undefined, mlim: number | undefined): VerdictResult {
+export function summarizeVerdict(rid: number, record: any, total: number, tlim: number | undefined, mlim: number | undefined): VerdictResult {
   const d = record?.detail || {}
   const score = record?.score ?? null
   const time = record?.time ?? null
@@ -370,12 +370,21 @@ function summarizeVerdict(rid: number, record: any, total: number, tlim: number 
   let verdict: VerdictKind = 'WA'
   let summary = '未通过'
   if (fc) {
-    const sig = fc.signal ?? null
-    const exit = fc.exitCode ?? 0
-    if ((sig != null && sig !== 0) || exit !== 0) { verdict = 'RE'; summary = `RE · exit ${exit}${sig ? ` signal ${sig}` : ''}` }
-    else if (tlim != null && fc.time != null && fc.time > tlim) { verdict = 'TLE'; summary = `TLE · ${fmtTime(fc.time)}` }
-    else if (mlim != null && fc.memory != null && fc.memory > mlim) { verdict = 'MLE'; summary = `MLE · ${fmtMem(fc.memory)}` }
-    else { verdict = 'WA'; summary = `WA · #${fc.id}` }
+    // 权威优先:用失败测试点的 status code 直接映射(7=TLE/8=MLE/9=RE/5,6,14=WA/11=OLE),
+    // 不依赖 time/memory limit——否则无 limit 时 TLE/MLE 会被误判成 WA,盖章显示 Unknown。
+    const codeLabel = RECORD_STATUS_MAP[Number(fc.status)]?.label
+    if (codeLabel && ['TLE', 'MLE', 'RE', 'WA', 'OLE', 'UKE'].includes(codeLabel)) {
+      verdict = codeLabel as VerdictKind
+      summary = `${verdict} · #${fc.id}`
+    }
+    else {
+      const sig = fc.signal ?? null
+      const exit = fc.exitCode ?? 0
+      if ((sig != null && sig !== 0) || exit !== 0) { verdict = 'RE'; summary = `RE · exit ${exit}${sig ? ` signal ${sig}` : ''}` }
+      else if (tlim != null && fc.time != null && fc.time > tlim) { verdict = 'TLE'; summary = `TLE · ${fmtTime(fc.time)}` }
+      else if (mlim != null && fc.memory != null && fc.memory > mlim) { verdict = 'MLE'; summary = `MLE · ${fmtMem(fc.memory)}` }
+      else { verdict = 'WA'; summary = `WA · #${fc.id}` }
+    }
   }
   return { ...base, state: 'done', verdict, compileMessage: null, failedCase: fc ? { id: fc.id, time: fc.time, memory: fc.memory, signal: fc.signal ?? null, exitCode: fc.exitCode ?? 0 } : null, summary }
 }

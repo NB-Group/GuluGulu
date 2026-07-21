@@ -7,9 +7,9 @@ import python from 'highlight.js/lib/languages/python'
 import { useGulyApp } from '~/composables/useAppProvider'
 import { AppPage } from '~/enums/appEnums'
 import { renderIcon } from '~/utils/icons'
-import type { VerdictKind, VerdictResult } from '~/utils/luogu-api'
+import type { VerdictResult } from '~/utils/luogu-api'
 import { RECORD_STATUS_MAP as statusMap } from '~/utils/luogu-api'
-import { friendlyError, LUOGU_LANGUAGES } from '~/utils/luogu-api'
+import { friendlyError, LUOGU_LANGUAGES, summarizeVerdict } from '~/utils/luogu-api'
 import { timeAgo } from '~/utils/main'
 
 hljs.registerLanguage('cpp', cpp)
@@ -197,26 +197,10 @@ async function fetchDetail(id: number) {
 // the verdict turns final; browsing old records stays quiet.
 let prevStampStatus: number | null = null
 const stampResult = ref<VerdictResult | null>(null)
+// 复用 luogu-api 的权威 verdict 推导:从失败测试点的 status code 映射 TLE/MLE/RE/WA,
+// 不依赖 record 级 status——洛谷 /record 详情的 record.status 不可靠,直接读会盖 Unknown。
 function verdictFromDetail(record: any): VerdictResult {
-  const st = Number(record?.status)
-  const label = statusMap[st]?.label || 'Unknown'
-  const verdict = (['AC', 'WA', 'TLE', 'MLE', 'RE', 'CE', 'OLE', 'UKE'].includes(label) ? label : 'Unknown') as VerdictKind
-  const time = record?.time ?? null
-  const memory = record?.memory ?? null
-  const timeStr = time == null ? '' : `${time}ms`
-  const memStr = memory == null ? '' : memory >= 1024 ? `${(memory / 1024).toFixed(2)}MB` : `${memory}KB`
-  const extra = [timeStr, memStr].filter(Boolean).join(' ')
-  return {
-    rid: record?.id ?? recordId.value ?? 0,
-    state: 'done',
-    verdict,
-    score: record?.score ?? null,
-    time,
-    memory,
-    compileMessage: record?.detail?.compileResult?.message || null,
-    failedCase: null,
-    summary: extra ? `${label} · ${extra}` : label,
-  }
+  return summarizeVerdict(record?.id ?? recordId.value ?? 0, record, 0, undefined, undefined)
 }
 watch(effectiveStatus, (st) => {
   if (st == null) { prevStampStatus = null; return }
