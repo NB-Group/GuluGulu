@@ -215,14 +215,20 @@ function difficultyColor(d: number) {
       border="1 $bew-border-color"
       style="
         backdrop-filter: var(--bew-filter-glass-1);
-        z-index: 99999;
-        position: relative;
+        z-index: 9;
+        position: sticky;
+        top: calc(var(--bew-top-bar-height) + 10px);
       "
     >
       <h1
         style="font-size: 1.5rem; color: var(--bew-text-1); font-weight: 700"
         mb-4
+        flex="~ items-center gap-2"
       >
+        <span
+          style="display: contents; color: var(--bew-theme-color)"
+          v-html="renderIcon('mingcute:code-line', 24)"
+        />
         题库
       </h1>
       <div mb-4>
@@ -305,7 +311,7 @@ function difficultyColor(d: number) {
     </div>
 
     <Transition name="content-reveal">
-      <div v-if="!loading && problems.length > 0" :class="gridClass" mb-6>
+      <TransitionGroup v-if="!loading && problems.length > 0" name="flip-list" tag="div" :class="gridClass" mb-6>
         <div
           v-for="(p, idx) in problems"
           :key="p.pid"
@@ -360,7 +366,7 @@ function difficultyColor(d: number) {
               {{ p.totalAccepted.toLocaleString() }} 通过</span>
           </div>
         </div>
-      </div>
+      </TransitionGroup>
     </Transition>
 
     <!-- Sentinel for infinite scroll -->
@@ -428,7 +434,8 @@ function difficultyColor(d: number) {
 }
 .grid-two-columns {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
+  /* auto-fit + minmax 让两列布局在窄屏自动塌成单列,避免每列被挤到 200px 以下 */
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
   gap: 16px;
 }
 .grid-single-column {

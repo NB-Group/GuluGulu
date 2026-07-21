@@ -79,7 +79,21 @@ const activeTab = ref<'statement' | 'submit' | 'solutions' | 'discussions'>('sta
 const contestId = computed(() => { const m = (currentUrl.value || window.location.href).match(/[?&]contestId=(\d+)/); return m ? m[1] : '' })
 const inContestMode = computed(() => !!contestId.value)
 const ideMode = ref(inContestMode.value || window.location.hash === '#ide')
-const isSplitView = computed(() => isLoggedIn.value && ideMode.value)
+// 窄屏(<768px)下禁用分屏视图:编辑器和题面会挤到无法阅读,移动端直接走 tab 切换。
+const isNarrow = ref(false)
+if (typeof window !== 'undefined' && window.matchMedia) {
+  const mq = window.matchMedia('(max-width: 767px)')
+  const sync = () => { isNarrow.value = mq.matches }
+  sync()
+  // Safari < 14 没有 addEventListener,回落到 addListener
+  if (typeof mq.addEventListener === 'function') mq.addEventListener('change', sync)
+  else if (typeof (mq as any).addListener === 'function') (mq as any).addListener(sync)
+  onUnmounted(() => {
+    if (typeof mq.removeEventListener === 'function') mq.removeEventListener('change', sync)
+    else if (typeof (mq as any).removeListener === 'function') (mq as any).removeListener(sync)
+  })
+}
+const isSplitView = computed(() => isLoggedIn.value && ideMode.value && !isNarrow.value)
 
 // 可拖拽分屏比例抽到 useSplitView(自持 onUnmounted 清理)
 const { splitRatio, isDragging, startResize } = useSplitView()
@@ -434,7 +448,7 @@ onUnmounted(() => {
               &times;
             </button>
           </div>
-          <div grid="~ cols-5" gap-2>
+          <div grid="~ cols-2 sm:cols-3 md:cols-5" gap-2>
             <button
               v-for="cp in contestProblems" :key="cp.no"
               :style="{

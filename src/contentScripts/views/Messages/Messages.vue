@@ -351,7 +351,7 @@ onMessagePoll((json: any) => {
         <!-- ============================================================ -->
         <div class="chat-layout" flex="~" bg="$bew-content" rounded="$bew-radius" shadow="[var(--bew-shadow-1),var(--bew-shadow-edge-glow-1)]" border="1 $bew-border-color" style="backdrop-filter:var(--bew-filter-glass-1)" overflow="hidden">
           <!-- Sidebar: conversation list -->
-          <div class="chat-sidebar" w="300px" shrink-0 border="r-1 $bew-border-color" bg="$bew-content" flex="~ col">
+          <div class="chat-sidebar" w="full md:260px lg:300px" shrink-0 border="r-1 $bew-border-color" bg="$bew-content" flex="~ col">
             <div p-4 border="b-1 $bew-border-color" bg="$bew-fill-1" flex="~ items-center justify-between">
               <h2 style="font-size:var(--bew-base-font-size);color:var(--bew-text-1);font-weight:700">私信</h2>
               <button

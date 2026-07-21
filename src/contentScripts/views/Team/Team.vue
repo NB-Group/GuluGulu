@@ -439,7 +439,10 @@ watch(() => currentUrl.value, () => loadContent())
     <!-- ============================================================ -->
     <template v-if="!teamId && !loading">
       <div bg="$bew-content" rounded="$bew-radius" p-6 mb-6 shadow="[var(--bew-shadow-1)]" border="1 $bew-border-color" style="backdrop-filter:var(--bew-filter-glass-1)">
-        <h1 style="font-size:1.5rem;color:var(--bew-text-1);font-weight:700" mb-4>我的团队</h1>
+        <h1 style="font-size:1.5rem;color:var(--bew-text-1);font-weight:700" mb-4 flex="~ items-center gap-2">
+          <span style="display:contents;color:var(--bew-theme-color)" v-html="renderIcon('mingcute:user-follow-line', 24)" />
+          我的团队
+        </h1>
       </div>
 
       <div v-if="errorMsg" bg="$bew-content" rounded="$bew-radius" p-8 border="1 $bew-border-color" text="center $bew-text-2">

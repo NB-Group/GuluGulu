@@ -149,6 +149,7 @@ function loadMore() {
 const recordId = computed(() => { const m = currentUrl.value.match(/\/record\/(\d+)/i); return m ? Number(m[1]) : null })
 const detail = ref<any>(null)
 const detailLoading = ref(false)
+const detailErrorMsg = ref('')
 // Auto-refresh: poll while the record is still being judged.
 const PENDING_STATUS = new Set([0, 1, 2, 3]) // Waiting / Judging / Compiling / Running
 let detailPollTimer: ReturnType<typeof setTimeout> | null = null
@@ -160,14 +161,16 @@ function clearDetailPoll() {
 
 async function fetchDetail(id: number) {
   // Only show the loading spinner on the first fetch — polls update silently.
-  if (!detail.value)
+  if (!detail.value) {
     detailLoading.value = true
+    detailErrorMsg.value = ''
+  }
   try {
     const res = await fetch(`https://www.luogu.com.cn/record/${id}?_contentOnly=1`, { credentials: 'same-origin' })
     const json = await res.json()
     detail.value = json?.data?.record || json?.currentData?.record || null
   }
-  catch (e) { console.warn('[GuluGulu]', e) }
+  catch (e: any) { detailErrorMsg.value = friendlyError(e) }
   detailLoading.value = false
   // Keep polling every 2s while still judging; stop on final status, navigation
   // away, unmount, or after ~3 min (90 tries) as a runaway safety cap.
@@ -325,6 +328,14 @@ onUnmounted(() => {
         </h1>
       </div>
       <Loading v-if="detailLoading" />
+      <div
+        v-if="!detailLoading && detailErrorMsg" bg="$bew-content" rounded="$bew-radius" p-8 border="1 $bew-border-color"
+        text="center $bew-text-2"
+      >
+        <span style="display:contents" v-html="renderIcon('mingcute:warning-line', 32)" /><p mt-2>
+          {{ detailErrorMsg }}
+        </p>
+      </div>
       <Transition name="content-reveal">
         <div
           v-if="!detailLoading && detail" bg="$bew-content" rounded="$bew-radius" p-6 shadow="[var(--bew-shadow-1),var(--bew-shadow-edge-glow-1)]"
@@ -356,6 +367,14 @@ onUnmounted(() => {
             style="font-size:var(--bew-base-font-size);white-space:pre-wrap;font-family:monospace;max-height:300px;overflow-y:auto;color:var(--bew-text-1)"
           >
             {{ detail.detail.compileResult.message }}
+          </div>
+          <!-- CE fallback: status=10 (CE) 但洛谷未带回 compileResult.message,
+               给个可见占位,否则用户看到空白以为页面坏了 -->
+          <div
+            v-else-if="detail.status === 10" bg="$bew-warning-color-20" rounded="$bew-radius" p-4 mb-6
+            style="font-size:var(--bew-base-font-size);color:var(--bew-warning-color)"
+          >
+            评测返回 CE 但未带回编译器输出,请到 <a :href="`https://www.luogu.com.cn/record/${recordId}`" target="_blank" style="color:var(--bew-theme-color);text-decoration:underline">洛谷原站</a> 查看。
           </div>
 
           <!-- Test case blocks — Luogu-style colored squares -->

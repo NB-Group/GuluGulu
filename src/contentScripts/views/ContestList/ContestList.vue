@@ -48,7 +48,10 @@ onMounted(fetchContests)
 <template>
   <div class="page-container" w-full h-full p="x-4 md:x-8 lg:x-16" pos="relative">
     <div bg="$bew-content" rounded="$bew-radius" p-6 mb-6 shadow="[var(--bew-shadow-1),var(--bew-shadow-edge-glow-1)]" border="1 $bew-border-color" style="backdrop-filter:var(--bew-filter-glass-1)">
-      <h1 style="font-size:var(--bew-base-font-size);color:var(--bew-text-1);font-weight:700" mb-2>比赛</h1>
+      <h1 style="font-size:var(--bew-base-font-size);color:var(--bew-text-1);font-weight:700" mb-2 flex="~ items-center gap-2">
+        <span style="display:contents;color:var(--bew-theme-color)" v-html="renderIcon('mingcute:trophy-line', 18)" />
+        比赛
+      </h1>
       <p style="font-size:var(--bew-base-font-size);color:var(--bew-text-2)">共 {{ totalCount }} 场比赛</p>
     </div>
 
@@ -58,7 +61,7 @@ onMounted(fetchContests)
     </div>
 
     <Transition name="content-reveal">
-      <div v-if="!loading && contests.length>0" grid="~ cols-1 md:cols-2 xl:cols-3" gap-4 mb-6>
+      <TransitionGroup v-if="!loading && contests.length>0" name="flip-list" tag="div" grid="~ cols-1 md:cols-2 xl:cols-3" gap-4 mb-6>
         <div v-for="(c, idx) in contests" :key="c.id" class="stagger-card contest-card" :style="{ '--card-index': idx, backdropFilter: 'var(--bew-filter-glass-1)' }" bg="$bew-content" rounded="$bew-radius" p-5 shadow="[var(--bew-shadow-1),var(--bew-shadow-edge-glow-1)]" border="1 $bew-border-color" cursor="pointer" @click="openContest(c.id)">
           <div flex="~ items-center justify-between" mb-3>
             <span :style="{background:`${getContestStatus(c).color}20`,color:getContestStatus(c).color,fontSize:'var(--bew-base-font-size)',fontWeight:600,padding:'2px 10px',borderRadius:'9999px'}">{{ getContestStatus(c).label }}</span>
@@ -69,7 +72,7 @@ onMounted(fetchContests)
             <span>{{ timeStr(c.startTime) }} — {{ timeStr(c.endTime) }}</span>
           </div>
         </div>
-      </div>
+      </TransitionGroup>
     </Transition>
   </div>
 </template>
