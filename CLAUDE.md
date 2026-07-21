@@ -30,7 +30,7 @@ GuluGulu is a **browser extension (Manifest V3)** that replaces Luogu (洛谷) p
 
 | File | Role |
 |------|------|
-| `src/contentScripts/index.ts` | Injected at `document_start`. Clears body, creates Shadow DOM, mounts Vue app. Handles URL routing, CSRF extraction, auth. |
+| `src/contentScripts/index.ts` | Injected at `document_start`. Clears body, creates Shadow DOM, mounts Vue app. Handles URL routing, CSRF extraction, auth. **bfcache**: this script does NOT re-run on browser back/forward — a `pageshow(persisted)` handler re-injects when `#guly` is absent and the URL is supported (`currentUrl` is `let`, refreshed in that handler since it's stale post-restore). |
 | `src/background/index.ts` | Background service worker. Proxies API calls via `apiListenerFactory`. |
 | `src/inject/index.js` | Injected into page context. Monkey-patches `history.pushState/replaceState` to dispatch `historyChange` events. |
 | `src/options/`, `src/popup/` | Extension options page and toolbar popup. |
