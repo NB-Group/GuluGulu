@@ -18,9 +18,12 @@ import { diffLabel, diffColor } from '~/utils/difficulty'
 async function fetchProblems() {
   loading.value = true
   try {
-    const res = await fetch('https://www.luogu.com.cn/problem/list?_contentOnly=1', { credentials: 'same-origin' })
-    const ctx = await res.json()
-    const list: any[] = ctx?.currentData?.problems?.result || ctx?.data?.problems?.result || []
+    // /problem/list?_contentOnly=1 对列表页返回的是 HTML(非 JSON),要 fetch 页面 + 正则抽 lentille-context
+    const res = await fetch('https://www.luogu.com.cn/problem/list', { credentials: 'same-origin' })
+    const html = await res.text()
+    const m = html.match(/<script\s+id="lentille-context"\s+type="application\/json"[^>]*>([^<]+)<\/script>/)
+    const ctx = m?.[1] ? JSON.parse(m[1]) : null
+    const list: any[] = ctx?.data?.problems?.result || ctx?.currentData?.problems?.result || []
     problems.value = list.slice(0, 12).map((p: any) => ({
       pid: p.pid || '', title: p.name || p.title || '', difficulty: p.difficulty || 1,
       accepted: p.totalAccepted || p.acceptedCount || 0, submitted: p.totalSubmit || p.submittedCount || 1,
