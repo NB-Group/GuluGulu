@@ -561,7 +561,7 @@ onUnmounted(() => {
                   <span style="display:contents" v-html="renderIcon('mingcute:exit-line', 12)" />
                   退出
                 </button>
-                <button :disabled="submitting" style="display:flex;align-items:center;gap:4px;background:var(--bew-theme-color);color:#fff;border:none;border-radius:var(--bew-radius-half);padding:3px 12px;cursor:pointer;font-size:.85em;font-weight:600;white-space:nowrap" @click="handleSubmit">
+                <button class="btn-press" :disabled="submitting" style="display:flex;align-items:center;gap:4px;background:var(--bew-theme-color);color:#fff;border:none;border-radius:var(--bew-radius-half);padding:3px 12px;cursor:pointer;font-size:.85em;font-weight:600;white-space:nowrap" @click="handleSubmit">
                   <span style="display:contents" v-html="renderIcon('mingcute:send-line', 12)" />
                   {{ submitting ? '…' : '提交' }}
                 </button>
@@ -580,7 +580,7 @@ onUnmounted(() => {
                 <img :src="captchaSrc" style="max-width:180px;border-radius:4px" alt="验证码">
                 <div style="display:flex;align-items:center;gap:6px">
                   <input v-model="captchaCode" placeholder="输入验证码" style="flex:1;padding:5px 8px;background:var(--bew-fill-1);color:var(--bew-text-1);border:1px solid var(--bew-border-color);border-radius:var(--bew-radius-half);font-size:.85em;outline:none" @keydown.enter="handleSubmit">
-                  <button :disabled="!captchaCode" style="background:var(--bew-theme-color);color:#fff;border:none;border-radius:var(--bew-radius-half);padding:5px 10px;cursor:pointer;font-weight:600;white-space:nowrap" @click="handleSubmit">
+                  <button class="btn-press" :disabled="!captchaCode" style="background:var(--bew-theme-color);color:#fff;border:none;border-radius:var(--bew-radius-half);padding:5px 10px;cursor:pointer;font-weight:600;white-space:nowrap" @click="handleSubmit">
                     提交
                   </button>
                 </div>
