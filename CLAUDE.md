@@ -5,6 +5,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Build & Run
 
 > Package manager is **pnpm** (`packageManager: pnpm@9.5.0` in `package.json`). `npm` will fail — use `pnpm`. If `pnpm` itself is broken (corepack version mismatch), the underlying tools run fine straight from `node_modules/.bin/` — e.g. `node_modules/.bin/vite build --config vite.config.content.ts`, `node_modules/.bin/esno scripts/ascii.ts`, `node_modules/.bin/vue-tsc --noEmit`.
+>
+> **Manual build chain needs `NODE_ENV=production`.** `pnpm build` sets it via `cross-env`; when running the steps yourself via `node_modules/.bin/`, you MUST prefix each with `NODE_ENV=production`. `scripts/prepare.ts` checks `isDev = process.env.NODE_ENV !== 'production'` and enters `chokidar.watch` (never exits) in dev mode — without it the chain hangs forever at `build:prepare`. Full manual build: `NODE_ENV=production node_modules/.bin/rimraf --glob extension 'extension.*' && NODE_ENV=production node_modules/.bin/vite build && NODE_ENV=production node_modules/.bin/esno scripts/prepare.ts && NODE_ENV=production node_modules/.bin/vite build --config vite.config.content.ts && NODE_ENV=production node_modules/.bin/tsup && NODE_ENV=production node_modules/.bin/esno scripts/ascii.ts`.
 
 ```bash
 pnpm install         # install dependencies
