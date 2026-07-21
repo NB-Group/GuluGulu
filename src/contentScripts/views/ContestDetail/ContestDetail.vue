@@ -338,9 +338,31 @@ async function fetchScoreboard(page = 1) {
 // ============================================================
 const c = computed(() => contest.value || {})
 const nowTs = ref(Math.floor(Date.now() / 1000))
-const nowTimer = setInterval(() => { nowTs.value = Math.floor(Date.now() / 1000) }, 1000)
-onUnmounted(() => clearInterval(nowTimer))
+// Arm the 1s tick only while the countdown is meaningful (contest not yet
+// ended). Without this gate the entire ~800-line template — including the
+// scoreboard v-for — re-renders every second even when the contest is long
+// over. disarmNowTimer stops the interval once nowTs crosses endTime; the
+// watch below re-arms it if contest data later loads with a future endTime.
+let nowTimer: ReturnType<typeof setInterval> | null = null
+function armNowTimer() {
+  if (nowTimer) return
+  nowTimer = setInterval(() => { nowTs.value = Math.floor(Date.now() / 1000) }, 1000)
+}
+function disarmNowTimer() {
+  if (nowTimer) { clearInterval(nowTimer); nowTimer = null }
+}
+watch(
+  () => { const e = c.value?.endTime || 0; return e > 0 && nowTs.value < e },
+  (active) => { if (active) armNowTimer(); else disarmNowTimer() },
+  { immediate: true },
+)
+onUnmounted(() => disarmNowTimer())
 onUnmounted(() => { cleanupWs(); if (saveTimer) clearTimeout(saveTimer) })
+
+// Parsed contest description. Used in two v-html bindings (sidebar + overview)
+// — computing once here avoids re-parsing the same markdown twice per render,
+// and (with T1's timer gated) avoids any re-parse on unrelated re-renders.
+const renderedDescription = computed(() => parseMarkdownContent(c.value?.description || ''))
 
 const contestStatus = computed(() => {
   const now = nowTs.value
@@ -549,7 +571,7 @@ watch(activeTab, (t) => { if (t === 'ranking' && scoreboard.value.length === 0) 
                 <span style="color:var(--bew-text-1);font-weight:500">{{ registeredCount || c.totalRegisteredUsers }} 人</span>
               </div>
               <div v-if="c.description" mt-2 p-3 rounded="$bew-radius" bg="$bew-fill-1" style="max-height:160px;overflow-y:auto">
-                <div class="markdown-body" style="font-size:.86em;color:var(--bew-text-2);line-height:1.7" v-html="parseMarkdownContent(c.description)" />
+                <div class="markdown-body" style="font-size:.86em;color:var(--bew-text-2);line-height:1.7" v-html="renderedDescription" />
               </div>
               <div v-if="!contestStatus.ended" mt-1>
                 <Button v-if="!isRegistered" type="primary" :loading="regLoading" w-full @click="handleRegister">
@@ -587,7 +609,7 @@ watch(activeTab, (t) => { if (t === 'ranking' && scoreboard.value.length === 0) 
           <!-- Tab: Overview -->
           <!-- ============================================================ -->
           <div v-if="activeTab === 'overview'" bg="$bew-content" rounded="$bew-radius" p-6 mb-6 shadow="[var(--bew-shadow-1),var(--bew-shadow-edge-glow-1)]" border="1 $bew-border-color" style="backdrop-filter:var(--bew-filter-glass-1)">
-            <div v-if="c.description" class="markdown-body" style="font-size:var(--bew-base-font-size);color:var(--bew-text-1);line-height:1.8" v-html="parseMarkdownContent(c.description)" />
+            <div v-if="c.description" class="markdown-body" style="font-size:var(--bew-base-font-size);color:var(--bew-text-1);line-height:1.8" v-html="renderedDescription" />
             <div v-else style="text-align:center;padding:40px;color:var(--bew-text-3);font-size:var(--bew-base-font-size)">
               <span v-html="renderIcon('mingcute:information-line', 48)" style="display:contents" /><p mt-2>暂无比赛介绍</p>
             </div>

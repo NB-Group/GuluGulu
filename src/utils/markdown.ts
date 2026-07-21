@@ -38,6 +38,40 @@ hljs.registerLanguage('json', json)
 hljs.registerLanguage('plaintext', plaintext)
 import browser from 'webextension-polyfill'
 
+// ============================================================
+// Parse cache (LRU, capped at 128 entries)
+// ------------------------------------------------------------
+// parseMarkdownContent / parseProblemMarkdown are called inside v-html
+// bindings, so they re-run on every render. Cache the parsed HTML keyed by
+// the raw input to avoid re-running marked + katex on identical input.
+//
+// CRITICAL: renderLatexRaw returns the raw text unchanged while
+// katex === null (before ensureKatex() resolves). A naive cache would pin
+// that pre-LaTeX output and math would never render. The whole cache is
+// invalidated inside ensureKatex() once katex finishes loading.
+// ============================================================
+const PARSE_CACHE = new Map<string, string>()
+const PARSE_CACHE_MAX = 128
+function cacheGet(key: string): string | undefined {
+  const v = PARSE_CACHE.get(key)
+  if (v !== undefined) {
+    // LRU refresh: delete + re-insert moves the entry to the tail (most
+    // recently used). Map iterates in insertion order, so the head is the
+    // oldest victim when we evict.
+    PARSE_CACHE.delete(key)
+    PARSE_CACHE.set(key, v)
+  }
+  return v
+}
+function cacheSet(key: string, value: string): void {
+  if (PARSE_CACHE.has(key)) PARSE_CACHE.delete(key)
+  PARSE_CACHE.set(key, value)
+  if (PARSE_CACHE.size > PARSE_CACHE_MAX) {
+    const oldest = PARSE_CACHE.keys().next().value
+    if (oldest !== undefined) PARSE_CACHE.delete(oldest)
+  }
+}
+
 // katex 外置:不静态打包进内容脚本 IIFE,运行时从 web-accessible 的 /assets/katex.mjs
 // 按需加载(内容脚本启动、Vue 挂载前由 ensureKatex() 预取)。renderLatexRaw 仍同步,
 // 在 katex 就绪前直接返回原文(降级)。585KB 从主包移出。
@@ -47,6 +81,11 @@ export async function ensureKatex(): Promise<Katex | null> {
   if (!katex) {
     try {
       katex = (await import(/* @vite-ignore */ browser.runtime.getURL('/assets/katex.mjs'))).default
+      // katex just became available — any cached parse output was produced
+      // with renderLatexRaw in its pass-through (pre-LaTeX) mode and would
+      // pin unrendered math if reused. Drop the whole cache so the next
+      // call re-parses with katex active.
+      PARSE_CACHE.clear()
     }
     catch (e) { console.warn('[GuluGulu] katex load failed:', e) }
   }
@@ -160,8 +199,12 @@ function renderLatexRaw(text: string): string {
  */
 export function parseProblemMarkdown(raw: string): string {
   injectKatexCSS()
+  const cached = cacheGet(raw)
+  if (cached !== undefined) return cached
   const withLatex = renderLatexRaw(raw)
-  return marked.parse(withLatex) as string
+  const out = marked.parse(withLatex) as string
+  cacheSet(raw, out)
+  return out
 }
 
 /**
@@ -171,8 +214,12 @@ export function parseProblemMarkdown(raw: string): string {
 export function parseMarkdownContent(md: string): string {
   if (!md) return ''
   injectKatexCSS()
+  const cached = cacheGet(md)
+  if (cached !== undefined) return cached
   try {
     const withLatex = renderLatexRaw(md)
-    return marked.parse(withLatex) as string
+    const out = marked.parse(withLatex) as string
+    cacheSet(md, out)
+    return out
   } catch { return md }
 }

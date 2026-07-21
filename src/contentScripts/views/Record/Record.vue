@@ -213,6 +213,12 @@ watch(() => detail.value?.status, (st) => {
   prevStampStatus = st
 })
 
+// Highlighted source code. Wrap in a computed so hljs only re-runs when the
+// detail's sourceCode/language actually change (Vue caches computeds against
+// their reactive deps and skips the DOM patch when the output string is
+// unchanged) instead of every 2s poll tick.
+const highlightedSource = computed(() => highlightCode(detail.value?.sourceCode, String(detail.value?.language)))
+
 // Normalize subtasks/testCases into display-ready groups
 const testCaseGroups = computed(() => {
   const subs = detail.value?.detail?.judgeResult?.subtasks
@@ -388,7 +394,7 @@ onUnmounted(() => {
             <div style="font-size:var(--bew-base-font-size);color:var(--bew-text-2);font-weight:600" mb-2>
               源代码
             </div>
-            <pre bg="$bew-fill-1" rounded="$bew-radius" p-4 style="font-size:var(--bew-base-font-size);font-family:monospace;overflow:auto;color:var(--bew-text-1);tab-size:4" v-html="highlightCode(detail.sourceCode, String(detail.language))" />
+            <pre bg="$bew-fill-1" rounded="$bew-radius" p-4 style="font-size:var(--bew-base-font-size);font-family:monospace;overflow:auto;color:var(--bew-text-1);tab-size:4" v-html="highlightedSource" />
           </div>
         </div>
       </Transition>
