@@ -9,7 +9,7 @@ import { AppPage } from '~/enums/appEnums'
 import { renderIcon } from '~/utils/icons'
 import type { VerdictResult } from '~/utils/luogu-api'
 import { RECORD_STATUS_MAP as statusMap } from '~/utils/luogu-api'
-import { friendlyError, LUOGU_LANGUAGES, summarizeVerdict, derivedRecordStatus, fetchLentilleContext, needLogin } from '~/utils/luogu-api'
+import { friendlyError, LUOGU_LANGUAGES, summarizeVerdict, derivedRecordStatus, fetchLentilleContext } from '~/utils/luogu-api'
 import { timeAgo } from '~/utils/main'
 
 hljs.registerLanguage('cpp', cpp)
@@ -169,16 +169,16 @@ async function fetchDetail(id: number) {
     detailErrorMsg.value = ''
   }
   try {
-    // 用 lentille-context(HTML 页)而非 ?_contentOnly=1 —— 后者对 record 详情常返回卡在
-    // Compiling 的陈旧 status;lentille 是页面实际渲染用的 live 数据(pollRecordVerdict 同源,已验证)。
+    // 优先 lentille(HTML 页,live,含 detail.compileResult/judgeResult —— pollRecordVerdict 同源已验证);
+    // 取不到则回退 ?_contentOnly=1(至少有 status,避免详情空白)。
     const ctx = await fetchLentilleContext(`https://www.luogu.com.cn/record/${id}`)
-    if (needLogin(ctx)) {
-      detailErrorMsg.value = '请先登录洛谷'
-      detail.value = null
+    let rec = ctx?.data?.record || ctx?.currentData?.record || null
+    if (!rec) {
+      const res = await fetch(`https://www.luogu.com.cn/record/${id}?_contentOnly=1`, { credentials: 'same-origin' })
+      const json = await res.json()
+      rec = json?.data?.record || json?.currentData?.record || null
     }
-    else {
-      detail.value = ctx?.data?.record || ctx?.currentData?.record || null
-    }
+    detail.value = rec
   }
   catch (e: any) { detailErrorMsg.value = friendlyError(e) }
   detailLoading.value = false
