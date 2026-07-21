@@ -40,7 +40,7 @@ watch(isDark, (_n, o) => {
   x.value = px
   y.value = py
   // distance to the farthest corner (+5% overshoot so the corners fully clear)
-  maxR.value = Math.hypot(Math.max(px, window.innerWidth - px), Math.max(py, window.innerHeight - py)) * 1.05
+  maxR.value = Math.hypot(Math.max(px, window.innerWidth - px), Math.max(py, window.innerHeight - py)) * 1.2
   revealing.value = true
 }, { flush: 'sync' })
 
@@ -79,18 +79,20 @@ function done() {
   inset: 0;
   z-index: 9999;
   pointer-events: none;
+  opacity: 0.25; // page content shows through outside the circle
   --r: 0px;
-  // transparent inside the growing circle (overlay hidden → NEW shows through),
-  // black outside (overlay visible = OLD). 8% feather for a soft diffusion edge.
-  mask: radial-gradient(circle var(--r) at var(--rx, 50%) var(--ry, 50%), transparent 92%, black);
-  -webkit-mask: radial-gradient(circle var(--r) at var(--rx, 50%) var(--ry, 50%), transparent 92%, black);
+  // transparent inside the growing circle (overlay hidden → NEW and page show fully),
+  // black outside (overlay at 25% opacity = faint old-theme wash → page visible through).
+  // 3% feather (= hard-ish edge, no lingering ring → no "callback" second phase).
+  mask: radial-gradient(circle var(--r) at var(--rx, 50%) var(--ry, 50%), transparent 97%, black);
+  -webkit-mask: radial-gradient(circle var(--r) at var(--rx, 50%) var(--ry, 50%), transparent 97%, black);
   animation: theme-diffuse 0.9s cubic-bezier(0.33, 0, 0.67, 1) forwards;
 }
 
 @keyframes theme-diffuse {
-  0%   { --r: 0px; opacity: 1; }
-  80%  { --r: var(--max-r); opacity: 1; } // fully spread, overlay at full opacity
-  100% { --r: var(--max-r); opacity: 0; } // gracefully fade out the overlay
+  0%   { --r: 0px; }
+  85%  { --r: var(--max-r); } // fully spread — circle covers viewport (+20% overshoot)
+  100% { --r: var(--max-r); } // hold, then element unmounts (already invisible)
 }
 
 @media (prefers-reduced-motion: reduce) {
