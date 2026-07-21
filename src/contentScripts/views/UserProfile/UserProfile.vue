@@ -84,13 +84,43 @@ function refreshCollapsed() {
     return
   const viewport = scrollbarRef.value?.osInstance?.()?.elements?.()?.viewport
   const scrollTop = viewport?.scrollTop || 0
+  // Collapse as soon as the header sticks (scrollTop > 8) so there is no gap
+  // between stick and shrink; expand only when nearly back at top (<= 14).
   if (collapsed.value && scrollTop <= 14) {
     collapsed.value = false
     lastToggle = performance.now()
   }
-  else if (!collapsed.value && scrollTop > 40) {
+  else if (!collapsed.value && scrollTop > 8) {
     collapsed.value = true
     lastToggle = performance.now()
+  }
+}
+
+// Sliding underline indicator for the active tab — uses getBoundingClientRect
+// to position an absolutely-spelled span inside .profile-tabs. Recomputed on
+// activeTab change, on tabs list change, on collapse state change, and on
+// layout resize via ResizeObserver.
+const tabsEl = ref<HTMLElement | null>(null)
+const tabIndicatorStyle = ref<{ transform: string, width: string }>({
+  transform: 'translateX(0)',
+  width: '0px',
+})
+let tabResizeObs: ResizeObserver | null = null
+function refreshTabIndicator() {
+  const root = tabsEl.value
+  if (!root)
+    return
+  const active = root.querySelector<HTMLElement>('.profile-tab--active')
+  if (!active) {
+    tabIndicatorStyle.value = { transform: 'translateX(0)', width: '0px' }
+    return
+  }
+  const rootRect = root.getBoundingClientRect()
+  const rect = active.getBoundingClientRect()
+  const offsetLeft = rect.left - rootRect.left + root.scrollLeft
+  tabIndicatorStyle.value = {
+    transform: `translateX(${offsetLeft}px)`,
+    width: `${rect.width}px`,
   }
 }
 function onViewportScroll() {
@@ -354,6 +384,12 @@ function cellTooltip(cell: HeatCell): string {
   return `${cell.date} — ${cell.count} 题`
 }
 
+// Tab indicator follows activeTab, the tabs list (counts may grow the list),
+// and the collapse state (collapse reflows the tab bar). ResizeObserver covers
+// viewport resizes and OS scrollbar driven reflows.
+watch([activeTab, tabs], () => nextTick(refreshTabIndicator))
+watch(collapsed, () => nextTick(refreshTabIndicator))
+
 onMounted(() => {
   emitter.on(OVERLAY_SCROLL_BAR_SCROLL, onViewportScroll)
   fetchUser()
@@ -361,11 +397,20 @@ onMounted(() => {
     activeTab.value = subView.value
     fetchFollowList(subView.value)
   }
+  nextTick(() => {
+    refreshTabIndicator()
+    if (tabsEl.value && typeof ResizeObserver !== 'undefined') {
+      tabResizeObs = new ResizeObserver(refreshTabIndicator)
+      tabResizeObs.observe(tabsEl.value)
+    }
+  })
 })
 onUnmounted(() => {
   emitter.off(OVERLAY_SCROLL_BAR_SCROLL, onViewportScroll)
   if (collapseRaf)
     cancelAnimationFrame(collapseRaf)
+  tabResizeObs?.disconnect()
+  tabResizeObs = null
 })
 watch(uid, () => {
   if (uid.value) {
@@ -413,7 +458,7 @@ watch(uid, () => {
               >
             </div>
             <div flex="1" min-w-0>
-              <div flex="~ items-center gap-2 wrap">
+              <div class="header-chips" flex="~ items-center gap-2 wrap">
                 <h1 class="header-name" style="font-weight: 700; line-height: 1.2" :style="{ color: colorVar(user.color) }">
                   {{ user.name }}
                 </h1>
@@ -472,7 +517,7 @@ watch(uid, () => {
           </div>
 
           <!-- Tab bar -->
-          <nav class="profile-tabs">
+          <nav ref="tabsEl" class="profile-tabs">
             <button
               v-for="tab in tabs"
               :key="tab.key"
@@ -484,6 +529,7 @@ watch(uid, () => {
               <span>{{ tab.label }}</span>
               <span v-if="tab.count !== undefined" class="count">{{ (tab.count || 0).toLocaleString() }}</span>
             </button>
+            <span class="tab-indicator" :style="tabIndicatorStyle" />
           </nav>
         </header>
 
@@ -612,7 +658,8 @@ watch(uid, () => {
                 >
                   <div flex="~ items-center justify-between wrap" mb-3 gap-2>
                     <div>
-                      <h2 style="font-size: var(--bew-base-font-size); color: var(--bew-text-1); font-weight: 700">
+                      <h2 flex="~ items-center gap-2" style="font-size: var(--bew-base-font-size); color: var(--bew-text-1); font-weight: 700">
+                        <span style="display: contents" v-html="renderIcon('mingcute:chart-bar-line', 18)" />
                         练习记录
                       </h2>
                       <p text="xs $bew-text-3" mt-0.5>
@@ -673,6 +720,21 @@ watch(uid, () => {
                     <span>多</span>
                   </div>
                 </div>
+                <div
+                  v-else
+                  bg="$bew-content"
+                  rounded="$bew-radius"
+                  p-6
+                  mb-4
+                  border="1 $bew-border-color"
+                  text="center $bew-text-3"
+                  style="backdrop-filter: var(--bew-filter-glass-1)"
+                >
+                  <span style="display: contents" v-html="renderIcon('mingcute:chart-bar-line', 32)" />
+                  <p mt-2>
+                    暂无打卡数据
+                  </p>
+                </div>
 
                 <!-- Prizes -->
                 <div
@@ -684,7 +746,8 @@ watch(uid, () => {
                   border="1 $bew-border-color"
                   style="backdrop-filter: var(--bew-filter-glass-1)"
                 >
-                  <h2 style="font-size: var(--bew-base-font-size); color: var(--bew-text-1); font-weight: 700" mb-3>
+                  <h2 flex="~ items-center gap-2" mb-3 style="font-size: var(--bew-base-font-size); color: var(--bew-text-1); font-weight: 700">
+                    <span style="display: contents" v-html="renderIcon('mingcute:medal-fill', 18)" />
                     获奖记录
                   </h2>
                   <div flex="~ wrap" gap-2>
@@ -695,6 +758,20 @@ watch(uid, () => {
                       {{ p.prize?.year }} {{ p.prize?.contest }} {{ p.prize?.prize }}
                     </span>
                   </div>
+                </div>
+                <div
+                  v-else
+                  bg="$bew-content"
+                  rounded="$bew-radius"
+                  p-6
+                  border="1 $bew-border-color"
+                  text="center $bew-text-3"
+                  style="backdrop-filter: var(--bew-filter-glass-1)"
+                >
+                  <span style="display: contents" v-html="renderIcon('mingcute:medal-fill', 32)" />
+                  <p mt-2>
+                    暂无获奖记录
+                  </p>
                 </div>
               </div>
 
@@ -869,28 +946,44 @@ watch(uid, () => {
   opacity: 0;
 }
 
-/* GitHub-style underline tab bar */
+/* GitHub-style underline tab bar with sliding indicator */
 .profile-tabs {
+  position: relative;
   display: flex;
   align-items: center;
   gap: 2px;
-  flex: 0 0 100%;
+  /* keep flex-basis stable so collapse never reflows the tab row; only the
+     chip container above transitions. Avoids the 100%↔0% flex-basis snap. */
+  flex: 1 1 auto;
+  min-width: 0;
   margin-top: 14px;
   border-bottom: 1px solid var(--bew-border-color);
   overflow-x: auto;
   scrollbar-width: none;
-  transition: flex-basis 0.32s ease, flex-grow 0.32s ease, margin-top 0.32s ease, border-color 0.32s ease;
+  transition: margin-top var(--bew-dur-cozy) var(--bew-ease-smooth), border-color var(--bew-dur-cozy) var(--bew-ease-smooth);
 }
-/* Collapsed: tab bar slides up to sit inline, right-aligned with the avatar */
+/* Collapsed: tab bar slides up to sit inline with the avatar; only the
+   border + alignment change, never the flex-basis. */
 .profile-header.is-collapsed .profile-tabs {
-  flex: 1 1 0%;
-  min-width: 0;
   margin-top: 0;
   justify-content: flex-end;
   border-bottom-color: transparent;
 }
 .profile-tabs::-webkit-scrollbar {
   display: none;
+}
+.tab-indicator {
+  position: absolute;
+  bottom: -1px;
+  left: 0;
+  height: 2px;
+  border-radius: 2px;
+  background: var(--bew-theme-color);
+  pointer-events: none;
+  will-change: transform, width;
+  transition:
+    transform var(--bew-dur-cozy) var(--bew-ease-smooth),
+    width var(--bew-dur-cozy) var(--bew-ease-smooth);
 }
 .profile-tab {
   display: flex;
@@ -899,23 +992,18 @@ watch(uid, () => {
   padding: 10px 14px;
   background: none;
   border: none;
-  border-bottom: 2px solid transparent;
-  margin-bottom: -1px;
   cursor: pointer;
   white-space: nowrap;
   color: var(--bew-text-2);
   font-size: var(--bew-base-font-size);
   font-weight: 600;
-  transition:
-    color 0.2s,
-    border-color 0.2s;
+  transition: color 0.2s ease;
 }
 .profile-tab:hover {
   color: var(--bew-text-1);
 }
 .profile-tab--active {
   color: var(--bew-theme-color);
-  border-bottom-color: var(--bew-theme-color);
   font-weight: 700;
 }
 .profile-tab .count {
@@ -935,10 +1023,23 @@ watch(uid, () => {
   width: 100%;
   flex-shrink: 0;
 }
+/* Intermediate breakpoint so 768-1024 doesn't squeeze the main column. */
 @media (min-width: 768px) {
+  .profile-sidebar {
+    width: 220px;
+  }
+}
+@media (min-width: 1024px) {
   .profile-sidebar {
     width: 300px;
   }
+}
+
+/* When collapsed, lock the chip row to a single line so the max-width transition
+   on UID/slogan chips can't trigger a mid-transition reflow (wrap jitter). */
+.profile-header.is-collapsed .header-chips {
+  flex-wrap: nowrap;
+  overflow: hidden;
 }
 
 .sidebar-meta {
@@ -949,7 +1050,10 @@ watch(uid, () => {
 }
 
 .stat-tile {
-  transition: background 0.2s;
+  transition:
+    background 0.2s ease,
+    transform var(--bew-dur-cozy) var(--bew-ease-smooth),
+    box-shadow var(--bew-dur-cozy) var(--bew-ease-smooth);
 }
 .stat-tile--clickable {
   cursor: pointer;
@@ -959,7 +1063,8 @@ watch(uid, () => {
 }
 .stat-tile--active {
   background: var(--bew-theme-color-20) !important;
-  outline: 1px solid var(--bew-theme-color-40);
+  box-shadow: var(--bew-active-ring), 0 4px 12px var(--bew-theme-color-20);
+  transform: scale(1.03);
 }
 
 .heatmap-wrap {
@@ -994,6 +1099,16 @@ watch(uid, () => {
   border-radius: 3px;
   position: relative;
   cursor: pointer;
+  transition:
+    transform var(--bew-dur-fast) var(--bew-ease-overshoot),
+    box-shadow var(--bew-dur-fast) var(--bew-ease-overshoot);
+  &:hover {
+    transform: scale(1.4);
+    z-index: 2;
+    box-shadow:
+      0 0 0 2px var(--bew-bg),
+      0 0 0 3px var(--bew-theme-color-40);
+  }
   &:hover .hm-tooltip {
     opacity: 1;
     transform: translateX(-50%) translateY(0);
