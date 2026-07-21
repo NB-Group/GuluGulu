@@ -248,13 +248,17 @@ const removeOriginalTopBar = injectCSS(
 )
 
 let onDOMLoadedCalled = false
+// 注入并发锁:防止 pageshow 重注与首次注入(或 observer/timeout 兜底)同时跑 onDOMLoaded
+let injecting = false
 
 async function onDOMLoaded() {
-  if (onDOMLoadedCalled || !document.body)
+  if (onDOMLoadedCalled || injecting || !document.body)
     return
   onDOMLoadedCalled = true
+  injecting = true
 
-  let originalTopBar: HTMLElement | null = null
+  try {
+    let originalTopBar: HTMLElement | null = null
 
   const isSupported = isSupportedPages() || isSupportedIframePages()
 
@@ -334,8 +338,12 @@ async function onDOMLoaded() {
   }
 
   // Reset the original top bar display style
-  if (removeOriginalTopBar)
-    document.documentElement.removeChild(removeOriginalTopBar)
+    if (removeOriginalTopBar)
+      document.documentElement.removeChild(removeOriginalTopBar)
+  }
+  finally {
+    injecting = false
+  }
 }
 
 function waitForBodyThenInject() {
@@ -364,14 +372,12 @@ if (document.readyState !== 'loading')
 else
   document.addEventListener('DOMContentLoaded', () => waitForBodyThenInject())
 
-// bfcache (browser back/forward): Chrome may restore the page WITHOUT re-running
-// this content script. If the restored page is a supported Luogu path GuluGulu
-// hasn't taken over (#guly absent — e.g. the snapshot was a native Luogu page),
-// re-inject so the extension loads. (#guly present = in-app back/forward, already
-// handled by App.vue's popstate listener → leave it alone.)
-window.addEventListener('pageshow', (event) => {
-  if (!event.persisted)
-    return
+// 后退/前进恢复:Chrome 可能不重跑本内容脚本就还原页面(bfcache,或 instant/prerender
+// 等非 bfcache 路径)。只要还原出的页面 #guly 缺失且 URL 受支持,就重注——不限定
+// event.persisted,否则非 bfcache 后退若脚本没重跑、#guly 仍缺时会漏注(用户反映
+// "后退有时不加载插件")。#guly 已存在 = 应用内后退,App.vue 的 popstate 已处理,跳过。
+// onDOMLoaded 的 injecting 锁防止与首次注入并发;#guly 存在性挡住 double-inject。
+window.addEventListener('pageshow', () => {
   if (document.querySelector('#guly'))
     return
   currentUrl = document.URL // refresh stale module-level URL
