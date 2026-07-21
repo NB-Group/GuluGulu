@@ -38,6 +38,30 @@ const themeOptions = computed<Array<{ value: string; label: string }>>(() => {
   ]
 })
 
+const transitionSpeedOptions = computed<Array<{ value: string; label: string }>>(() => [
+  { label: '快速', value: 'fast' },
+  { label: '标准', value: 'normal' },
+  { label: '舒缓', value: 'slow' },
+])
+
+// Map transitionSpeed → --bew-time-scale written on documentElement (cascades into #guly shadow DOM).
+const transitionSpeedScale: Record<string, number> = {
+  fast: 0.7,
+  normal: 1,
+  slow: 1.3,
+}
+
+// glassOpacity (0-100) → --bew-content-opacity (0-1)
+watch(() => settings.value.glassOpacity, (val) => {
+  const clamped = Math.max(0, Math.min(100, Number(val) || 0))
+  document.documentElement.style.setProperty('--bew-content-opacity', `${(clamped / 100).toFixed(3)}`)
+}, { immediate: true })
+
+watch(() => settings.value.transitionSpeed, (val) => {
+  const scale = transitionSpeedScale[val] ?? 1
+  document.documentElement.style.setProperty('--bew-time-scale', String(scale))
+}, { immediate: true })
+
 watch(() => settings.value.wallpaper, (newValue) => {
   changeWallpaper(newValue)
 })
@@ -126,6 +150,19 @@ function handleRemoveCustomWallpaper() {
       <SettingsItem title="渐变主题色背景" desc="在背景中使用主题色渐变">
         <Radio v-model="settings.useLinearGradientThemeColorBackground" />
       </SettingsItem>
+
+      <SettingsItem title="顶栏主题色渐变" desc="在顶栏顶部叠加一层主题色渐变（仅深色模式 + 页面顶部）">
+        <Radio v-model="settings.showTopBarThemeColorGradient" />
+      </SettingsItem>
+    </SettingsItemGroup>
+
+    <SettingsItemGroup title="动画与玻璃质感">
+      <SettingsItem title="动效速度" desc="调整全局过渡动画的节奏（影响 --bew-time-scale）">
+        <Select v-model="settings.transitionSpeed" w-full :options="transitionSpeedOptions" />
+      </SettingsItem>
+      <SettingsItem title="玻璃不透明度" desc="调整卡片/面板的基底透明度（影响 --bew-content-opacity）">
+        <Slider v-model="settings.glassOpacity" :min="0" :max="100" :label="`${settings.glassOpacity}%`" />
+      </SettingsItem>
     </SettingsItemGroup>
 
     <SettingsItemGroup title="壁纸">
@@ -185,8 +222,12 @@ function handleRemoveCustomWallpaper() {
     </SettingsItemGroup>
 
     <SettingsItemGroup>
-      <SettingsItem title="自定义 CSS" desc="⚠️ 请谨慎使用，错误的 CSS 可能导致界面异常">
+      <SettingsItem title="自定义 CSS" desc="⚠️ 实验性 · 内容已保存但注入逻辑尚未启用（需在 App.vue 挂载处接入 #guly shadow root），错误的 CSS 可能导致界面异常">
         <Radio v-model="settings.customizeCSS" />
+        <!-- TODO(customizeCSS): injection is not wired up yet.
+             To enable, on App.vue mount, watch settings.customizeCSS/ customizeCSSContent
+             and inject a <style id="guly-custom-css"> into document.querySelector('#guly')?.shadowRoot
+             (falling back to document.head). Remove this TODO once the App.vue side lands. -->
         <template v-if="settings.customizeCSS" #bottom>
           <textarea
             v-model="settings.customizeCSSContent"
@@ -195,7 +236,7 @@ function handleRemoveCustomWallpaper() {
             rounded="$bew-radius"
             text="$bew-text-1"
             outline-none
-            placeholder="/* 在此输入自定义 CSS */"
+            placeholder="/* 在此输入自定义 CSS（注入逻辑暂未启用） */"
             @keydown.stop.passive="() => {}"
           />
         </template>

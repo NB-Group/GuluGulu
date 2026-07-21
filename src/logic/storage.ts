@@ -23,6 +23,7 @@ export interface Settings {
   gridLayout: 'adaptive' | 'twoColumn' | 'singleColumn'
   showTopBar: boolean
   topBarAutoHide: boolean
+  showTopBarThemeColorGradient: boolean
   searchBarMode: 'currentTab' | 'newTab'
 	  dockMessageBadge: boolean
 
@@ -44,6 +45,11 @@ export interface Settings {
   // Custom CSS
   customizeCSS: boolean
   customizeCSSContent: string
+
+  // Motion & glass (consumed via CSS custom properties written to documentElement)
+  transitionSpeed: 'fast' | 'normal' | 'slow'
+  glassOpacity: number // 0-100, mapped to --bew-content-opacity
+  dockIconSize: 'small' | 'medium' | 'large' // storage + UI only; consumed by Dock.vue
 
   // Dock items configuration
   dockItemsConfig: { page: AppPage, visible: boolean, openInNewTab: boolean, useOriginalLuoguPage: boolean }[]
@@ -69,6 +75,7 @@ export const originalSettings: Settings = {
   gridLayout: 'adaptive',
   showTopBar: true,
   topBarAutoHide: false,
+  showTopBarThemeColorGradient: false,
   searchBarMode: 'currentTab',
   dockMessageBadge: true,
 
@@ -80,6 +87,11 @@ export const originalSettings: Settings = {
   touchScreenOptimization: false,
   customizeCSS: false,
   customizeCSSContent: '',
+
+  transitionSpeed: 'normal',
+  glassOpacity: 62,
+  dockIconSize: 'medium',
+
   individuallySetSearchPageWallpaper: false,
   searchPageWallpaper: '',
   searchPageWallpaperMaskOpacity: 50,

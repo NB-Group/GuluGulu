@@ -198,7 +198,7 @@ function setCurrentTitle() {
               style="
                 mask-image: linear-gradient(to bottom,  black 0, transparent 100%);
                 -webkit-mask-image: linear-gradient(to bottom, black 0, transparent 100%);
-                backdrop-filter: blur(6px);
+                backdrop-filter: var(--bew-filter-glass-1);
               "
               z--1 rounded-inherit transform-gpu
             />
@@ -247,6 +247,13 @@ function setCurrentTitle() {
 .menu-item-activated {
   color: var(--bew-text-auto);
   background-color: var(--bew-theme-color);
+  transform: translateX(2px);
+  box-shadow: inset 3px 0 0 var(--bew-theme-color);
+  transition:
+    transform var(--bew-dur-normal) var(--bew-ease-overshoot),
+    box-shadow var(--bew-dur-normal) var(--bew-ease-smooth),
+    background-color var(--bew-dur-normal) var(--bew-ease-smooth),
+    color var(--bew-dur-normal) var(--bew-ease-smooth);
 }
 
 

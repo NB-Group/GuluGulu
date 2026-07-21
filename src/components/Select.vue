@@ -159,6 +159,7 @@ onMounted(() => {
     background: var(--bew-theme-color-20);
     color: var(--bew-theme-color);
     font-weight: 600;
+    box-shadow: inset 2px 0 0 var(--bew-theme-color);
   }
 }
 

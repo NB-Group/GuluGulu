@@ -19,11 +19,11 @@ const searchBarModeOptions = computed(() => [
 <template>
   <div>
     <SettingsItemGroup title="通用">
-      <SettingsItem title="默认网格布局" desc="控制卡片/列表的默认排列方式">
+      <SettingsItem title="默认网格布局" desc="⚠️ 暂未实现 · 字段已保留，UI 选择不会生效">
         <Select v-model="settings.gridLayout" :options="gridLayoutOptions" w="full" />
       </SettingsItem>
 
-      <SettingsItem title="搜索栏行为" desc="搜索时在当前标签页还是新标签页打开">
+      <SettingsItem title="搜索栏行为" desc="⚠️ 暂未实现 · 字段已保留，UI 选择不会生效">
         <Select v-model="settings.searchBarMode" :options="searchBarModeOptions" w="full" />
       </SettingsItem>
 
@@ -57,7 +57,7 @@ const searchBarModeOptions = computed(() => [
       >
         <Radio v-model="settings.reduceFrostedGlassBlur" />
       </SettingsItem>
-      <SettingsItem title="禁用阴影" desc="关闭阴影效果可小幅提升性能">
+      <SettingsItem title="禁用阴影" desc="⚠️ 暂未实现 · 字段已保留，开关不会生效">
         <Radio v-model="settings.disableShadow" />
       </SettingsItem>
     </SettingsItemGroup>

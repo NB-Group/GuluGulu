@@ -9,6 +9,12 @@ const dockPositionOptions = computed(() => [
   { label: '右侧', value: 'right' },
   { label: '底部', value: 'bottom' },
 ])
+
+const dockIconSizeOptions = computed(() => [
+  { label: '小', value: 'small' },
+  { label: '中', value: 'medium' },
+  { label: '大', value: 'large' },
+])
 </script>
 
 <template>
@@ -44,6 +50,10 @@ const dockPositionOptions = computed(() => [
 
       <SettingsItem title="私信未读角标" desc="在导航坞的私信图标上显示未读消息数">
         <Radio v-model="settings.dockMessageBadge" />
+      </SettingsItem>
+
+      <SettingsItem title="导航坞图标尺寸" desc="⚠️ 暂未实现 · 字段已保留，选择暂不会改变图标大小">
+        <Select v-model="settings.dockIconSize" :options="dockIconSizeOptions" w="full" />
       </SettingsItem>
     </SettingsItemGroup>
   </div>

@@ -44,6 +44,7 @@ input[type="checkbox"] {
 
   &:checked + span {
     --uno: "bg-$bew-theme-color-60 border-$bew-theme-color";
+    box-shadow: 0 0 0 4px var(--bew-theme-color-20);
   }
 
   &:checked:hover + span {

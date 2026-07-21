@@ -534,6 +534,13 @@ const dockTransformStyle = computed((): { transform: string, transformOrigin: st
     --uno: "important-bg-$bew-theme-color text-white !dark:bg-white !dark:text-black";
     --uno: "shadow-$shadow-active dark:shadow-$shadow-dark";
     --uno: "active:shadow-$shadow-active-active dark-active:shadow-$shadow-dark-active";
+    animation: dock-pop var(--bew-dur-cozy) var(--bew-ease-overshoot);
+  }
+
+  @keyframes dock-pop {
+    0% { transform: scale(0.85); }
+    60% { transform: scale(1.12); }
+    100% { transform: scale(1); }
   }
 
   &.inactive {
