@@ -61,12 +61,12 @@ type ProfileTab
     | 'notifications'
 
 const user = ref<UserData | null>(null)
-const prizes = ref<any[]>([])
+const prizes = shallowRef<any[]>([])
 const gu = ref<any>(null)
-const dailyCounts = ref<Record<string, [number, number]>>({})
+const dailyCounts = shallowRef<Record<string, [number, number]>>({})
 const loading = ref(true)
 const errorMsg = ref('')
-const followList = ref<any[]>([])
+const followList = shallowRef<any[]>([])
 const followLoading = ref(false)
 const followLoaded = ref<Set<'following' | 'followers'>>(new Set())
 
