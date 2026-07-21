@@ -304,7 +304,7 @@ const dockTransformStyle = computed((): { transform: string, transformOrigin: st
         title="收起"
         pointer-events-auto
         @click="settings.dockCollapsed = true"
-      >‹</button>
+      >{{ { left: '‹', right: '›', bottom: '∨' }[settings.dockPosition] }}</button>
 
       <!-- Back to top & refresh buttons -->
       <div
@@ -376,7 +376,7 @@ const dockTransformStyle = computed((): { transform: string, transformOrigin: st
       title="展开"
       pointer-events-auto
       @click="settings.dockCollapsed = false"
-    >›</button>
+    >{{ { left: '›', right: '‹', bottom: '∧' }[settings.dockPosition] }}</button>
   </aside>
 </template>
 
