@@ -78,7 +78,9 @@ const { problem, loading, loadError, discussions, difficultyColor, passRate, ren
 const activeTab = ref<'statement' | 'submit' | 'solutions' | 'discussions'>('statement')
 const contestId = computed(() => { const m = (currentUrl.value || window.location.href).match(/[?&]contestId=(\d+)/); return m ? m[1] : '' })
 const inContestMode = computed(() => !!contestId.value)
-const ideMode = ref(inContestMode.value || window.location.hash === '#ide')
+// 默认进普通题面页;IDE 仅手动进入(顶栏 IDE 按钮 / #ide hash),不再因 contestId 自动进。
+// inContestMode 仍保留,用于隐藏题解与讨论 tab、显示题目切换、contest 提交路由。
+const ideMode = ref(window.location.hash === '#ide')
 // 窄屏(<768px)下禁用分屏视图:编辑器和题面会挤到无法阅读,移动端直接走 tab 切换。
 const isNarrow = ref(false)
 if (typeof window !== 'undefined' && window.matchMedia) {
@@ -369,6 +371,14 @@ onUnmounted(() => {
 
             <div flex="~ gap-2" shrink-0>
               <Button
+                v-if="externalUrl"
+                type="secondary"
+                @click="openOriginalSite"
+              >
+                <span style="display:contents" v-html="renderIcon('mingcute:external-link-line', 16)" />
+                跳转原站
+              </Button>
+              <Button
                 :type="copiedMarkdown ? 'success' : 'secondary'"
                 @click="copyMarkdown"
               >
@@ -419,10 +429,12 @@ onUnmounted(() => {
               <img v-if="problem.provider.avatar" :src="problem.provider.avatar" style="width:16px;height:16px;border-radius:50%" @error="(e:any)=>{e.target.style.display='none'}" />
               <span text="$bew-theme-color">{{ problem.provider.name }}</span>
             </span>
-            <span flex="~ items-center gap-1" cursor="pointer" text="$bew-theme-color" @click="toggleMyRecords">
-              <span style="display:contents" v-html="renderIcon('mingcute:chart-bar-line', 14)" />
+            <button flex="~ items-center gap-1" cursor="pointer" p="x-2.5 y-1" rounded="$bew-radius-half" text="sm" border="none" shrink-0
+              style="background:var(--bew-theme-color-20);color:var(--bew-theme-color);font-weight:600"
+              @click="toggleMyRecords">
+              <span style="display:contents" v-html="renderIcon('mingcute:history-line', 14)" />
               我的提交
-            </span>
+            </button>
           </div>
           <button
             v-if="!isSplitView" class="ml-auto" flex="~ items-center gap-1" p="x-3 y-2" rounded="$bew-radius-half" text="sm"
@@ -846,12 +858,13 @@ onUnmounted(() => {
                 </div>
                 <div flex="~ col gap-1">
                   <div v-for="h in submitHistory" :key="h.rid" flex="~ items-center gap-2" text="xs">
-                    <a
-                      :href="`https://www.luogu.com.cn/record/${h.rid}`" target="_blank"
-                      style="color:var(--bew-theme-color);text-decoration:none;font-family:monospace"
+                    <span
+                      cursor="pointer"
+                      @click="navigateTo(AppPage.Record, `https://www.luogu.com.cn/record/${h.rid}`)"
+                      style="color:var(--bew-theme-color);font-family:monospace"
                     >
                       #{{ h.rid }}
-                    </a>
+                    </span>
                     <span style="color:var(--bew-text-3)">{{ h.pid }}</span>
                   </div>
                 </div>
