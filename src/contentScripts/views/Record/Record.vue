@@ -150,6 +150,14 @@ const recordId = computed(() => { const m = currentUrl.value.match(/\/record\/(\
 const detail = ref<any>(null)
 const detailLoading = ref(false)
 const detailErrorMsg = ref('')
+// CE 派生状态:洛谷 CE 时 record.status 常卡在 Compiling(2) 不翻 10,
+// 但 detail.compileResult.success===false 已能判定 CE。UI 据此显示 CE 而非 Compiling。
+const effectiveStatus = computed(() => {
+  const cr = detail.value?.detail?.compileResult
+  if (cr && cr.success === false)
+    return 10 // CE
+  return detail.value?.status
+})
 // Auto-refresh: poll while the record is still being judged.
 const PENDING_STATUS = new Set([0, 1, 2, 3]) // Waiting / Judging / Compiling / Running
 let detailPollTimer: ReturnType<typeof setTimeout> | null = null
@@ -174,9 +182,12 @@ async function fetchDetail(id: number) {
   detailLoading.value = false
   // Keep polling every 2s while still judging; stop on final status, navigation
   // away, unmount, or after ~3 min (90 tries) as a runaway safety cap.
-  // compileResult 出现即 CE 终态(洛谷有时 status 卡在 Compiling 但 compileResult 已回),
-  // 立刻停轮询,避免 Record 页一直显示 Compiling。
-  if (detail.value && PENDING_STATUS.has(detail.value.status) && !detail.value?.detail?.compileResult && detailPollCount < 90) {
+  // CE 终态:compileResult.success===false 即编译失败,立刻停轮询。
+  // 不能用"compileResult 出现"判停——正常提交编译通过也有 compileResult(success=true),
+  // 那样会在评测中途误停,看不到后续测试点结果。
+  const compileResult = detail.value?.detail?.compileResult
+  const isCE = !!compileResult && compileResult.success === false
+  if (detail.value && PENDING_STATUS.has(detail.value.status) && !isCE && detailPollCount < 90) {
     detailPollCount++
     detailPollTimer = setTimeout(() => fetchDetail(id), 2000)
   }
@@ -207,7 +218,7 @@ function verdictFromDetail(record: any): VerdictResult {
     summary: extra ? `${label} · ${extra}` : label,
   }
 }
-watch(() => detail.value?.status, (st) => {
+watch(effectiveStatus, (st) => {
   if (st == null) { prevStampStatus = null; return }
   if (stampResult.value || PENDING_STATUS.has(st)) { prevStampStatus = st; return }
   const wasPending = prevStampStatus != null && PENDING_STATUS.has(prevStampStatus)
@@ -345,10 +356,10 @@ onUnmounted(() => {
         >
           <!-- Status header -->
           <div flex="~ items-center gap-4" mb-4 pb-4 border="b-1 $bew-border-color">
-            <div :style="{ fontSize: '1.5em', fontWeight: 700, color: statusColor(detail.status) }">
-              {{ statusLabel(detail.status) }}
+            <div :style="{ fontSize: '1.5em', fontWeight: 700, color: statusColor(effectiveStatus) }">
+              {{ statusLabel(effectiveStatus) }}
             </div>
-            <div v-if="detail.score != null" :style="{ fontSize: '1.2em', fontWeight: 600, color: detail.status === 12 || detail.status === 4 ? 'var(--bew-success-color)' : 'var(--bew-error-color)' }">
+            <div v-if="detail.score != null" :style="{ fontSize: '1.2em', fontWeight: 600, color: effectiveStatus === 12 || effectiveStatus === 4 ? 'var(--bew-success-color)' : 'var(--bew-error-color)' }">
               {{ detail.score }} 分
             </div>
           </div>
@@ -373,7 +384,7 @@ onUnmounted(() => {
           <!-- CE fallback: status=10 (CE) 但洛谷未带回 compileResult.message,
                给个可见占位,否则用户看到空白以为页面坏了 -->
           <div
-            v-else-if="detail.status === 10" bg="$bew-warning-color-20" rounded="$bew-radius" p-4 mb-6
+            v-else-if="effectiveStatus === 10" bg="$bew-warning-color-20" rounded="$bew-radius" p-4 mb-6
             style="font-size:var(--bew-base-font-size);color:var(--bew-warning-color)"
           >
             评测返回 CE 但未带回编译器输出,请到 <a :href="`https://www.luogu.com.cn/record/${recordId}`" target="_blank" style="color:var(--bew-theme-color);text-decoration:underline">洛谷原站</a> 查看。
