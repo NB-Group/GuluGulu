@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import CheckInCalendar from './CheckInCalendar.vue'
+import ProblemJumper from './ProblemJumper.vue'
 import { renderIcon } from '~/utils/icons'
 
 const announcements = [
