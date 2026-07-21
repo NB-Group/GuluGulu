@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { useThrottleFn } from '@vueuse/core'
 import { renderIcon } from '~/utils/icons'
 import { getCsrfToken, friendlyError } from '~/utils/luogu-api'
 import { useMessagePolling, onMessagePoll } from '~/composables/useMessagePolling'
@@ -25,7 +26,7 @@ const errorMsg = ref('')
 
 const activeChatUid = ref<number | null>(null)
 const activeChatUser = ref<ChatUser | null>(null)
-const messages = ref<Message[]>([])
+const messages = shallowRef<Message[]>([])
 const chatLoading = ref(false)
 const loadingOlder = ref(false)
 
@@ -46,7 +47,7 @@ const msgEndRef = ref<HTMLDivElement>()
 // ============================================================
 // Scroll-to-top detection for loading older messages
 // ============================================================
-function onMsgListScroll() {
+function handleMsgListScroll() {
   const el = msgListRef.value
   if (!el || loadingOlder.value || chatLoading.value) return
   // Fire at 300px from top — by the time user reaches top, more messages are already there
@@ -54,6 +55,9 @@ function onMsgListScroll() {
     loadOlderMessages()
   }
 }
+// Throttle scroll-driven fetches so a fast scroll-up doesn't fire loadOlderMessages
+// repeatedly within the same frame burst.
+const onMsgListScroll = useThrottleFn(handleMsgListScroll, 100)
 
 // ============================================================
 // Auto-scroll helper
@@ -236,7 +240,7 @@ async function sendMessage() {
         status: 2,
         content: text,
       }
-      messages.value.push(newMsgObj)
+      messages.value = [...messages.value, newMsgObj]
       newMsg.value = ''
 
       const idx = conversations.value.findIndex(c => c.user.uid === activeChatUid.value)
