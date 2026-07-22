@@ -66,6 +66,10 @@ Luogu pages embed server data in `<script id="lentille-context" type="applicatio
 - **UnoCSS attributify** — `bg="$bew-content"`, `rounded="$bew-radius"`, `flex="~ items-center gap-2"`, `border="1 $bew-border-color"`. ⚠️ attributify **不认裸 `var()`**:`bg="var(--bew-error-color)"` 不生成规则 → 背景缺失(白字透明)。用别名 `bg="$bew-error-color"` 或 inline `style="background:var(--bew-error-color)"`。
 - **CSRF** — Token from `<meta name="csrf-token">`, stored in `window.__guly_user.csrfToken`, used in `X-CSRF-TOKEN` header for POST/DELETE.
 
+### Theme Switching
+
+`useDark.ts` 用 **View Transition API** 做扩散切换:`document.startViewTransition(() => { flipTheme(); setAppAppearance() })`,对 `::view-transition-new(root)` 做 clip-path 圆扩散(圆内=新主题、圆外=旧主题快照,两侧都是原生渲染内容)。**关键**:VT 回调内必须**同步**改 DOM(直接调 `setAppAppearance()`,不能只改 reactive setting 等 watch 异步施加),否则 VT 捕获的新旧一致 → 无过渡。⚠️ 曾试过 `captureVisibleTab` 截旧画面做覆盖层,但 MV3 它要求 `activeTab`/`<all_urls>`,而**内容脚本里的按钮点击不授予 activeTab**(只认扩展图标/快捷键/右键菜单手势)→ 权限被否决,已弃用。`ThemeReveal.vue` 现仅作无 VT 浏览器的回退(VT 可用时 watch 早返回)。非 100% 缩放下 VT 快照可能差几像素,可接受。
+
 ### URL → Page Routing
 
 `getActivatedPage()` in `contentScripts/index.ts` maps URL regex to `AppPage` enum. Key patterns: `/problem/P1001` → ProblemDetail, `/contest/337891` → ContestDetail, `/team/*` → Team, `/discuss/*` → Blog.
