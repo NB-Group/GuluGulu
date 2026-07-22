@@ -47,15 +47,15 @@ export function useDark() {
   // ::view-transition-new(root) 从点击点 clip-path 圆扩散,圆内=新主题、圆外=旧主题快照,
   // 两侧都是真实渲染内容(无需截图权限)。captureVisibleTab 因需 activeTab/<all_urls>
   // 权限被否决,改用此原生方案。非 100% 缩放下 VT 快照可能差几像素(可接受)。
-  let vtCssInjected = false
+  // clip-path 圆扩散需要关掉 VT 默认交叉淡入(旧层在下、新层在上)。该 CSS 只在【整数 dpr】
+  // 下用 html.guly-vt-clip 类启用;分数 dpr 时不下发该类 → VT 走默认交叉淡入(见 toggleDark)。
+  let vtStyle: HTMLStyleElement | null = null
   function ensureViewTransitionCss() {
-    if (vtCssInjected)
+    if (vtStyle)
       return
-    vtCssInjected = true
-    // 关掉 VT 默认交叉淡入,只让 clip-path 扩散控制;旧层在下、新层在上。
-    const css = document.createElement('style')
-    css.textContent = '::view-transition-old(root),::view-transition-new(root){animation:none!important;mix-blend-mode:normal}::view-transition-old(root){z-index:1}::view-transition-new(root){z-index:2}'
-    document.head.appendChild(css)
+    vtStyle = document.createElement('style')
+    vtStyle.textContent = 'html.guly-vt-clip ::view-transition-old(root),html.guly-vt-clip ::view-transition-new(root){animation:none!important;mix-blend-mode:normal}html.guly-vt-clip ::view-transition-old(root){z-index:1}html.guly-vt-clip ::view-transition-new(root){z-index:2}'
+    document.head.appendChild(vtStyle)
   }
   function flipTheme() {
     if (currentAppColorScheme.value !== currentSystemColorScheme.value)
@@ -72,10 +72,18 @@ export function useDark() {
       flipTheme()
       return
     }
+    // 分数 devicePixelRatio(110/125/150/166% 等)下,VT 在设备像素↔CSS px 重投影时把快照整体
+    // 偏移,clip-path 圆心会比点击点高/偏(85d22f2 当年为此弃用 VT)。检测到分数 dpr 就不启用
+    // clip-path 圆扩散,改走 VT 默认交叉淡入:两侧仍是真实内容快照,且无圆心定位 → 无可察觉偏移。
+    const dpr = window.devicePixelRatio || 1
+    const useClipPath = Math.abs(dpr - Math.round(dpr)) <= 0.01
     ensureViewTransitionCss()
+    document.documentElement.classList.toggle('guly-vt-clip', useClipPath)
     // VT 回调内必须【同步】改变 DOM(否则 VT 捕获的新旧一致→无过渡)。
     // flipTheme 改 reactive setting,class 由 watch 异步施加,所以这里同步补一次 setAppAppearance。
     const t = d.startViewTransition(() => { flipTheme(); setAppAppearance() })
+    if (!useClipPath)
+      return // 分数 dpr:VT 默认交叉淡入,不做 clip-path
     t.ready.then(() => {
       const maxR = Math.hypot(Math.max(x, window.innerWidth - x), Math.max(y, window.innerHeight - y))
       document.documentElement.animate(
