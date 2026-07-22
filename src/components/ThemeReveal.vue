@@ -48,7 +48,8 @@ onUnmounted(() => {
 // fractional zoom (110/125/150/166%) and offsets the layer — a real element has
 // no snapshot, so it's immune. (This is the 166% fix.)
 watch(isDark, (_n, o) => {
-  if (reduceMotion)
+  // View Transition API 可用时由 useDark 的 VT 扩散接管,这里只作无 VT 浏览器的回退。
+  if (reduceMotion || typeof (document as any).startViewTransition === 'function')
     return
   oldIsDark.value = o
   const px = x.value || window.innerWidth / 2

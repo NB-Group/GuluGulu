@@ -17,19 +17,7 @@ export const API_COLLECTION = {
   },
 }
 
-const FullAPI = Object.assign({}, ...API_COLLECTION, {
-  // 截取当前可见 tab 画面(MV3 SW,洛谷 host 权限已声明 → 可用),
-  // 返回 PNG data URL。供主题切换动画在扩散圆外显示真实旧主题内容,而非平涂色块。
-  CAPTURE_TAB: async () => {
-    try {
-      const url = await browser.tabs.captureVisibleTab(undefined, { format: 'png' })
-      return { ok: true, url }
-    }
-    catch (e: any) {
-      return { ok: false, error: String(e) }
-    }
-  },
-})
+const FullAPI = Object.assign({}, ...API_COLLECTION)
 const handleMessage = apiListenerFactory(FullAPI)
 
 export function setupApiMsgLstnrs() {
