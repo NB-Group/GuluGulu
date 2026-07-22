@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { useGulyApp } from '~/composables/useAppProvider'
-import { useCodeMirror } from '~/composables/useCodeMirror'
+import { useMonaco } from '~/composables/useMonaco'
 import { AppPage } from '~/enums/appEnums'
 import { renderIcon } from '~/utils/icons'
 import type { LuoguLanguage } from '~/utils/luogu-api'
@@ -45,7 +45,7 @@ const codeContent = ref('')
 
 // CodeMirror 6 编辑器宿主(分屏 IDE 视图内挂载/卸载)
 const cmHost = ref<HTMLElement>()
-const cm = useCodeMirror({
+const cm = useMonaco({
   host: cmHost,
   value: codeContent,
   lang: computed(() => selectedLang.value.aceMode),
