@@ -103,6 +103,8 @@ interface RecordItem {
   submitTime: number
 }
 const records = shallowRef<RecordItem[]>([])
+// 已解析的真实终态缓存(CE 等终态永不变),按 rid 存;返回列表时秒回填,避免重复拉详情。
+const statusCache = new Map<number, { status: number, score: number | null, time: number, memory: number }>()
 const loading = ref(true); const loadingMore = ref(false); const errorMsg = ref('')
 const listPage = ref(1); const totalCount = ref(0)
 const perPage = 20 // Luogu API uses 20 per page
@@ -117,7 +119,7 @@ async function resolvePendingStatuses(items: RecordItem[]) {
   const pending = items.filter(r => PENDING_ST.has(Number(r.status)))
   if (!pending.length)
     return
-  const CONCURRENCY = 4
+  const CONCURRENCY = 6 // 浏览器对单 origin 约 6 并发,再高也被排队
   let cursor = 0
   async function worker() {
     while (cursor < pending.length) {
@@ -138,9 +140,9 @@ async function resolvePendingStatuses(items: RecordItem[]) {
         if (idx < 0)
           continue
         const cur = records.value[idx]
-        records.value = records.value.map((r, i) => i === idx
-          ? { ...r, status: real, score: rec.score ?? cur.score, time: rec.time ?? cur.time, memory: rec.memory ?? cur.memory }
-          : r)
+        const patch = { status: real, score: rec.score ?? cur.score, time: rec.time ?? cur.time, memory: rec.memory ?? cur.memory }
+        statusCache.set(it.rid, patch) // 终态缓存,返回列表秒回填
+        records.value = records.value.map((r, i) => i === idx ? { ...r, ...patch } : r)
       }
       catch {}
     }
@@ -164,16 +166,19 @@ async function fetchRecords(append = false) {
     }
     const recs = json?.data?.records || json?.currentData?.records
     if (recs) {
-      const items = (recs.result || []).map((rc: any) => ({
-        rid: rc.id || 0,
-        problem: { pid: rc.problem?.pid || '', name: rc.problem?.title || '' },
-        status: rc.status,
-        score: rc.score,
-        time: rc.time || 0,
-        memory: rc.memory || 0,
-        language: rc.language || '',
-        submitTime: rc.submitTime || 0,
-      }))
+      const items = (recs.result || []).map((rc: any) => {
+        const cached = statusCache.get(rc.id) // 命中缓存(之前已解析的真实终态)直接回填,免再拉
+        return {
+          rid: rc.id || 0,
+          problem: { pid: rc.problem?.pid || '', name: rc.problem?.title || '' },
+          status: cached?.status ?? rc.status,
+          score: cached?.score ?? rc.score,
+          time: rc.time || 0,
+          memory: rc.memory || 0,
+          language: rc.language || '',
+          submitTime: rc.submitTime || 0,
+        }
+      })
       records.value = append ? [...records.value, ...items] : items
       totalCount.value = recs.count || items.length
       resolvePendingStatuses(items) // 后台修 CE 卡 Compiling(列表 status 不可靠)
