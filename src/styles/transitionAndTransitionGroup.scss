@@ -199,14 +199,22 @@
 }
 
 // IDE 编辑器面板入场:仅右侧编辑器面板从右"伸出"(左侧题面不动)。
-// 面板在 ideMode 开启时挂载,CSS 动画播一次。不加 blur(重面板会卡)。
-.ide-editor-panel {
-  animation: ide-panel-slide-in 0.38s cubic-bezier(0.22, 1, 0.36, 1) both;
+// IDE 分屏入场:左右面板协调淡入(题面从左微滑、编辑器从右滑入),
+// 避免单边硬切的突兀感。位移小、用平滑减速曲线,不带 blur(重面板会卡)。
+.ide-statement-panel {
+  animation: ide-statement-in 0.32s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
-@keyframes ide-panel-slide-in {
-  from { opacity: 0; transform: translateX(48px); }
+.ide-editor-panel {
+  animation: ide-editor-in 0.38s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+@keyframes ide-statement-in {
+  from { opacity: 0; transform: translateX(-10px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+@keyframes ide-editor-in {
+  from { opacity: 0; transform: translateX(18px); }
   to   { opacity: 1; transform: translateX(0); }
 }
 @media (prefers-reduced-motion: reduce) {
-  .ide-editor-panel { animation: none; }
+  .ide-statement-panel, .ide-editor-panel { animation: none; }
 }

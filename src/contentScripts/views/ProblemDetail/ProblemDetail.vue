@@ -492,6 +492,7 @@ onUnmounted(() => {
         <div v-if="isSplitView" flex style="height:calc(100vh - 90px);margin:0 -16px 0 -16px;gap:0">
           <!-- Left: Header + Problem Statement -->
           <div
+            class="ide-statement-panel"
             :style="{ flex: `0 0 ${splitRatio}%`, backdropFilter: 'var(--bew-filter-glass-1)', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '8px', paddingRight: '8px' }" bg="$bew-content" rounded="$bew-radius" p-6 border="1 $bew-border-color"
             shadow="[var(--bew-shadow-1)]"
           >
