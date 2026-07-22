@@ -115,7 +115,14 @@ async function fetchRecords(append = false) {
   errorMsg.value = ''
   try {
     const res = await fetch(`https://www.luogu.com.cn/record/list?_contentOnly=1&page=${listPage.value}`, { credentials: 'same-origin' })
-    const json = await res.json()
+    const text = await res.text()
+    // _contentOnly 对记录列表可能返回 HTML(非 JSON,实测),要兼容:先试 JSON,失败则正则抽 lentille-context
+    let json: any = null
+    try { json = JSON.parse(text) }
+    catch {
+      const m = text.match(/<script\s+id="lentille-context"\s+type="application\/json"[^>]*>([^<]+)<\/script>/)
+      if (m?.[1]) { try { json = JSON.parse(m[1]) } catch {} }
+    }
     const recs = json?.data?.records || json?.currentData?.records
     if (recs) {
       const items = (recs.result || []).map((rc: any) => ({
