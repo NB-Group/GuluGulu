@@ -219,15 +219,20 @@
   to   { opacity: 1; transform: translateX(0); }
 }
 
-// IDE 分屏 ↔ 普通视图切换:整块淡出再淡入(mode=out-in,不堆叠)。
-// 配合内层面板滑入,整体慢而连贯。
+// IDE 分屏 ↔ 普通视图切换(mode=out-in,不堆叠):退出整块向右滑出,
+// 进入从左微滑入;配合内层面板(题面/编辑器)各自的滑入,整体慢而连贯。
 .ide-view-fade-enter-active,
 .ide-view-fade-leave-active {
-  transition: opacity var(--bew-dur-cozy) var(--bew-ease-smooth);
+  transition: opacity var(--bew-dur-cozy) var(--bew-ease-smooth),
+              transform var(--bew-dur-cozy) var(--bew-ease-smooth);
 }
-.ide-view-fade-enter-from,
+.ide-view-fade-enter-from {
+  opacity: 0;
+  transform: translateX(-24px);
+}
 .ide-view-fade-leave-to {
   opacity: 0;
+  transform: translateX(48px);
 }
 
 @media (prefers-reduced-motion: reduce) {
