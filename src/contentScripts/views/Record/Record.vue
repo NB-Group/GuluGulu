@@ -109,6 +109,39 @@ const perPage = 20 // Luogu API uses 20 per page
 const sentinelRef = ref<HTMLDivElement>()
 const totalPages = computed(() => Math.max(1, Math.ceil(totalCount.value / perPage)))
 
+// 洛谷 /record/list 的 status 对 CE 不可靠:CE 记录在列表里永久卡 Compiling(2),
+// 且列表 item 无 detail 可推导(实测 firstHasDetail=false)。对 pending(0-3)的记录
+// 后台拉一次详情,用 derivedRecordStatus(详情同源、已测)推真实终态回填;仍 pending 则不动。
+const PENDING_ST = new Set([0, 1, 2, 3])
+async function resolvePendingStatuses(items: RecordItem[]) {
+  const pending = items.filter(r => PENDING_ST.has(Number(r.status)))
+  if (!pending.length)
+    return
+  const CONCURRENCY = 4
+  let cursor = 0
+  async function worker() {
+    while (cursor < pending.length) {
+      const it = pending[cursor++]
+      try {
+        const ctx = await fetchLentilleContext(`https://www.luogu.com.cn/record/${it.rid}`)
+        const rec = ctx?.data?.record
+        const real = rec ? derivedRecordStatus(rec) : undefined
+        if (real == null || PENDING_ST.has(real))
+          continue
+        const idx = records.value.findIndex(r => r.rid === it.rid)
+        if (idx < 0)
+          continue
+        const cur = records.value[idx]
+        records.value = records.value.map((r, i) => i === idx
+          ? { ...r, status: real, score: rec.score ?? cur.score, time: rec.time ?? cur.time, memory: rec.memory ?? cur.memory }
+          : r)
+      }
+      catch {}
+    }
+  }
+  await Promise.all(Array.from({ length: Math.min(CONCURRENCY, pending.length) }, worker))
+}
+
 async function fetchRecords(append = false) {
   if (append)
     loadingMore.value = true; else loading.value = true
@@ -137,6 +170,7 @@ async function fetchRecords(append = false) {
       }))
       records.value = append ? [...records.value, ...items] : items
       totalCount.value = recs.count || items.length
+      resolvePendingStatuses(items) // 后台修 CE 卡 Compiling(列表 status 不可靠)
     }
     else { errorMsg.value = '未登录或数据格式不匹配' }
   }
