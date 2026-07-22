@@ -195,17 +195,20 @@
 
 // 空态(暂无 xx):挂载时淡入 + 上移,避免突兀地直接出现
 .empty-state-fade {
-  animation: content-reveal-in 0.4s ease both;
+  animation: empty-state-fade-in var(--bew-dur-cozy) var(--bew-ease-smooth) both;
+}
+@keyframes empty-state-fade-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
 }
 
-// IDE 编辑器面板入场:仅右侧编辑器面板从右"伸出"(左侧题面不动)。
-// IDE 分屏入场:左右面板协调淡入(题面从左微滑、编辑器从右滑入),
-// 避免单边硬切的突兀感。位移小、用平滑减速曲线,不带 blur(重面板会卡)。
+// IDE 分屏入场:左右面板协调淡入(题面从左微滑、编辑器从右滑入)。
+// 用项目统一的 --bew-dur-slow(550ms)+ --bew-ease-smooth,不带 blur(重面板会卡)。
 .ide-statement-panel {
-  animation: ide-statement-in 0.32s cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation: ide-statement-in var(--bew-dur-slow) var(--bew-ease-smooth) both;
 }
 .ide-editor-panel {
-  animation: ide-editor-in 0.38s cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation: ide-editor-in var(--bew-dur-slow) var(--bew-ease-smooth) both;
 }
 @keyframes ide-statement-in {
   from { opacity: 0; transform: translateX(-10px); }
@@ -215,6 +218,19 @@
   from { opacity: 0; transform: translateX(18px); }
   to   { opacity: 1; transform: translateX(0); }
 }
+
+// IDE 分屏 ↔ 普通视图切换:整块淡出再淡入(mode=out-in,不堆叠)。
+// 配合内层面板滑入,整体慢而连贯。
+.ide-view-fade-enter-active,
+.ide-view-fade-leave-active {
+  transition: opacity var(--bew-dur-cozy) var(--bew-ease-smooth);
+}
+.ide-view-fade-enter-from,
+.ide-view-fade-leave-to {
+  opacity: 0;
+}
+
 @media (prefers-reduced-motion: reduce) {
-  .ide-statement-panel, .ide-editor-panel { animation: none; }
+  .empty-state-fade, .ide-statement-panel, .ide-editor-panel { animation: none !important; }
+  .ide-view-fade-enter-active, .ide-view-fade-leave-active { transition: none !important; }
 }

@@ -317,6 +317,8 @@ onUnmounted(() => {
 
     <Transition name="content-reveal">
       <div v-if="!loading" w-full>
+        <Transition name="ide-view-fade" mode="out-in">
+          <div v-if="!isSplitView" key="normal">
 
         <!-- ============================================================ -->
         <!-- Problem Header -->
@@ -483,171 +485,6 @@ onUnmounted(() => {
                 {{ cp.score }}分
               </div>
             </button>
-          </div>
-        </div>
-
-        <!-- ============================================================ -->
-        <!-- Split View (IDE / Contest mode) -->
-        <!-- ============================================================ -->
-        <div v-if="isSplitView" flex style="height:calc(100vh - 90px);margin:0 -16px 0 -16px;gap:0">
-          <!-- Left: Header + Problem Statement -->
-          <div
-            class="ide-statement-panel"
-            :style="{ flex: `0 0 ${splitRatio}%`, backdropFilter: 'var(--bew-filter-glass-1)', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '8px', paddingRight: '8px' }" bg="$bew-content" rounded="$bew-radius" p-6 border="1 $bew-border-color"
-            shadow="[var(--bew-shadow-1)]"
-          >
-            <!-- Problem header info -->
-            <h1 style="font-size:1.2rem;font-weight:700;color:var(--bew-text-1)">
-              <span text="$bew-text-3" font-mono>{{ problem.pid }}</span> {{ problem.title }}
-            </h1>
-            <div flex="~ gap-2 wrap" style="font-size:.8em;color:var(--bew-text-2)">
-              <span v-if="problem.difficultyLabel" flex="~ items-center gap-1" px-2 py-0.5 rounded-full :style="{ backgroundColor: `${difficultyColor}20`, color: difficultyColor }"><span style="display:contents" v-html="renderIcon('mingcute:fire-line', 12)" /> {{ problem.difficultyLabel }}</span>
-              <span>{{ problem.timeLimit }}</span>
-              <span>{{ problem.memoryLimit }}</span>
-            </div>
-            <!-- Statement -->
-            <div class="problem-statement" style="font-size:var(--bew-base-font-size);color:var(--bew-text-1);line-height:1.8">
-              <div mb-4 v-html="renderedDescription" />
-              <div v-if="problem.samples.length > 0" mt-6>
-                <h3 mb-3>
-                  样例
-                </h3>
-                <div v-for="(sample, idx) in problem.samples" :key="idx" mb-3>
-                  <div bg="$bew-fill-1" rounded="$bew-radius" p-3 mb-2>
-                    <div flex="~ items-center justify-between" mb-1>
-                      <span text="xs $bew-text-3">输入 #{{ idx + 1 }}</span>
-                      <button class="sample-copy-btn" :class="{ copied: copiedSample === `in-${idx}` }" @click="copyWithFeedback(`in-${idx}`, String(Array.isArray(sample) ? sample[0] : sample.input))">
-                        <span v-if="copiedSample === `in-${idx}`" style="display:contents" v-html="renderIcon('mingcute:check-circle-fill', 12)" />
-                        <span v-else style="display:contents" v-html="renderIcon('mingcute:copy-line', 12)" />
-                        {{ copiedSample === `in-${idx}` ? '已复制' : '复制' }}
-                      </button>
-                    </div>
-                    <pre style="margin:0;white-space:pre-wrap;font-size:.85em;color:var(--bew-text-1);font-family:Consolas,monospace">{{ Array.isArray(sample) ? sample[0] : sample.input }}</pre>
-                  </div>
-                  <div bg="$bew-fill-1" rounded="$bew-radius" p-3>
-                    <div flex="~ items-center justify-between" mb-1>
-                      <span text="xs $bew-text-3">输出 #{{ idx + 1 }}</span>
-                      <button class="sample-copy-btn" :class="{ copied: copiedSample === `out-${idx}` }" @click="copyWithFeedback(`out-${idx}`, String(Array.isArray(sample) ? sample[1] : sample.output))">
-                        <span v-if="copiedSample === `out-${idx}`" style="display:contents" v-html="renderIcon('mingcute:check-circle-fill', 12)" />
-                        <span v-else style="display:contents" v-html="renderIcon('mingcute:copy-line', 12)" />
-                        {{ copiedSample === `out-${idx}` ? '已复制' : '复制' }}
-                      </button>
-                    </div>
-                    <pre style="margin:0;white-space:pre-wrap;font-size:.85em;color:var(--bew-text-1);font-family:Consolas,monospace">{{ Array.isArray(sample) ? sample[1] : sample.output }}</pre>
-                  </div>
-                  <div v-if="(Array.isArray(sample) ? sample[2] : sample.explanation)" mt-1 text="xs" style="color:var(--bew-text-3)">
-                    说明: {{ Array.isArray(sample) ? sample[2] : sample.explanation }}
-                  </div>
-                </div>
-              </div>
-              <div v-if="problem.hint" class="markdown-body" mt-4 v-html="renderedHint" />
-            </div>
-            <div style="margin-top:auto;padding-top:12px;border-top:1px solid var(--bew-border-color);display:flex;align-items:center;gap:4px;color:var(--bew-text-4);font-size:.75em">
-              <span style="display:contents" v-html="renderIcon('mingcute:check-line', 12)" />
-              题目正文结束
-            </div>
-          </div>
-
-          <!-- Resize Handle -->
-          <div :style="{ flex: '0 0 3px', cursor: 'col-resize', background: isDragging ? 'var(--bew-theme-color)' : 'transparent', transition: isDragging ? 'none' : 'background .15s', userSelect: 'none', margin: '0 1px', position: 'relative' }" class="resize-handle" @mousedown="startResize">
-            <span style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);color:var(--bew-text-4);pointer-events:none;line-height:0" v-html="renderIcon('mingcute:transfer-line', 10)" />
-          </div>
-
-          <!-- Right: Code Editor + Controls -->
-          <div class="ide-editor-panel" :style="{ flex: `0 0 ${100 - splitRatio - 0.5}%`, display: 'flex', flexDirection: 'column', gap: '6px', overflowY: 'auto' }">
-            <!-- Editor Card -->
-            <div bg="$bew-content" rounded="$bew-radius" border="1 $bew-border-color" style="backdrop-filter:var(--bew-filter-glass-1);display:flex;flex-direction:column;flex:1;min-height:0">
-              <!-- Top bar: all controls -->
-              <div style="display:flex;align-items:center;gap:6px;flex-shrink:0;padding:5px 10px;border-bottom:1px solid var(--bew-border-color);font-size:.82em;overflow-x:auto">
-                <div v-if="contestProblems.length > 0" style="display:flex;align-items:center;gap:3px">
-                  <span v-for="cp in contestProblems" :key="cp.no" style="padding:0 6px;border-radius:999px;cursor:pointer;font-size:.72em;font-weight:600;white-space:nowrap" :style="{ background: cp.pid === problemId ? 'var(--bew-theme-color)' : 'var(--bew-fill-2)', color: cp.pid === problemId ? '#fff' : 'var(--bew-text-2)' }" @click="switchToProblem(cp.pid)">{{ cp.no }}</span>
-                </div>
-                <select :value="selectedLang.id" style="padding:2px 4px;background:var(--bew-fill-1);color:var(--bew-text-1);border:1px solid var(--bew-border-color);border-radius:var(--bew-radius-half);font-size:.85em;outline:none" @change="(e: Event) => { const lang = LUOGU_LANGUAGES.find(l => l.id === Number((e.target as HTMLSelectElement).value)); if (lang) onLangChange(lang) }">
-                  <option v-for="l in LUOGU_LANGUAGES" :key="l.id" :value="l.id">
-                    {{ l.name }}
-                  </option>
-                </select>
-                <label v-if="selectedLang.canO2" style="display:flex;align-items:center;gap:3px;color:var(--bew-text-2);cursor:pointer;white-space:nowrap;font-size:.85em">
-                  <input v-model="enableO2" type="checkbox" style="width:13px;height:13px;cursor:pointer"> O2
-                </label>
-                <span style="flex:1" />
-                <button style="display:flex;align-items:center;gap:4px;background:none;border:1px solid var(--bew-border-color);border-radius:var(--bew-radius-half);padding:2px 8px;cursor:pointer;color:var(--bew-text-2);font-size:.82em;white-space:nowrap" @click="copyMarkdown">
-                  <span style="display:contents" v-html="renderIcon(copiedMarkdown ? 'mingcute:check-circle-fill' : 'mingcute:copy-line', 12)" />
-                  {{ copiedMarkdown ? '已复制' : '复制MD' }}
-                </button>
-                <button style="display:flex;align-items:center;gap:4px;background:none;border:1px solid var(--bew-border-color);border-radius:var(--bew-radius-half);padding:2px 8px;cursor:pointer;color:var(--bew-text-2);font-size:.82em;white-space:nowrap" @click="showTestPanel = !showTestPanel">
-                  <span style="display:contents" v-html="renderIcon(showTestPanel ? 'mingcute:down-line' : 'mingcute:right-line', 12)" />
-                  自测
-                </button>
-                <button style="display:flex;align-items:center;gap:4px;background:none;border:1px solid var(--bew-border-color);border-radius:var(--bew-radius-half);padding:2px 8px;cursor:pointer;color:var(--bew-text-2);font-size:.82em;white-space:nowrap" @click="ideMode = false">
-                  <span style="display:contents" v-html="renderIcon('mingcute:exit-line', 12)" />
-                  退出
-                </button>
-                <button class="btn-press" :disabled="submitting" style="display:flex;align-items:center;gap:4px;background:var(--bew-theme-color);color:#fff;border:none;border-radius:var(--bew-radius-half);padding:3px 12px;cursor:pointer;font-size:.85em;font-weight:600;white-space:nowrap" @click="handleSubmit">
-                  <span style="display:contents" v-html="renderIcon('mingcute:send-line', 12)" />
-                  {{ submitting ? '…' : '提交' }}
-                </button>
-              </div>
-              <div style="flex:1;position:relative;overflow:hidden">
-                <div ref="cmHost" style="position:absolute;inset:0;overflow:hidden" />
-              </div>
-            </div>
-
-            <!-- Submit feedback (IDE/contest split view — was missing: result/captcha/error) -->
-            <div v-if="submitResult || submitError || captchaSrc" style="flex-shrink:0;display:flex;flex-direction:column;gap:6px;margin-top:6px;padding:8px 10px;background:var(--bew-content);border:1px solid var(--bew-border-color);border-radius:var(--bew-radius);font-size:.82em">
-              <div v-if="submitResult" style="color:var(--bew-success-color);font-weight:600">
-                {{ submitResult }}
-              </div>
-              <div v-if="captchaSrc" style="display:flex;flex-direction:column;gap:6px">
-                <img :src="captchaSrc" style="max-width:180px;border-radius:4px" alt="验证码">
-                <div style="display:flex;align-items:center;gap:6px">
-                  <input v-model="captchaCode" placeholder="输入验证码" style="flex:1;padding:5px 8px;background:var(--bew-fill-1);color:var(--bew-text-1);border:1px solid var(--bew-border-color);border-radius:var(--bew-radius-half);font-size:.85em;outline:none" @keydown.enter="handleSubmit">
-                  <button class="btn-press" :disabled="!captchaCode" style="background:var(--bew-theme-color);color:#fff;border:none;border-radius:var(--bew-radius-half);padding:5px 10px;cursor:pointer;font-weight:600;white-space:nowrap" @click="handleSubmit">
-                    提交
-                  </button>
-                </div>
-                <button style="background:none;border:none;color:var(--bew-text-3);cursor:pointer;font-size:.75em;align-self:flex-start" @click="captchaSrc = ''; captchaCode = ''; submitError = ''">
-                  取消
-                </button>
-              </div>
-              <div v-if="submitError" style="display:flex;align-items:center;justify-content:space-between;gap:8px;color:var(--bew-error-color)">
-                <span>{{ submitError }}</span>
-                <button v-if="submitError.includes('验证码')" style="background:var(--bew-theme-color);color:#fff;border:none;border-radius:var(--bew-radius-half);padding:3px 8px;cursor:pointer;font-size:.82em;font-weight:600;white-space:nowrap;flex-shrink:0" @click="loadCaptcha()">
-                  刷新验证码
-                </button>
-              </div>
-            </div>
-
-            <!-- Test Panels -->
-            <div v-if="showTestPanel" style="flex-shrink:0;display:flex;gap:6px;min-height:120px">
-              <div bg="$bew-content" rounded="$bew-radius" style="backdrop-filter:var(--bew-filter-glass-1);display:flex;flex-direction:column;flex:1;overflow:hidden;border:1px solid var(--bew-border-color)">
-                <div style="display:flex;align-items:center;justify-content:space-between;padding:6px 10px 2px;font-size:.75em;color:var(--bew-text-3);border-bottom:1px solid var(--bew-border-color)">
-                  <span>自测输入</span>
-                  <span flex="~ items-center gap-1">
-                    <span v-if="testVerdict" style="padding:0 6px;border-radius:999px;font-size:.75em;font-weight:700;line-height:1.5" :style="{ background: testVerdict.startsWith('AC') || testVerdict.startsWith('运行完成') ? 'var(--bew-success-color-20)' : 'var(--bew-error-color-20)', color: testVerdict.startsWith('AC') || testVerdict.startsWith('运行完成') ? 'var(--bew-success-color)' : 'var(--bew-error-color)' }">{{ testVerdict }}</span>
-                    <button :disabled="testRunning" style="display:flex;align-items:center;gap:4px;background:var(--bew-theme-color);color:#fff;border:none;border-radius:var(--bew-radius-half);padding:2px 8px;cursor:pointer;font-size:.82em;font-weight:600;white-space:nowrap" @click="runTest">
-                      <span style="display:contents" v-html="renderIcon('mingcute:play-fill', 12)" />
-                      {{ testRunning ? '…' : '运行测试' }}
-                    </button>
-                  </span>
-                </div>
-                <textarea v-model="testInput" style="flex:1;width:100%;background:var(--bew-fill-1);color:var(--bew-text-1);border:none;padding:8px 10px;font-family:Consolas,monospace;font-size:.78em;resize:none;outline:none" placeholder="输入…" />
-              </div>
-              <div bg="$bew-content" rounded="$bew-radius" style="backdrop-filter:var(--bew-filter-glass-1);display:flex;flex-direction:column;flex:1;overflow:hidden;border:1px solid var(--bew-border-color)">
-                <div style="flex:1;display:flex;flex-direction:column;border-bottom:1px solid var(--bew-border-color)">
-                  <div style="padding:6px 10px 2px;font-size:.75em;color:var(--bew-text-3)">
-                    预期输出
-                  </div>
-                  <textarea v-model="testExpectedOutput" style="flex:1;width:100%;background:var(--bew-fill-1);color:var(--bew-text-1);border:none;padding:8px 10px;font-family:Consolas,monospace;font-size:.78em;resize:none;outline:none" placeholder="手动填入" />
-                </div>
-                <div style="flex:1;display:flex;flex-direction:column">
-                  <div style="padding:6px 10px 2px;font-size:.75em;color:var(--bew-text-3)">
-                    自测输出
-                  </div>
-                  <textarea v-model="testActualOutput" style="flex:1;width:100%;background:var(--bew-fill-1);color:var(--bew-text-1);border:none;padding:8px 10px;font-family:Consolas,monospace;font-size:.78em;resize:none;outline:none" placeholder="—" readonly />
-                </div>
-              </div>
-            </div>
           </div>
         </div>
 
@@ -881,6 +718,172 @@ onUnmounted(() => {
           <!-- Solutions Tab -->
           <!-- ============================================================ -->
           <SolutionsTab v-else-if="activeTab === 'solutions'" key="solutions" :solutions="solutions" :solutions-loading="solutionsLoading" :need-login="solutionsNeedLogin" :problem-id="problemId" />
+        </Transition>
+          </div>
+        <!-- ============================================================ -->
+        <!-- Split View (IDE / Contest mode) -->
+        <!-- ============================================================ -->
+        <div v-else key="ide" flex style="height:calc(100vh - 90px);margin:0 -16px 0 -16px;gap:0">
+          <!-- Left: Header + Problem Statement -->
+          <div
+            class="ide-statement-panel"
+            :style="{ flex: `0 0 ${splitRatio}%`, backdropFilter: 'var(--bew-filter-glass-1)', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '8px', paddingRight: '8px' }" bg="$bew-content" rounded="$bew-radius" p-6 border="1 $bew-border-color"
+            shadow="[var(--bew-shadow-1)]"
+          >
+            <!-- Problem header info -->
+            <h1 style="font-size:1.2rem;font-weight:700;color:var(--bew-text-1)">
+              <span text="$bew-text-3" font-mono>{{ problem.pid }}</span> {{ problem.title }}
+            </h1>
+            <div flex="~ gap-2 wrap" style="font-size:.8em;color:var(--bew-text-2)">
+              <span v-if="problem.difficultyLabel" flex="~ items-center gap-1" px-2 py-0.5 rounded-full :style="{ backgroundColor: `${difficultyColor}20`, color: difficultyColor }"><span style="display:contents" v-html="renderIcon('mingcute:fire-line', 12)" /> {{ problem.difficultyLabel }}</span>
+              <span>{{ problem.timeLimit }}</span>
+              <span>{{ problem.memoryLimit }}</span>
+            </div>
+            <!-- Statement -->
+            <div class="problem-statement" style="font-size:var(--bew-base-font-size);color:var(--bew-text-1);line-height:1.8">
+              <div mb-4 v-html="renderedDescription" />
+              <div v-if="problem.samples.length > 0" mt-6>
+                <h3 mb-3>
+                  样例
+                </h3>
+                <div v-for="(sample, idx) in problem.samples" :key="idx" mb-3>
+                  <div bg="$bew-fill-1" rounded="$bew-radius" p-3 mb-2>
+                    <div flex="~ items-center justify-between" mb-1>
+                      <span text="xs $bew-text-3">输入 #{{ idx + 1 }}</span>
+                      <button class="sample-copy-btn" :class="{ copied: copiedSample === `in-${idx}` }" @click="copyWithFeedback(`in-${idx}`, String(Array.isArray(sample) ? sample[0] : sample.input))">
+                        <span v-if="copiedSample === `in-${idx}`" style="display:contents" v-html="renderIcon('mingcute:check-circle-fill', 12)" />
+                        <span v-else style="display:contents" v-html="renderIcon('mingcute:copy-line', 12)" />
+                        {{ copiedSample === `in-${idx}` ? '已复制' : '复制' }}
+                      </button>
+                    </div>
+                    <pre style="margin:0;white-space:pre-wrap;font-size:.85em;color:var(--bew-text-1);font-family:Consolas,monospace">{{ Array.isArray(sample) ? sample[0] : sample.input }}</pre>
+                  </div>
+                  <div bg="$bew-fill-1" rounded="$bew-radius" p-3>
+                    <div flex="~ items-center justify-between" mb-1>
+                      <span text="xs $bew-text-3">输出 #{{ idx + 1 }}</span>
+                      <button class="sample-copy-btn" :class="{ copied: copiedSample === `out-${idx}` }" @click="copyWithFeedback(`out-${idx}`, String(Array.isArray(sample) ? sample[1] : sample.output))">
+                        <span v-if="copiedSample === `out-${idx}`" style="display:contents" v-html="renderIcon('mingcute:check-circle-fill', 12)" />
+                        <span v-else style="display:contents" v-html="renderIcon('mingcute:copy-line', 12)" />
+                        {{ copiedSample === `out-${idx}` ? '已复制' : '复制' }}
+                      </button>
+                    </div>
+                    <pre style="margin:0;white-space:pre-wrap;font-size:.85em;color:var(--bew-text-1);font-family:Consolas,monospace">{{ Array.isArray(sample) ? sample[1] : sample.output }}</pre>
+                  </div>
+                  <div v-if="(Array.isArray(sample) ? sample[2] : sample.explanation)" mt-1 text="xs" style="color:var(--bew-text-3)">
+                    说明: {{ Array.isArray(sample) ? sample[2] : sample.explanation }}
+                  </div>
+                </div>
+              </div>
+              <div v-if="problem.hint" class="markdown-body" mt-4 v-html="renderedHint" />
+            </div>
+            <div style="margin-top:auto;padding-top:12px;border-top:1px solid var(--bew-border-color);display:flex;align-items:center;gap:4px;color:var(--bew-text-4);font-size:.75em">
+              <span style="display:contents" v-html="renderIcon('mingcute:check-line', 12)" />
+              题目正文结束
+            </div>
+          </div>
+
+          <!-- Resize Handle -->
+          <div :style="{ flex: '0 0 3px', cursor: 'col-resize', background: isDragging ? 'var(--bew-theme-color)' : 'transparent', transition: isDragging ? 'none' : 'background .15s', userSelect: 'none', margin: '0 1px', position: 'relative' }" class="resize-handle" @mousedown="startResize">
+            <span style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);color:var(--bew-text-4);pointer-events:none;line-height:0" v-html="renderIcon('mingcute:transfer-line', 10)" />
+          </div>
+
+          <!-- Right: Code Editor + Controls -->
+          <div class="ide-editor-panel" :style="{ flex: `0 0 ${100 - splitRatio - 0.5}%`, display: 'flex', flexDirection: 'column', gap: '6px', overflowY: 'auto' }">
+            <!-- Editor Card -->
+            <div bg="$bew-content" rounded="$bew-radius" border="1 $bew-border-color" style="backdrop-filter:var(--bew-filter-glass-1);display:flex;flex-direction:column;flex:1;min-height:0">
+              <!-- Top bar: all controls -->
+              <div style="display:flex;align-items:center;gap:6px;flex-shrink:0;padding:5px 10px;border-bottom:1px solid var(--bew-border-color);font-size:.82em;overflow-x:auto">
+                <div v-if="contestProblems.length > 0" style="display:flex;align-items:center;gap:3px">
+                  <span v-for="cp in contestProblems" :key="cp.no" style="padding:0 6px;border-radius:999px;cursor:pointer;font-size:.72em;font-weight:600;white-space:nowrap" :style="{ background: cp.pid === problemId ? 'var(--bew-theme-color)' : 'var(--bew-fill-2)', color: cp.pid === problemId ? '#fff' : 'var(--bew-text-2)' }" @click="switchToProblem(cp.pid)">{{ cp.no }}</span>
+                </div>
+                <select :value="selectedLang.id" style="padding:2px 4px;background:var(--bew-fill-1);color:var(--bew-text-1);border:1px solid var(--bew-border-color);border-radius:var(--bew-radius-half);font-size:.85em;outline:none" @change="(e: Event) => { const lang = LUOGU_LANGUAGES.find(l => l.id === Number((e.target as HTMLSelectElement).value)); if (lang) onLangChange(lang) }">
+                  <option v-for="l in LUOGU_LANGUAGES" :key="l.id" :value="l.id">
+                    {{ l.name }}
+                  </option>
+                </select>
+                <label v-if="selectedLang.canO2" style="display:flex;align-items:center;gap:3px;color:var(--bew-text-2);cursor:pointer;white-space:nowrap;font-size:.85em">
+                  <input v-model="enableO2" type="checkbox" style="width:13px;height:13px;cursor:pointer"> O2
+                </label>
+                <span style="flex:1" />
+                <button style="display:flex;align-items:center;gap:4px;background:none;border:1px solid var(--bew-border-color);border-radius:var(--bew-radius-half);padding:2px 8px;cursor:pointer;color:var(--bew-text-2);font-size:.82em;white-space:nowrap" @click="copyMarkdown">
+                  <span style="display:contents" v-html="renderIcon(copiedMarkdown ? 'mingcute:check-circle-fill' : 'mingcute:copy-line', 12)" />
+                  {{ copiedMarkdown ? '已复制' : '复制MD' }}
+                </button>
+                <button style="display:flex;align-items:center;gap:4px;background:none;border:1px solid var(--bew-border-color);border-radius:var(--bew-radius-half);padding:2px 8px;cursor:pointer;color:var(--bew-text-2);font-size:.82em;white-space:nowrap" @click="showTestPanel = !showTestPanel">
+                  <span style="display:contents" v-html="renderIcon(showTestPanel ? 'mingcute:down-line' : 'mingcute:right-line', 12)" />
+                  自测
+                </button>
+                <button style="display:flex;align-items:center;gap:4px;background:none;border:1px solid var(--bew-border-color);border-radius:var(--bew-radius-half);padding:2px 8px;cursor:pointer;color:var(--bew-text-2);font-size:.82em;white-space:nowrap" @click="ideMode = false">
+                  <span style="display:contents" v-html="renderIcon('mingcute:exit-line', 12)" />
+                  退出
+                </button>
+                <button class="btn-press" :disabled="submitting" style="display:flex;align-items:center;gap:4px;background:var(--bew-theme-color);color:#fff;border:none;border-radius:var(--bew-radius-half);padding:3px 12px;cursor:pointer;font-size:.85em;font-weight:600;white-space:nowrap" @click="handleSubmit">
+                  <span style="display:contents" v-html="renderIcon('mingcute:send-line', 12)" />
+                  {{ submitting ? '…' : '提交' }}
+                </button>
+              </div>
+              <div style="flex:1;position:relative;overflow:hidden">
+                <div ref="cmHost" style="position:absolute;inset:0;overflow:hidden" />
+              </div>
+            </div>
+
+            <!-- Submit feedback (IDE/contest split view — was missing: result/captcha/error) -->
+            <div v-if="submitResult || submitError || captchaSrc" style="flex-shrink:0;display:flex;flex-direction:column;gap:6px;margin-top:6px;padding:8px 10px;background:var(--bew-content);border:1px solid var(--bew-border-color);border-radius:var(--bew-radius);font-size:.82em">
+              <div v-if="submitResult" style="color:var(--bew-success-color);font-weight:600">
+                {{ submitResult }}
+              </div>
+              <div v-if="captchaSrc" style="display:flex;flex-direction:column;gap:6px">
+                <img :src="captchaSrc" style="max-width:180px;border-radius:4px" alt="验证码">
+                <div style="display:flex;align-items:center;gap:6px">
+                  <input v-model="captchaCode" placeholder="输入验证码" style="flex:1;padding:5px 8px;background:var(--bew-fill-1);color:var(--bew-text-1);border:1px solid var(--bew-border-color);border-radius:var(--bew-radius-half);font-size:.85em;outline:none" @keydown.enter="handleSubmit">
+                  <button class="btn-press" :disabled="!captchaCode" style="background:var(--bew-theme-color);color:#fff;border:none;border-radius:var(--bew-radius-half);padding:5px 10px;cursor:pointer;font-weight:600;white-space:nowrap" @click="handleSubmit">
+                    提交
+                  </button>
+                </div>
+                <button style="background:none;border:none;color:var(--bew-text-3);cursor:pointer;font-size:.75em;align-self:flex-start" @click="captchaSrc = ''; captchaCode = ''; submitError = ''">
+                  取消
+                </button>
+              </div>
+              <div v-if="submitError" style="display:flex;align-items:center;justify-content:space-between;gap:8px;color:var(--bew-error-color)">
+                <span>{{ submitError }}</span>
+                <button v-if="submitError.includes('验证码')" style="background:var(--bew-theme-color);color:#fff;border:none;border-radius:var(--bew-radius-half);padding:3px 8px;cursor:pointer;font-size:.82em;font-weight:600;white-space:nowrap;flex-shrink:0" @click="loadCaptcha()">
+                  刷新验证码
+                </button>
+              </div>
+            </div>
+
+            <!-- Test Panels -->
+            <div v-if="showTestPanel" style="flex-shrink:0;display:flex;gap:6px;min-height:120px">
+              <div bg="$bew-content" rounded="$bew-radius" style="backdrop-filter:var(--bew-filter-glass-1);display:flex;flex-direction:column;flex:1;overflow:hidden;border:1px solid var(--bew-border-color)">
+                <div style="display:flex;align-items:center;justify-content:space-between;padding:6px 10px 2px;font-size:.75em;color:var(--bew-text-3);border-bottom:1px solid var(--bew-border-color)">
+                  <span>自测输入</span>
+                  <span flex="~ items-center gap-1">
+                    <span v-if="testVerdict" style="padding:0 6px;border-radius:999px;font-size:.75em;font-weight:700;line-height:1.5" :style="{ background: testVerdict.startsWith('AC') || testVerdict.startsWith('运行完成') ? 'var(--bew-success-color-20)' : 'var(--bew-error-color-20)', color: testVerdict.startsWith('AC') || testVerdict.startsWith('运行完成') ? 'var(--bew-success-color)' : 'var(--bew-error-color)' }">{{ testVerdict }}</span>
+                    <button :disabled="testRunning" style="display:flex;align-items:center;gap:4px;background:var(--bew-theme-color);color:#fff;border:none;border-radius:var(--bew-radius-half);padding:2px 8px;cursor:pointer;font-size:.82em;font-weight:600;white-space:nowrap" @click="runTest">
+                      <span style="display:contents" v-html="renderIcon('mingcute:play-fill', 12)" />
+                      {{ testRunning ? '…' : '运行测试' }}
+                    </button>
+                  </span>
+                </div>
+                <textarea v-model="testInput" style="flex:1;width:100%;background:var(--bew-fill-1);color:var(--bew-text-1);border:none;padding:8px 10px;font-family:Consolas,monospace;font-size:.78em;resize:none;outline:none" placeholder="输入…" />
+              </div>
+              <div bg="$bew-content" rounded="$bew-radius" style="backdrop-filter:var(--bew-filter-glass-1);display:flex;flex-direction:column;flex:1;overflow:hidden;border:1px solid var(--bew-border-color)">
+                <div style="flex:1;display:flex;flex-direction:column;border-bottom:1px solid var(--bew-border-color)">
+                  <div style="padding:6px 10px 2px;font-size:.75em;color:var(--bew-text-3)">
+                    预期输出
+                  </div>
+                  <textarea v-model="testExpectedOutput" style="flex:1;width:100%;background:var(--bew-fill-1);color:var(--bew-text-1);border:none;padding:8px 10px;font-family:Consolas,monospace;font-size:.78em;resize:none;outline:none" placeholder="手动填入" />
+                </div>
+                <div style="flex:1;display:flex;flex-direction:column">
+                  <div style="padding:6px 10px 2px;font-size:.75em;color:var(--bew-text-3)">
+                    自测输出
+                  </div>
+                  <textarea v-model="testActualOutput" style="flex:1;width:100%;background:var(--bew-fill-1);color:var(--bew-text-1);border:none;padding:8px 10px;font-family:Consolas,monospace;font-size:.78em;resize:none;outline:none" placeholder="—" readonly />
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
         </Transition>
       </div>
     </Transition>
