@@ -360,7 +360,7 @@ defineExpose({
                     通知
                   </a>
                   <a href="https://www.luogu.com.cn/record/list" target="_blank" class="user-panel-item">
-                    <span style="display:contents" v-html="renderIcon('mingcute:file-list-line', 16)" />
+                    <span style="display:contents" v-html="renderIcon('mingcute:clipboard-line', 16)" />
                     评测记录
                   </a>
                   <div class="user-panel-divider" />

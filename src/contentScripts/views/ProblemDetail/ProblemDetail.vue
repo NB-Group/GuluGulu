@@ -553,7 +553,7 @@ onUnmounted(() => {
           </div>
 
           <!-- Right: Code Editor + Controls -->
-          <div :style="{ flex: `0 0 ${100 - splitRatio - 0.5}%`, display: 'flex', flexDirection: 'column', gap: '6px', overflowY: 'auto' }">
+          <div class="ide-editor-panel" :style="{ flex: `0 0 ${100 - splitRatio - 0.5}%`, display: 'flex', flexDirection: 'column', gap: '6px', overflowY: 'auto' }">
             <!-- Editor Card -->
             <div bg="$bew-content" rounded="$bew-radius" border="1 $bew-border-color" style="backdrop-filter:var(--bew-filter-glass-1);display:flex;flex-direction:column;flex:1;min-height:0">
               <!-- Top bar: all controls -->

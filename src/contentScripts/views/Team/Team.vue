@@ -43,7 +43,7 @@ function typeLabel(t: number): string {
   return t === 2 ? '教学' : t === 1 ? '比赛' : '普通'
 }
 function typeIcon(t: number): string {
-  return t === 2 ? 'mingcute:graduation-cap-line' : t === 1 ? 'mingcute:trophy-line' : 'mingcute:team-line'
+  return t === 2 ? 'mingcute:book-4-line' : t === 1 ? 'mingcute:trophy-line' : 'mingcute:group-line'
 }
 
 // ============================================================
@@ -310,7 +310,7 @@ watch(() => currentUrl.value, () => loadContent())
               { k: '', l: '主页', icon: 'mingcute:home-5-line' },
               { k: 'problem', l: '题目', icon: 'mingcute:code-line', n: detail?.usages?.problem?.[0] },
               { k: 'training', l: '题单', icon: 'mingcute:book-4-line', n: detail?.counts?.training },
-              { k: 'homework', l: '作业', icon: 'mingcute:file-edit-line', n: detail?.counts?.homework },
+              { k: 'homework', l: '作业', icon: 'mingcute:document-line', n: detail?.counts?.homework },
               { k: 'contest', l: '比赛', icon: 'mingcute:trophy-line', n: detail?.usages?.contest?.[0] },
               { k: 'file', l: '文件', icon: 'mingcute:folder-line' },
             ]" :key="t.k" class="team-tab" :class="{ 'team-tab--active': (subPath || '') === t.k }" @click="t.k ? openTeamPage(t.k) : backToTeamHome()"
@@ -322,6 +322,8 @@ watch(() => currentUrl.value, () => loadContent())
 
         <!-- Content -->
         <div class="team-content">
+          <Transition name="content-reveal" mode="out-in">
+            <div :key="subPath || 'home'">
           <!-- ============================================================ -->
           <!-- Sub-Page View -->
           <!-- ============================================================ -->
@@ -510,7 +512,7 @@ watch(() => currentUrl.value, () => loadContent())
                       v-for="(item, idx) in [
                         { k: 'problem', l: '题目', icon: 'mingcute:code-line' },
                         { k: 'training', l: '题单', icon: 'mingcute:book-4-line' },
-                        { k: 'homework', l: '作业', icon: 'mingcute:file-edit-line' },
+                        { k: 'homework', l: '作业', icon: 'mingcute:document-line' },
                         { k: 'contest', l: '比赛', icon: 'mingcute:trophy-line' },
                         { k: 'file', l: '文件', icon: 'mingcute:folder-line' },
                       ]" :key="item.k" class="stagger-card usage-card" :style="{ '--card-index': idx }" bg="$bew-fill-1"
@@ -570,6 +572,8 @@ watch(() => currentUrl.value, () => loadContent())
               </div>
             </Transition>
           </template>
+            </div>
+          </Transition>
         </div>
       </div>
     </template>
@@ -584,7 +588,7 @@ watch(() => currentUrl.value, () => loadContent())
       >
         <div class="team-hero-accent" />
         <div p="6" flex="~ items-center gap-3">
-          <span style="display:contents;color:var(--bew-theme-color)" v-html="renderIcon('mingcute:team-line', 26)" />
+          <span style="display:contents;color:var(--bew-theme-color)" v-html="renderIcon('mingcute:group-line', 26)" />
           <h1 style="font-size:1.5rem;color:var(--bew-text-1);font-weight:800;margin:0">
             我的团队
           </h1>
@@ -605,7 +609,7 @@ watch(() => currentUrl.value, () => loadContent())
         v-if="!errorMsg && teams.length === 0" bg="$bew-content" rounded="$bew-radius" p-8 border="1 $bew-border-color"
         text="center $bew-text-3" flex="~ col items-center" gap-3
       >
-        <span style="display:contents" v-html="renderIcon('mingcute:team-line', 48)" />
+        <span style="display:contents" v-html="renderIcon('mingcute:group-line', 48)" />
         <p>暂未加入任何团队</p>
       </div>
 

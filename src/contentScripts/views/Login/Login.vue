@@ -36,7 +36,7 @@ function refreshPage() {
           >
           <div flex="~ gap-3" mt-6>
             <Button type="secondary" @click="refreshPage">
-              <span v-html="renderIcon('mingcute:refresh-line', 16)" style="display:contents" /> 刷新状态
+              <span v-html="renderIcon('mingcute:rotate-270', 16)" style="display:contents" /> 刷新状态
             </Button>
             <Button type="primary" @click="doLogin">
               <span v-html="renderIcon('mingcute:user-4-line', 16)" style="display:contents" /> 切换账号

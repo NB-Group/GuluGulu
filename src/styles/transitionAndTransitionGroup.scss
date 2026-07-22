@@ -197,3 +197,16 @@
 .empty-state-fade {
   animation: content-reveal-in 0.4s ease both;
 }
+
+// IDE 编辑器面板入场:仅右侧编辑器面板从右"伸出"(左侧题面不动)。
+// 面板在 ideMode 开启时挂载,CSS 动画播一次。不加 blur(重面板会卡)。
+.ide-editor-panel {
+  animation: ide-panel-slide-in 0.38s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+@keyframes ide-panel-slide-in {
+  from { opacity: 0; transform: translateX(48px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ide-editor-panel { animation: none; }
+}
