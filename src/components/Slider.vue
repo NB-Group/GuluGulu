@@ -80,7 +80,7 @@ onMounted(() => {
     border-radius: 50%;
     box-shadow: 0 0 0 2px var(--bew-border-color);
     cursor: pointer;
-    transition: box-shadow .2s;
+    transition: box-shadow var(--bew-dur-fast);
   }
   &::-webkit-slider-thumb:hover {
     box-shadow: 0 0 0 2px var(--bew-theme-color);
@@ -101,7 +101,7 @@ onMounted(() => {
     box-shadow: 0 0 0 2px var(--bew-border-color);
     cursor: pointer;
     border: none;
-    transition: box-shadow .2s;
+    transition: box-shadow var(--bew-dur-fast);
   }
   &::-moz-range-thumb:hover {
     box-shadow: 0 0 0 2px var(--bew-theme-color);

@@ -472,11 +472,11 @@ const dockTransformStyle = computed((): { transform: string, transformOrigin: st
 
     backdrop-filter: var(--bew-filter-glass-1);
     transition:
-      transform 300ms cubic-bezier(0.34, 2, 0.6, 1),
-      background 300ms ease,
-      color 300ms ease,
-      box-shadow 300ms ease,
-      opacity 600ms ease;
+      transform var(--bew-dur-cozy) cubic-bezier(0.34, 2, 0.6, 1),
+      background var(--bew-dur-cozy) ease,
+      color var(--bew-dur-cozy) ease,
+      box-shadow var(--bew-dur-cozy) ease,
+      opacity var(--bew-dur-slow) ease;
     box-shadow: var(--bew-shadow-edge-glow-1), var(--bew-shadow-2);
 
     &.active {
@@ -513,11 +513,11 @@ const dockTransformStyle = computed((): { transform: string, transformOrigin: st
 
   box-shadow: var(--bew-shadow-edge-glow-1), var(--bew-shadow-1);
   transition:
-    transform 300ms cubic-bezier(0.34, 2, 0.6, 1),
-    background 300ms ease,
-    color 300ms ease,
-    box-shadow 600ms ease,
-    opacity 600ms ease;
+    transform var(--bew-dur-cozy) cubic-bezier(0.34, 2, 0.6, 1),
+    background var(--bew-dur-cozy) ease,
+    color var(--bew-dur-cozy) ease,
+    box-shadow var(--bew-dur-slow) ease,
+    opacity var(--bew-dur-slow) ease;
 
   &:hover {
     box-shadow:
@@ -590,7 +590,7 @@ const dockTransformStyle = computed((): { transform: string, transformOrigin: st
   border-radius: var(--bew-radius);
   box-shadow: var(--bew-shadow-1);
   backdrop-filter: var(--bew-filter-glass-1);
-  transition: background .2s, color .2s;
+  transition: background var(--bew-dur-fast), color var(--bew-dur-fast);
 }
 .dock-expand:hover { background: var(--bew-fill-2); color: var(--bew-text-1); }
 .dock-expand-left { left: 0; top: 50%; transform: translateY(-50%); width: 20px; height: 48px; }
@@ -611,7 +611,7 @@ const dockTransformStyle = computed((): { transform: string, transformOrigin: st
   border-radius: var(--bew-radius);
   box-shadow: var(--bew-shadow-1);
   backdrop-filter: var(--bew-filter-glass-1);
-  transition: background .2s, color .2s;
+  transition: background var(--bew-dur-fast), color var(--bew-dur-fast);
 }
 .dock-collapse-btn:hover { background: var(--bew-fill-2); color: var(--bew-text-1); }
 .dock-collapse-left { right: -24px; top: 50%; transform: translateY(-50%); width: 18px; height: 36px; }

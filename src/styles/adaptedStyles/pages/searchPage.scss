@@ -11,8 +11,8 @@
   .search-layout {
     .bili-video-card .bili-video-card__wrap {
       transition:
-        box-shadow 0.3s ease-in-out,
-        background 0.3s ease-in-out;
+        box-shadow var(--bew-dur-cozy) ease-in-out,
+        background var(--bew-dur-cozy) ease-in-out;
       border-radius: var(--bew-radius-half);
     }
 
@@ -22,7 +22,7 @@
     }
 
     .bili-video-card:hover .bili-video-card__info--tit {
-      transition: color 0.3s ease-in-out;
+      transition: color var(--bew-dur-cozy) ease-in-out;
     }
   }
 

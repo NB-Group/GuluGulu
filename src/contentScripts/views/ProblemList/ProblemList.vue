@@ -463,8 +463,8 @@ function difficultyColor(d: number) {
 }
 .problem-card {
   transition:
-    box-shadow 0.2s,
-    transform 0.2s;
+    box-shadow var(--bew-dur-fast),
+    transform var(--bew-dur-fast);
 }
 .problem-card:hover {
   box-shadow: var(--bew-shadow-2) !important;

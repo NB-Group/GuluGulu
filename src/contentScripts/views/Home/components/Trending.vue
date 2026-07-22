@@ -208,6 +208,6 @@ onMounted(() => {
 
 <style scoped lang="scss">
 .trend-row:hover { background: var(--bew-fill-2); }
-.problem-card { transition: box-shadow 200ms ease, transform 200ms ease; }
+.problem-card { transition: box-shadow var(--bew-dur-fast) ease, transform var(--bew-dur-fast) ease; }
 .problem-card:hover { box-shadow: var(--bew-shadow-2); transform: translateY(-2px); }
 </style>

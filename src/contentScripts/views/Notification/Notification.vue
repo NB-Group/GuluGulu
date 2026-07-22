@@ -374,8 +374,8 @@ onUnmounted(() => obs?.disconnect())
   white-space: nowrap;
   border-bottom: 2px solid transparent;
   transition:
-    color 0.15s,
-    border-color 0.15s;
+    color var(--bew-dur-fast),
+    border-color var(--bew-dur-fast);
   & span:first-child {
     display: contents;
   }
@@ -399,7 +399,7 @@ onUnmounted(() => obs?.disconnect())
 
 /* 列表项 */
 .notif-item {
-  transition: background 0.15s;
+  transition: background var(--bew-dur-fast);
   &:hover {
     background: var(--bew-fill-2);
   }

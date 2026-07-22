@@ -166,8 +166,8 @@ watch(trainingId, () => loadTrainingContent())
 </template>
 
 <style lang="scss" scoped>
-.training-card { transition: box-shadow .2s,transform .2s }
+.training-card { transition: box-shadow var(--bew-dur-fast),transform var(--bew-dur-fast) }
 .training-card:hover { box-shadow:var(--bew-shadow-2)!important;transform:translateY(-2px) }
-.training-problem-row { transition: background .15s }
+.training-problem-row { transition: background var(--bew-dur-fast) }
 .training-problem-row:hover { background: var(--bew-fill-2) }
 </style>

@@ -17,7 +17,7 @@
     }
 
     .up a:hover * {
-      transition: 0.3s;
+      transition: var(--bew-dur-cozy);
     }
   }
 

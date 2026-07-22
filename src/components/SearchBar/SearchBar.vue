@@ -129,7 +129,7 @@ function handleKeyEnter(e: KeyboardEvent) {
 <style lang="scss" scoped>
 .mask-enter-active,
 .mask-leave-active {
-  transition: all 0.3s ease-in-out;
+  transition: all var(--bew-dur-cozy) ease-in-out;
 }
 
 .mask-enter-from,

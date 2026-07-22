@@ -139,7 +139,7 @@ const links = {
   text-decoration: none;
   padding: 4px 0;
   display: block;
-  transition: color 0.2s;
+  transition: color var(--bew-dur-fast);
 }
 .side-link:hover {
   color: var(--bew-theme-color);

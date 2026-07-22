@@ -196,7 +196,7 @@ function handleClick() {
 
 <style lang="scss" scoped>
 .problem-card {
-  transition: transform 300ms ease, box-shadow 300ms ease;
+  transition: transform var(--bew-dur-cozy) ease, box-shadow var(--bew-dur-cozy) ease;
 }
 
 .problem-card-skeleton {

@@ -5,7 +5,7 @@ import { watch, type ComputedRef, type Ref } from 'vue'
  * 本扩展 IDE 从未回写 → 退出即丢。这里把编辑器镜像到 localStorage,草稿跨刷新/退出存活;
  * 载入时洛谷服务端草稿优先(见 ProblemDetail.loadRealData)。
  *
- * 自动监听 code/lang 变化,600ms 防抖落盘;flushLocalCode 供 pagehide/卸载/切题时立即落盘。
+ * 自动监听 code/lang 变化,var(--bew-dur-slow) 防抖落盘;flushLocalCode 供 pagehide/卸载/切题时立即落盘。
  */
 export function useCodePersistence(opts: {
   code: Ref<string>

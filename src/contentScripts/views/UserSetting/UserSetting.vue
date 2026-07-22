@@ -727,8 +727,8 @@ watch(activeTab, async (t) => {
   font-size: var(--bew-base-font-size);
   font-weight: 500;
   transition:
-    color 0.2s,
-    border-color 0.2s;
+    color var(--bew-dur-fast),
+    border-color var(--bew-dur-fast);
 }
 .us-tab:hover {
   color: var(--bew-text-1);
@@ -782,8 +782,8 @@ watch(activeTab, async (t) => {
   font-size: var(--bew-base-font-size);
   outline: none;
   transition:
-    border-color 0.2s,
-    box-shadow 0.2s;
+    border-color var(--bew-dur-fast),
+    box-shadow var(--bew-dur-fast);
 }
 .us-input::placeholder {
   color: var(--bew-text-4);
@@ -815,8 +815,8 @@ watch(activeTab, async (t) => {
   resize: vertical;
   font-family: inherit;
   transition:
-    border-color 0.2s,
-    box-shadow 0.2s;
+    border-color var(--bew-dur-fast),
+    box-shadow var(--bew-dur-fast);
 }
 .us-textarea::placeholder {
   color: var(--bew-text-4);
@@ -841,8 +841,8 @@ watch(activeTab, async (t) => {
   font-size: var(--bew-base-font-size);
   font-weight: 500;
   transition:
-    filter 0.15s,
-    background 0.15s;
+    filter var(--bew-dur-fast),
+    background var(--bew-dur-fast);
 }
 .us-btn:hover {
   background: var(--bew-fill-2);
@@ -873,8 +873,8 @@ watch(activeTab, async (t) => {
   color: var(--bew-text-1);
   font-size: 0.9em;
   transition:
-    border-color 0.15s,
-    background 0.15s;
+    border-color var(--bew-dur-fast),
+    background var(--bew-dur-fast);
 }
 .us-file-label:hover {
   border-color: var(--bew-theme-color);
@@ -966,7 +966,7 @@ watch(activeTab, async (t) => {
   cursor: pointer;
   flex-shrink: 0;
   padding: 0;
-  transition: background 0.2s;
+  transition: background var(--bew-dur-fast);
 }
 .switch--on {
   background: var(--bew-theme-color);
@@ -980,7 +980,7 @@ watch(activeTab, async (t) => {
   border-radius: 50%;
   background: #fff;
   box-shadow: var(--bew-shadow-1);
-  transition: transform 0.2s;
+  transition: transform var(--bew-dur-fast);
 }
 .switch--on .switch-thumb {
   transform: translateX(20px);

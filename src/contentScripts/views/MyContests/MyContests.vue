@@ -85,8 +85,8 @@ function timeStr(ts: number) { return new Date(ts * 1000).toLocaleDateString('zh
 <style scoped>
 .contest-card {
   transition:
-    box-shadow 0.2s,
-    transform 0.2s;
+    box-shadow var(--bew-dur-fast),
+    transform var(--bew-dur-fast);
 }
 .contest-card:hover {
   box-shadow: var(--bew-shadow-2) !important;

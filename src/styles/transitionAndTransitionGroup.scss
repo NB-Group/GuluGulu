@@ -203,7 +203,7 @@
 }
 
 // IDE 分屏入场:左右面板协调淡入(题面从左微滑、编辑器从右滑入)。
-// 用项目统一的 --bew-dur-slow(550ms)+ --bew-ease-smooth,不带 blur(重面板会卡)。
+// 用项目统一的 --bew-dur-slow(var(--bew-dur-slow))+ --bew-ease-smooth,不带 blur(重面板会卡)。
 .ide-statement-panel {
   animation: ide-statement-in var(--bew-dur-slow) var(--bew-ease-smooth) both;
 }
@@ -211,11 +211,11 @@
   animation: ide-editor-in var(--bew-dur-slow) var(--bew-ease-smooth) both;
 }
 @keyframes ide-statement-in {
-  from { opacity: 0; transform: translateX(-10px); }
+  from { opacity: 0; transform: translateX(-32px); }
   to   { opacity: 1; transform: translateX(0); }
 }
 @keyframes ide-editor-in {
-  from { opacity: 0; transform: translateX(18px); }
+  from { opacity: 0; transform: translateX(64px); }
   to   { opacity: 1; transform: translateX(0); }
 }
 

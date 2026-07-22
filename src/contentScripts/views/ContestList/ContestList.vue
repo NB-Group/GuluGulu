@@ -78,6 +78,6 @@ onMounted(fetchContests)
 </template>
 
 <style lang="scss" scoped>
-.contest-card { transition:box-shadow .2s,transform .2s }
+.contest-card { transition:box-shadow var(--bew-dur-fast),transform var(--bew-dur-fast) }
 .contest-card:hover { box-shadow:var(--bew-shadow-2)!important;transform:translateY(-2px) }
 </style>

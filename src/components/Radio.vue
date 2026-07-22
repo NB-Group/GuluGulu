@@ -56,7 +56,7 @@ input[type="checkbox"] {
 
   & + span,
   & + span::after {
-    transition: 0.3s cubic-bezier(0.25, 0.15, 0.29, 1.51);
+    transition: var(--bew-dur-cozy) cubic-bezier(0.25, 0.15, 0.29, 1.51);
   }
 
   &:checked + span::after {

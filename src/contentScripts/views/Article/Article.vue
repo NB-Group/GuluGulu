@@ -699,10 +699,10 @@ onUnmounted(() => obs?.disconnect())
   font-weight: 500;
   cursor: pointer;
   transition:
-    background 0.15s,
-    color 0.15s,
-    border-color 0.15s,
-    transform 0.1s;
+    background var(--bew-dur-fast),
+    color var(--bew-dur-fast),
+    border-color var(--bew-dur-fast),
+    transform var(--bew-dur-fast);
   &:hover:not(:disabled) {
     background: var(--bew-fill-2);
     color: var(--bew-text-1);

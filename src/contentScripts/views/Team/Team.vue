@@ -654,8 +654,8 @@ watch(() => currentUrl.value, () => loadContent())
 <style lang="scss" scoped>
 .team-card {
   transition:
-    box-shadow 0.2s,
-    transform 0.2s;
+    box-shadow var(--bew-dur-fast),
+    transform var(--bew-dur-fast);
 }
 .team-card:hover {
   box-shadow: var(--bew-shadow-2) !important;
@@ -666,15 +666,15 @@ watch(() => currentUrl.value, () => loadContent())
 }
 .usage-card {
   transition:
-    box-shadow 0.2s,
-    transform 0.2s;
+    box-shadow var(--bew-dur-fast),
+    transform var(--bew-dur-fast);
 }
 .usage-card:hover {
   box-shadow: var(--bew-shadow-2) !important;
   transform: translateY(-2px);
 }
 .item-row {
-  transition: background 0.15s;
+  transition: background var(--bew-dur-fast);
 }
 .item-row:hover {
   background: var(--bew-fill-2) !important;
@@ -707,7 +707,7 @@ watch(() => currentUrl.value, () => loadContent())
   font-size: 0.82em;
   font-weight: 500;
   padding: 4px 0;
-  transition: color 0.15s;
+  transition: color var(--bew-dur-fast);
   &:hover {
     color: var(--bew-theme-color);
   }
@@ -839,8 +839,8 @@ watch(() => currentUrl.value, () => loadContent())
   white-space: nowrap;
   border-bottom: 2px solid transparent;
   transition:
-    color 0.15s,
-    border-color 0.15s;
+    color var(--bew-dur-fast),
+    border-color var(--bew-dur-fast);
   & span:first-child {
     display: contents;
   }

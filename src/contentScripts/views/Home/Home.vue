@@ -165,7 +165,7 @@ function toggleTabContentLoading(loading: boolean) {
   border-radius: 9999px;
   cursor: pointer;
   white-space: nowrap;
-  transition: background var(--bew-dur-normal, 0.3s) ease, color var(--bew-dur-normal, 0.3s) ease, transform var(--bew-dur-normal, 0.3s) ease, box-shadow var(--bew-dur-normal, 0.3s) ease;
+  transition: background var(--bew-dur-normal, var(--bew-dur-cozy)) ease, color var(--bew-dur-normal, var(--bew-dur-cozy)) ease, transform var(--bew-dur-normal, var(--bew-dur-cozy)) ease, box-shadow var(--bew-dur-normal, var(--bew-dur-cozy)) ease;
   display: flex;
   align-items: center;
   flex-shrink: 0;

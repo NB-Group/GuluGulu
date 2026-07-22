@@ -560,7 +560,7 @@ onUnmounted(() => {
   line-height: 1.3;
   // 测试点方块悬停可看详情(tooltip)——给个交互反馈,提升辨识度。
   cursor: help;
-  transition: transform .12s ease, box-shadow .12s ease;
+  transition: transform var(--bew-dur-fast) ease, box-shadow var(--bew-dur-fast) ease;
   &:hover {
     transform: translateY(-2px) scale(1.03);
     box-shadow: 0 4px 12px rgba(0, 0, 0, .25);
@@ -607,13 +607,13 @@ onUnmounted(() => {
 }
 .tc-tip-enter-active {
   transition:
-    opacity 0.2s ease,
-    transform 0.2s ease;
+    opacity var(--bew-dur-fast) ease,
+    transform var(--bew-dur-fast) ease;
 }
 .tc-tip-leave-active {
   transition:
-    opacity 0.15s ease,
-    transform 0.15s ease;
+    opacity var(--bew-dur-fast) ease,
+    transform var(--bew-dur-fast) ease;
 }
 .tc-tip-enter-from {
   opacity: 0;

@@ -53,6 +53,6 @@ function openTraining(id: number) { navigateTo(AppPage.Training, 'https://www.lu
 </template>
 
 <style scoped>
-.card { transition: box-shadow .2s, transform .2s; }
+.card { transition: box-shadow var(--bew-dur-fast), transform var(--bew-dur-fast); }
 .card:hover { box-shadow: var(--bew-shadow-2)!important; transform: translateY(-2px); }
 </style>

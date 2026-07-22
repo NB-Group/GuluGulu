@@ -144,7 +144,7 @@ reduced.value = !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matche
 </template>
 
 <style scoped>
-.vs-overlay { background: rgba(0, 0, 0, 0.36); backdrop-filter: blur(3px); animation: vsFade 0.25s ease; }
+.vs-overlay { background: rgba(0, 0, 0, 0.36); backdrop-filter: blur(3px); animation: vsFade var(--bew-dur-cozy) ease; }
 .vs-doc {
   position: relative;
   width: 360px;
@@ -155,7 +155,7 @@ reduced.value = !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matche
   border: 1px solid var(--bew-border-color);
   box-shadow: 0 26px 78px rgba(0, 0, 0, 0.45);
   text-align: center;
-  animation: vsDocIn 0.5s cubic-bezier(0.2, 0.8, 0.3, 1.05);
+  animation: vsDocIn var(--bew-dur-slow) cubic-bezier(0.2, 0.8, 0.3, 1.05);
 }
 .vs-seal-wrap {
   position: absolute;
@@ -200,7 +200,7 @@ reduced.value = !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matche
 }
 @keyframes vsFlash { 0% { opacity: 0.55 } 100% { opacity: 0 } }
 @media (prefers-reduced-motion: reduce) {
-  .vs-slam { animation: vsFade 0.3s ease; }
+  .vs-slam { animation: vsFade var(--bew-dur-cozy) ease; }
   .vs-splat, .vs-flash { display: none; }
 }
 </style>

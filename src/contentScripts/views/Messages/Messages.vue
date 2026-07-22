@@ -357,7 +357,7 @@ onMessagePoll((json: any) => {
               <button
                 @click="toggleNotify"
                 :title="notifyEnabled ? '桌面通知已开启' : '桌面通知已关闭'"
-                style="background:none;border:1px solid var(--bew-border-color);border-radius:999px;cursor:pointer;padding:3px 10px;font-size:11px;font-weight:600;color:var(--bew-text-2);display:flex;align-items:center;gap:4px;transition:all .2s"
+                style="background:none;border:1px solid var(--bew-border-color);border-radius:999px;cursor:pointer;padding:3px 10px;font-size:11px;font-weight:600;color:var(--bew-text-2);display:flex;align-items:center;gap:4px;transition:all var(--bew-dur-fast)"
                 :style="notifyEnabled ? { background: 'var(--bew-theme-color-20)', color: 'var(--bew-theme-color)', borderColor: 'var(--bew-theme-color-30)' } : {}"
               >
                 <span v-html="renderIcon(notifyEnabled ? 'mingcute:notification-line' : 'mingcute:notification-off-line', 13)" style="display:contents" />
@@ -527,11 +527,11 @@ onMessagePoll((json: any) => {
 /* Message fade animation */
 .msg-fade-enter-active,
 .msg-fade-appear-active {
-  transition: opacity 0.35s ease, transform 0.35s ease;
+  transition: opacity var(--bew-dur-cozy) ease, transform var(--bew-dur-cozy) ease;
   transition-delay: var(--msg-delay, 0ms);
 }
 .msg-fade-leave-active {
-  transition: opacity 0.2s ease;
+  transition: opacity var(--bew-dur-fast) ease;
   position: absolute;
 }
 .msg-fade-enter-from,
@@ -543,6 +543,6 @@ onMessagePoll((json: any) => {
   opacity: 0;
 }
 .msg-fade-move {
-  transition: transform 0.3s ease;
+  transition: transform var(--bew-dur-cozy) ease;
 }
 </style>

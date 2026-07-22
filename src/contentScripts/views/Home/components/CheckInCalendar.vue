@@ -248,7 +248,7 @@ async function handleCheckIn() {
 
 .checkin-btn {
   box-shadow: 0 2px 8px var(--bew-theme-color-30);
-  transition: all 200ms ease;
+  transition: all var(--bew-dur-fast) ease;
 
   &:hover {
     box-shadow: 0 4px 16px var(--bew-theme-color-40);

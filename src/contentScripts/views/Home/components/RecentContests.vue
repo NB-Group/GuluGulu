@@ -87,6 +87,6 @@ onMounted(fetchContests)
 </template>
 
 <style scoped lang="scss">
-.contest-row { transition: box-shadow 200ms ease, transform 200ms ease; backdrop-filter: var(--bew-filter-glass-1); }
+.contest-row { transition: box-shadow var(--bew-dur-fast) ease, transform var(--bew-dur-fast) ease; backdrop-filter: var(--bew-filter-glass-1); }
 .contest-row:hover { box-shadow: var(--bew-shadow-2) !important; transform: translateY(-2px); }
 </style>

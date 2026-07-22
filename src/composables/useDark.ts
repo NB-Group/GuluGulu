@@ -69,7 +69,7 @@ function ensureViewTransitionStyles(toDark: boolean, x: number, y: number, r: nu
         to   { clip-path: circle(0px at ${x}px ${y}px); }
       }
       ::view-transition-old(root) {
-        animation: gulu-clip-shrink 300ms ease-in-out both !important;
+        animation: gulu-clip-shrink var(--bew-dur-cozy) ease-in-out both !important;
         z-index: 2147483646;
       }
       ::view-transition-new(root) { z-index: 1; }
@@ -84,7 +84,7 @@ function ensureViewTransitionStyles(toDark: boolean, x: number, y: number, r: nu
         to   { clip-path: circle(${r}px at ${x}px ${y}px); }
       }
       ::view-transition-new(root) {
-        animation: gulu-clip-expand 300ms ease-in-out both !important;
+        animation: gulu-clip-expand var(--bew-dur-cozy) ease-in-out both !important;
         z-index: 2147483646;
       }
       ::view-transition-old(root) { z-index: 1; }

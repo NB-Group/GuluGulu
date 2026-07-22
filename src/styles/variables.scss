@@ -54,7 +54,7 @@
   // Animation duration scale — the "cozy 10% slower" is baked into each step so
   // transitions feel unhurried without authors re-deriving it each time.
   --bew-dur-fast: 180ms;
-  --bew-dur-normal: 280ms;
+  --bew-dur-normal: var(--bew-dur-cozy);
   --bew-dur-cozy: 330ms;
   --bew-dur-slow: 550ms;
   --bew-dur-page: 660ms;

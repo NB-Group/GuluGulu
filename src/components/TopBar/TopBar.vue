@@ -312,7 +312,7 @@ defineExpose({
             >
               <button
                 class="login-btn"
-                style="display:flex;align-items:center;gap:6px;padding:0 16px;height:34px;border-radius:9999px;border:none;cursor:pointer;font-size:var(--bew-base-font-size);font-weight:700;background:var(--bew-theme-color-10);color:var(--bew-theme-color);border:1px solid var(--bew-theme-color-20);transition:all .2s"
+                style="display:flex;align-items:center;gap:6px;padding:0 16px;height:34px;border-radius:9999px;border:none;cursor:pointer;font-size:var(--bew-base-font-size);font-weight:700;background:var(--bew-theme-color-10);color:var(--bew-theme-color);border:1px solid var(--bew-theme-color-20);transition:all var(--bew-dur-fast)"
                 @click="goToLogin"
               >
                 <span style="display:contents" v-html="renderIcon('mingcute:user-4-line', 18)" />
@@ -381,7 +381,7 @@ defineExpose({
 <style lang="scss" scoped>
 .top-bar-enter-active,
 .top-bar-leave-active {
-  transition: all 0.5s ease;
+  transition: all var(--bew-dur-slow) ease;
 }
 
 .top-bar-enter-from,
@@ -392,7 +392,7 @@ defineExpose({
 
 .slide-out-enter-active,
 .slide-out-leave-active {
-  transition: all 0.3s ease;
+  transition: all var(--bew-dur-cozy) ease;
   pointer-events: none;
   transform: translateZ(0);
 }
@@ -405,7 +405,7 @@ defineExpose({
 
 .fade-enter-active,
 .fade-leave-active {
-  transition: all 0.6s ease;
+  transition: all var(--bew-dur-slow) ease;
 }
 
 .fade-leave-to,
@@ -454,7 +454,7 @@ defineExpose({
   text-decoration: none;
   font-size: var(--bew-base-font-size);
   cursor: pointer;
-  transition: background 0.15s;
+  transition: background var(--bew-dur-fast);
 
   &:hover {
     background: var(--bew-fill-2);
@@ -497,7 +497,7 @@ defineExpose({
     .avatar-img,
     .avatar-shadow {
       flex-shrink: 0;
-      transition: all 0.3s ease;
+      transition: all var(--bew-dur-cozy) ease;
       border-radius: 50%;
       width: 34px;
       height: 34px;
@@ -525,7 +525,7 @@ defineExpose({
       display: grid;
       place-items: center;
       border-radius: 40px;
-      transition: all 0.3s ease;
+      transition: all var(--bew-dur-cozy) ease;
       position: relative;
       z-index: 5;
       height: 34px;

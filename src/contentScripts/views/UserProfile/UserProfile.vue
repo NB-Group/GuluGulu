@@ -825,7 +825,7 @@ watch(uid, () => {
   font-weight: 600;
   font-size: 0.9em;
   cursor: pointer;
-  transition: filter 0.2s;
+  transition: filter var(--bew-dur-fast);
 }
 .gh-follow-btn:hover {
   filter: brightness(1.1);
@@ -843,7 +843,7 @@ watch(uid, () => {
 
 .gh-link {
   cursor: pointer;
-  transition: color 0.15s;
+  transition: color var(--bew-dur-fast);
 }
 .gh-link:hover strong {
   color: var(--bew-theme-color);
@@ -965,8 +965,8 @@ watch(uid, () => {
   font-size: var(--bew-base-font-size);
   font-weight: 500;
   transition:
-    color 0.2s,
-    border-color 0.2s;
+    color var(--bew-dur-fast),
+    border-color var(--bew-dur-fast);
 }
 .gh-tab:hover {
   color: var(--bew-text-1);
@@ -1006,9 +1006,9 @@ watch(uid, () => {
   font-weight: 500;
   cursor: pointer;
   transition:
-    background 0.15s,
-    color 0.15s,
-    border-color 0.15s;
+    background var(--bew-dur-fast),
+    color var(--bew-dur-fast),
+    border-color var(--bew-dur-fast);
 }
 .gh-subtab:hover {
   background: var(--bew-fill-2);
@@ -1062,7 +1062,7 @@ watch(uid, () => {
   padding: 12px 20px;
   border-bottom: 1px solid var(--bew-border-color);
   cursor: pointer;
-  transition: background 0.15s;
+  transition: background var(--bew-dur-fast);
 }
 .follow-row:last-child {
   border-bottom: none;
@@ -1123,8 +1123,8 @@ watch(uid, () => {
   pointer-events: none;
   z-index: 10;
   transition:
-    opacity 0.15s ease,
-    transform 0.15s ease;
+    opacity var(--bew-dur-fast) ease,
+    transform var(--bew-dur-fast) ease;
 }
 
 /* ---------- Introduction (README) ---------- */

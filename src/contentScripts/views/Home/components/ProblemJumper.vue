@@ -102,7 +102,7 @@ function handleKeyup(event: KeyboardEvent) {
 
 <style scoped lang="scss">
 .problem-input-wrapper {
-  transition: border-color 200ms ease;
+  transition: border-color var(--bew-dur-fast) ease;
 
   &:focus-within {
     border-color: var(--bew-theme-color);
@@ -116,7 +116,7 @@ function handleKeyup(event: KeyboardEvent) {
 }
 
 .jump-btn {
-  transition: all 200ms ease;
+  transition: all var(--bew-dur-fast) ease;
 
   &:hover {
     filter: brightness(1.1);

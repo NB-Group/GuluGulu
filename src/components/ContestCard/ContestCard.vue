@@ -178,7 +178,7 @@ function handleClick() {
 
 <style lang="scss" scoped>
 .contest-card {
-  transition: transform 300ms ease, box-shadow 300ms ease;
+  transition: transform var(--bew-dur-cozy) ease, box-shadow var(--bew-dur-cozy) ease;
 }
 
 .contest-card-skeleton {

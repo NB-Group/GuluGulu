@@ -105,7 +105,7 @@ onMounted(() => {
   color: var(--bew-text-1);
   font-size: var(--bew-base-font-size);
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all var(--bew-dur-fast) ease;
   backdrop-filter: var(--bew-filter-glass-1);
   box-shadow: var(--bew-shadow-edge-glow-1), var(--bew-shadow-1);
 
@@ -127,7 +127,7 @@ onMounted(() => {
   .arrow {
     font-size: 0.7em;
     color: var(--bew-text-3);
-    transition: transform 0.2s ease;
+    transition: transform var(--bew-dur-fast) ease;
   }
   &.open .arrow {
     transform: rotate(180deg);
@@ -150,7 +150,7 @@ onMounted(() => {
   font-size: var(--bew-base-font-size);
   color: var(--bew-text-1);
   cursor: pointer;
-  transition: background 0.1s ease;
+  transition: background var(--bew-dur-fast) ease;
 
   &:hover {
     background: var(--bew-fill-2);
@@ -165,13 +165,13 @@ onMounted(() => {
 
 .dropdown-enter-active {
   transition:
-    opacity 0.15s ease,
-    transform 0.15s ease;
+    opacity var(--bew-dur-fast) ease,
+    transform var(--bew-dur-fast) ease;
 }
 .dropdown-leave-active {
   transition:
-    opacity 0.1s ease,
-    transform 0.1s ease;
+    opacity var(--bew-dur-fast) ease,
+    transform var(--bew-dur-fast) ease;
 }
 .dropdown-enter-from,
 .dropdown-leave-to {

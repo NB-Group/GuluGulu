@@ -783,7 +783,7 @@ onUnmounted(() => {
           </div>
 
           <!-- Resize Handle -->
-          <div :style="{ flex: '0 0 3px', cursor: 'col-resize', background: isDragging ? 'var(--bew-theme-color)' : 'transparent', transition: isDragging ? 'none' : 'background .15s', userSelect: 'none', margin: '0 1px', position: 'relative' }" class="resize-handle" @mousedown="startResize">
+          <div :style="{ flex: '0 0 3px', cursor: 'col-resize', background: isDragging ? 'var(--bew-theme-color)' : 'transparent', transition: isDragging ? 'none' : 'background var(--bew-dur-fast)', userSelect: 'none', margin: '0 1px', position: 'relative' }" class="resize-handle" @mousedown="startResize">
             <span style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);color:var(--bew-text-4);pointer-events:none;line-height:0" v-html="renderIcon('mingcute:transfer-line', 10)" />
           </div>
 
@@ -970,7 +970,7 @@ onUnmounted(() => {
   font-size: 0.75em;
   padding: 2px 10px;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all var(--bew-dur-fast);
   &:hover {
     background: var(--bew-fill-2);
     color: var(--bew-text-1);

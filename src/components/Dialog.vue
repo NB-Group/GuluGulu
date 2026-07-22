@@ -235,7 +235,7 @@ function handleConfirm() {
 <style lang="scss" scoped>
 .modal-enter-active,
 .modal-leave-active {
-  transition: all 0.3s ease;
+  transition: all var(--bew-dur-cozy) ease;
 }
 
 .modal-enter-from,

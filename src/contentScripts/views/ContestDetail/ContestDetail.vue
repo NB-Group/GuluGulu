@@ -533,7 +533,7 @@ watch(activeTab, (t) => { if (t === 'ranking' && scoreboard.value.length === 0) 
                   <span style="color:var(--bew-text-2);font-weight:600">{{ myPassedCount }} / {{ problems.length }}</span>
                 </div>
                 <div style="height:6px;border-radius:99px;background:var(--bew-fill-2);overflow:hidden">
-                  <div :style="{ width: (problems.length ? Math.round(myPassedCount / problems.length * 100) : 0) + '%', height: '100%', background: 'var(--bew-theme-color)', borderRadius: '99px', transition: 'width .4s' }" />
+                  <div :style="{ width: (problems.length ? Math.round(myPassedCount / problems.length * 100) : 0) + '%', height: '100%', background: 'var(--bew-theme-color)', borderRadius: '99px', transition: 'width var(--bew-dur-slow)' }" />
                 </div>
                 <!-- 每题部分分明细 -->
                 <div v-if="myScores" mt-3 flex="~ wrap gap-1">
@@ -611,7 +611,7 @@ watch(activeTab, (t) => { if (t === 'ranking' && scoreboard.value.length === 0) 
           <div bg="$bew-content" rounded="$bew-radius" mb-4 shadow="[var(--bew-shadow-1),var(--bew-shadow-edge-glow-1)]" border="1 $bew-border-color" style="backdrop-filter:var(--bew-filter-glass-1)" overflow="hidden">
             <div flex="~" border="b-1 $bew-border-color" overflow="x-auto">
               <template v-for="tab in (['overview','problems','submit','ranking'] as const)" :key="tab">
-                <button v-if="tab==='overview' || canAccessContent" flex="~ items-center justify-center gap-1.5" flex-shrink-0 style="background:none;border:none;cursor:pointer;padding:11px 18px;font-size:var(--bew-base-font-size);font-weight:600;transition:color .2s,border-bottom-color .2s,box-shadow .25s" :style="{ color: activeTab === tab ? 'var(--bew-theme-color)' : 'var(--bew-text-3)', borderBottom: activeTab === tab ? '2px solid var(--bew-theme-color)' : '2px solid transparent', boxShadow: activeTab === tab ? '0 4px 16px -4px var(--bew-theme-color-30)' : 'none' }" @click="activeTab = tab">
+                <button v-if="tab==='overview' || canAccessContent" flex="~ items-center justify-center gap-1.5" flex-shrink-0 style="background:none;border:none;cursor:pointer;padding:11px 18px;font-size:var(--bew-base-font-size);font-weight:600;transition:color var(--bew-dur-fast),border-bottom-color var(--bew-dur-fast),box-shadow var(--bew-dur-cozy)" :style="{ color: activeTab === tab ? 'var(--bew-theme-color)' : 'var(--bew-text-3)', borderBottom: activeTab === tab ? '2px solid var(--bew-theme-color)' : '2px solid transparent', boxShadow: activeTab === tab ? '0 4px 16px -4px var(--bew-theme-color-30)' : 'none' }" @click="activeTab = tab">
                   <span v-html="renderIcon({ overview: 'mingcute:information-line', problems: 'mingcute:document-line', submit: 'mingcute:code-line', ranking: 'mingcute:chart-bar-line' }[tab], 16)" style="display:contents" />
                   {{ { overview: '概览', problems: '题目', submit: '提交', ranking: '排名' }[tab] }}
                 </button>
@@ -802,7 +802,7 @@ watch(activeTab, (t) => { if (t === 'ranking' && scoreboard.value.length === 0) 
 </template>
 
 <style lang="scss" scoped>
-.hover-row { transition: background .15s; }
+.hover-row { transition: background var(--bew-dur-fast); }
 .hover-row:hover { background: var(--bew-fill-2); }
 /* 比赛排名表:窄屏紧凑 + 用户名省略 + 我的行高亮(置顶与原位) */
 .rank-table { font-variant-numeric: tabular-nums; }

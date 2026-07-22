@@ -4,7 +4,7 @@
 .bewly-design.videoPage {
   .video-pod__list {
     .title-txt {
-      transition: color 0.2s ease-in-out;
+      transition: color var(--bew-dur-fast) ease-in-out;
     }
 
     .simple-base-item.normal .title-txt {
