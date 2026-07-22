@@ -123,8 +123,14 @@ async function resolvePendingStatuses(items: RecordItem[]) {
     while (cursor < pending.length) {
       const it = pending[cursor++]
       try {
-        const ctx = await fetchLentilleContext(`https://www.luogu.com.cn/record/${it.rid}`)
-        const rec = ctx?.data?.record
+        // /record/{rid} 的 HTML 不含 lentille(实测 hasLentille=false,是 SPA 壳),
+        // 详情数据在 ?_contentOnly=1 的 JSON 里(实测 isJson=true,含 detail.compileResult)。
+        const rr = await fetch(`https://www.luogu.com.cn/record/${it.rid}?_contentOnly=1`, { credentials: 'same-origin' })
+        const tt = await rr.text()
+        let j: any = null
+        try { j = JSON.parse(tt) }
+        catch {}
+        const rec = j?.data?.record || j?.currentData?.record
         const real = rec ? derivedRecordStatus(rec) : undefined
         if (real == null || PENDING_ST.has(real))
           continue
