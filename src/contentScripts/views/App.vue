@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { useEventListener, useThrottleFn, useToggle } from '@vueuse/core'
+import { useThrottleFn, useToggle } from '@vueuse/core'
 import type { Ref } from 'vue'
 
 import type { GulyAppProvider } from '~/composables/useAppProvider'
@@ -31,31 +31,58 @@ function getPageParam(): AppPage | null {
 function getPageFromUrl(): AppPage | null {
   const url = document.URL
 
-  if (/\/problem\/list/i.test(url)) return AppPage.ProblemList
-  if (/\/problem\/solution/i.test(url)) return AppPage.Solution
-  if (/\/problem\/[A-Za-z0-9_]+/i.test(url)) return AppPage.ProblemDetail
-  if (/\/contest\/list/i.test(url)) return AppPage.ContestList
-  if (/\/contest\/\d+/i.test(url)) return AppPage.ContestDetail
-  if (/\/ranking/i.test(url)) return AppPage.Ranking
-  if (/\/blog\//i.test(url) || /\/discuss/i.test(url)) return AppPage.Blog
-  if (/\/user\/mine\/problem/i.test(url)) return AppPage.MyProblems
-  if (/\/user\/mine\/contestJoined/i.test(url)) return AppPage.MyContests
-  if (/\/user\/mine\/team/i.test(url)) return AppPage.Team
-  if (/\/user\/mine\/trainingFav/i.test(url)) return AppPage.TrainingFav
-  if (/\/user\/mine\/contest/i.test(url)) return AppPage.CreatedContests
-  if (/\/user\/mine\/training/i.test(url)) return AppPage.CreatedTrainings
-  if (/\/user\/notification/i.test(url)) return AppPage.Notification
-  if (/\/user\/\d+\/practice/i.test(url)) return AppPage.Practice
-  if (/\/user\/\d+\/follower/i.test(url)) return AppPage.UserProfile
-  if (/\/user\/\d+\/following/i.test(url)) return AppPage.UserProfile
-  if (/\/user\//i.test(url)) return AppPage.UserProfile
-  if (/\/training\/list/i.test(url)) return AppPage.Training
-  if (/\/training\/\d+/i.test(url)) return AppPage.Training
-  if (/\/article/i.test(url)) return AppPage.Article
-  if (/\/team\//i.test(url)) return AppPage.Team
-  if (/\/record\//i.test(url)) return AppPage.Record
-  if (/\/chat/i.test(url) && !/\/discuss/i.test(url)) return AppPage.Messages
-  if (/\/search/i.test(url) || /\/problem\/keyword/i.test(url)) return AppPage.Search
+  if (/\/problem\/list/i.test(url))
+    return AppPage.ProblemList
+  if (/\/problem\/solution/i.test(url))
+    return AppPage.Solution
+  if (/\/problem\/\w+/i.test(url))
+    return AppPage.ProblemDetail
+  if (/\/contest\/list/i.test(url))
+    return AppPage.ContestList
+  if (/\/contest\/\d+/i.test(url))
+    return AppPage.ContestDetail
+  if (/\/ranking/i.test(url))
+    return AppPage.Ranking
+  if (/\/blog\//i.test(url) || /\/discuss/i.test(url))
+    return AppPage.Blog
+  if (/\/user\/mine\/problem/i.test(url))
+    return AppPage.MyProblems
+  if (/\/user\/mine\/contestJoined/i.test(url))
+    return AppPage.MyContests
+  if (/\/user\/mine\/team/i.test(url))
+    return AppPage.Team
+  if (/\/user\/mine\/trainingFav/i.test(url))
+    return AppPage.TrainingFav
+  if (/\/user\/mine\/contest/i.test(url))
+    return AppPage.CreatedContests
+  if (/\/user\/mine\/training/i.test(url))
+    return AppPage.CreatedTrainings
+  if (/\/user\/notification/i.test(url))
+    return AppPage.Notification
+  if (/\/user\/setting/i.test(url))
+    return AppPage.UserSetting
+  if (/\/user\/\d+\/practice/i.test(url))
+    return AppPage.Practice
+  if (/\/user\/\d+\/follower/i.test(url))
+    return AppPage.UserProfile
+  if (/\/user\/\d+\/following/i.test(url))
+    return AppPage.UserProfile
+  if (/\/user\//i.test(url))
+    return AppPage.UserProfile
+  if (/\/training\/list/i.test(url))
+    return AppPage.Training
+  if (/\/training\/\d+/i.test(url))
+    return AppPage.Training
+  if (/\/article/i.test(url))
+    return AppPage.Article
+  if (/\/team\//i.test(url))
+    return AppPage.Team
+  if (/\/record\//i.test(url))
+    return AppPage.Record
+  if (/\/chat/i.test(url) && !/\/discuss/i.test(url))
+    return AppPage.Messages
+  if (/\/search/i.test(url) || /\/problem\/keyword/i.test(url))
+    return AppPage.Search
 
   return null
 }
@@ -63,7 +90,7 @@ function getPageFromUrl(): AppPage | null {
 const activatedPage = ref<AppPage>(
   getPageParam()
   || getPageFromUrl()
-  || (settings.value.dockItemsConfig.find(e => e.visible === true)?.page || AppPage.Home)
+  || (settings.value.dockItemsConfig.find(e => e.visible === true)?.page || AppPage.Home),
 )
 
 const pages = {
@@ -83,6 +110,7 @@ const pages = {
   [AppPage.Messages]: defineAsyncComponent(() => import('./Messages/Messages.vue')),
   [AppPage.Solution]: defineAsyncComponent(() => import('./Solution/Solution.vue')),
   [AppPage.Article]: defineAsyncComponent(() => import('./Article/Article.vue')),
+  [AppPage.UserSetting]: defineAsyncComponent(() => import('./UserSetting/UserSetting.vue')),
   [AppPage.MyProblems]: defineAsyncComponent(() => import('./MyProblems/MyProblems.vue')),
   [AppPage.MyContests]: defineAsyncComponent(() => import('./MyContests/MyContests.vue')),
   [AppPage.TrainingFav]: defineAsyncComponent(() => import('./TrainingFav/TrainingFav.vue')),
@@ -150,7 +178,8 @@ watch(
 // Apply theme color CSS variables to the shadow root
 function applyThemeColor() {
   const el = document.getElementById('guly')
-  if (!el) return
+  if (!el)
+    return
   const color = settings.value.themeColor
   el.style.setProperty('--bew-theme-color', color)
   // Generate opacity variants using color-mix
@@ -164,13 +193,15 @@ watch(() => settings.value.themeColor, applyThemeColor, { immediate: true })
 // Apply base font size
 watch(() => settings.value.baseFontSize, (size) => {
   const el = document.getElementById('guly')
-  if (el) el.style.setProperty('--bew-base-font-size', `${size}px`)
+  if (el)
+    el.style.setProperty('--bew-base-font-size', `${size}px`)
 }, { immediate: true })
 
 // Apply page max width
 watch(() => settings.value.pageMaxWidth, (width) => {
   const el = document.getElementById('guly')
-  if (el) el.style.setProperty('--bew-page-max-width', `${width}px`)
+  if (el)
+    el.style.setProperty('--bew-page-max-width', `${width}px`)
 }, { immediate: true })
 
 // Apply frosted glass CSS classes to document root
@@ -184,7 +215,8 @@ watch(() => [settings.value.disableFrostedGlass, settings.value.reduceFrostedGla
 // Listen to Luogu's own SPA navigation (hooked by inject/index.js)
 function onHistoryChange() {
   import.meta.env.DEV && console.log('[historyChange] navigatingFromUs:', navigatingFromUs)
-  if (navigatingFromUs) return
+  if (navigatingFromUs)
+    return
   const url = window.location.href
   import.meta.env.DEV && console.log('[historyChange] url:', url, 'currentUrl:', currentUrl.value)
   if (url !== currentUrl.value) {
@@ -262,12 +294,14 @@ function navigateTo(pageName: AppPage, url?: string) {
       history.pushState({ page: pageName }, '', targetUrl)
       currentUrl.value = targetUrl
     }
-  } finally { navigatingFromUs = false }
+  }
+  finally { navigatingFromUs = false }
 
   // Same page AND same URL → just refresh, don't re-mount
   if (!urlChanged && activatedPage.value === pageName) {
     if (pageName !== AppPage.Search) {
-      if (scrollTopValue === 0) handleThrottledPageRefresh()
+      if (scrollTopValue === 0)
+        handleThrottledPageRefresh()
       else handleThrottledBackToTop()
     }
     return
@@ -288,7 +322,8 @@ function handleOsScroll() {
   emitter.emit(OVERLAY_SCROLL_BAR_SCROLL)
 
   const osInstance = scrollbarRef.value?.osInstance?.()
-  if (!osInstance?.elements) return
+  if (!osInstance?.elements)
+    return
   const { viewport } = osInstance.elements()
   const { scrollTop, scrollHeight, clientHeight } = viewport
 
@@ -359,9 +394,6 @@ provide<GulyAppProvider>('GULY_APP', {
       <AppBackground :activated-page="activatedPage" />
     </template>
 
-    <!-- Theme switch reveal (top-down wipe; zoom-safe — no View Transition snapshot) -->
-    <ThemeReveal />
-
     <!-- Settings -->
     <KeepAlive>
       <Settings v-if="showSettings" z-10002 @close="showSettings = false" />
@@ -419,7 +451,6 @@ provide<GulyAppProvider>('GULY_APP', {
         </template>
       </Transition>
     </div>
-
   </div>
 </template>
 

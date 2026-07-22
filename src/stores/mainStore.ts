@@ -101,6 +101,16 @@ export const useMainStore = defineStore('main', () => {
         url: 'https://www.luogu.com.cn/chat',
         hasGulyPage: true,
       },
+      {
+        i18nKey: 'nav.article',
+        icon: 'mingcute:document-line',
+        iconActivated: 'i-mingcute:document-line',
+        page: AppPage.Article,
+        openInNewTab: false,
+        useOriginalLuoguPage: false,
+        url: 'https://www.luogu.com.cn/article',
+        hasGulyPage: true,
+      },
     ]
   })
 

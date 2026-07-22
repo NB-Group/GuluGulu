@@ -1,57 +1,95 @@
 <script setup lang="ts">
-import { AppPage } from '~/enums/appEnums'
 import { useGulyApp } from '~/composables/useAppProvider'
+import { AppPage } from '~/enums/appEnums'
 import { renderIcon } from '~/utils/icons'
 import { friendlyError } from '~/utils/luogu-api'
 
+const props = withDefaults(defineProps<{ embedded?: boolean, mode?: 'joined' | 'created' }>(), { embedded: false, mode: 'joined' })
 const { navigateTo } = useGulyApp()
-const props = withDefaults(defineProps<{ embedded?: boolean }>(), { embedded: false })
-
 const contests = ref<any[]>([])
 const loading = ref(true); const errorMsg = ref('')
 
-onMounted(async () => {
+async function load() {
+  loading.value = true; errorMsg.value = ''
   try {
-    const res = await fetch('https://www.luogu.com.cn/user/mine/contestJoined', { credentials: 'same-origin' })
+    const url = props.mode === 'created'
+      ? 'https://www.luogu.com.cn/user/mine/contest'
+      : 'https://www.luogu.com.cn/user/mine/contestJoined'
+    const res = await fetch(url, { credentials: 'same-origin' })
     const html = await res.text()
     const m = html.match(/<script\s+id="lentille-context"\s+type="application\/json"[^>]*>([^<]+)<\/script>/)
     if (m?.[1]) {
       const raw = JSON.parse(m[1])?.data?.contests || []
       contests.value = Array.isArray(raw) ? raw : (raw.result || [])
     }
-    else errorMsg.value = '请先登录洛谷'
-  } catch (e: any) { errorMsg.value = friendlyError(e) }
+    else {
+      errorMsg.value = '请先登录洛谷'
+    }
+  }
+  catch (e: any) { errorMsg.value = friendlyError(e) }
   loading.value = false
-})
+}
+onMounted(load)
+watch(() => props.mode, load)
 
-function openContest(id: number) { navigateTo(AppPage.ContestDetail, 'https://www.luogu.com.cn/contest/'+id) }
-function timeStr(ts: number) { return new Date(ts*1000).toLocaleDateString('zh-CN') }
+function openContest(id: number) { navigateTo(AppPage.ContestDetail, `https://www.luogu.com.cn/contest/${id}`) }
+function timeStr(ts: number) { return new Date(ts * 1000).toLocaleDateString('zh-CN') }
 </script>
 
 <template>
   <div :class="{ 'page-container': !props.embedded }" w-full h-full :p="props.embedded ? '' : 'x-4 md:x-8 lg:x-16'">
-    <div bg="$bew-content" rounded="$bew-radius" p-6 mb-6 shadow="[var(--bew-shadow-1)]" border="1 $bew-border-color" v-if="!props.embedded">
-      <h1 style="font-size:1.5rem;color:var(--bew-text-1);font-weight:700">我的比赛</h1>
+    <div
+      v-if="!props.embedded" bg="$bew-content" rounded="$bew-radius" p-6 mb-6
+      shadow="[var(--bew-shadow-1)]" border="1 $bew-border-color"
+    >
+      <h1 style="font-size:1.5rem;color:var(--bew-text-1);font-weight:700">
+        我的比赛
+      </h1>
     </div>
     <Loading v-if="loading" />
-    <div v-if="!loading && errorMsg" bg="$bew-content" rounded="$bew-radius" p-8 text="center $bew-text-2" border="1 $bew-border-color">
-      <span v-html="renderIcon('mingcute:warning-line',32)" style="display:contents"/><p mt-2>{{ errorMsg }}</p>
+    <div
+      v-if="!loading && errorMsg" bg="$bew-content" rounded="$bew-radius" p-8 text="center $bew-text-2"
+      border="1 $bew-border-color"
+    >
+      <span style="display:contents" v-html="renderIcon('mingcute:warning-line', 32)" /><p mt-2>
+        {{ errorMsg }}
+      </p>
     </div>
     <Transition name="content-reveal">
-      <div v-if="!loading && contests.length>0" grid="~ cols-1 md:cols-2 xl:cols-3" gap-4>
-        <div v-for="c in contests" :key="c.id" class="contest-card" bg="$bew-content" rounded="$bew-radius" p-5 shadow="[var(--bew-shadow-1)]" border="1 $bew-border-color" cursor="pointer" style="backdrop-filter:var(--bew-filter-glass-1)" @click="openContest(c.id)">
-          <h3 style="font-size:var(--bew-base-font-size);color:var(--bew-text-1);font-weight:600" mb-2>{{ c.name }}</h3>
-          <div style="font-size:.85em;color:var(--bew-text-2)">{{ timeStr(c.startTime) }} — {{ timeStr(c.endTime) }}</div>
+      <div v-if="!loading && contests.length > 0" grid="~ cols-1 md:cols-2 xl:cols-3" gap-4>
+        <div
+          v-for="c in contests" :key="c.id" class="contest-card" bg="$bew-content" rounded="$bew-radius"
+          p-5 shadow="[var(--bew-shadow-1)]" border="1 $bew-border-color" cursor="pointer" style="backdrop-filter:var(--bew-filter-glass-1)"
+          @click="openContest(c.id)"
+        >
+          <h3 style="font-size:var(--bew-base-font-size);color:var(--bew-text-1);font-weight:600" mb-2>
+            {{ c.name }}
+          </h3>
+          <div style="font-size:.85em;color:var(--bew-text-2)">
+            {{ timeStr(c.startTime) }} — {{ timeStr(c.endTime) }}
+          </div>
         </div>
       </div>
     </Transition>
-    <div v-if="!loading && !errorMsg && contests.length===0" bg="$bew-content" rounded="$bew-radius" p-8 text="center $bew-text-3" border="1 $bew-border-color">
-      <span v-html="renderIcon('mingcute:trophy-line',48)" style="display:contents"/><p mt-2>暂无比赛</p>
+    <div
+      v-if="!loading && !errorMsg && contests.length === 0" bg="$bew-content" rounded="$bew-radius" p-8 text="center $bew-text-3"
+      border="1 $bew-border-color"
+    >
+      <span style="display:contents" v-html="renderIcon('mingcute:trophy-line', 48)" /><p mt-2>
+        暂无比赛
+      </p>
     </div>
   </div>
 </template>
 
 <style scoped>
-.contest-card { transition: box-shadow .2s, transform .2s; }
-.contest-card:hover { box-shadow: var(--bew-shadow-2)!important; transform: translateY(-2px); }
+.contest-card {
+  transition:
+    box-shadow 0.2s,
+    transform 0.2s;
+}
+.contest-card:hover {
+  box-shadow: var(--bew-shadow-2) !important;
+  transform: translateY(-2px);
+}
 </style>

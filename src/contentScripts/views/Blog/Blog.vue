@@ -65,6 +65,15 @@ const replies = ref<any[]>([])
 const replyContent = ref('')
 const replyError = ref('')
 const replySending = ref(false)
+// 洛谷讨论回复强制图形验证码。端点必须是 /lg4/captcha(新),旧的 /api/verify/captcha
+// 是另一套 session,reply 不认 → 即便码对也死循环报"图形验证码错误"。原生进帖子即预取。
+const captchaSrc = ref('')
+const captchaCode = ref('')
+function loadReplyCaptcha() {
+  captchaCode.value = ''
+  // _t 带随机小数,同原生(Date.now()+Math.random()),仅 cache-buster
+  captchaSrc.value = `https://www.luogu.com.cn/lg4/captcha?_t=${Date.now() + Math.random()}`
+}
 
 async function fetchDetail(id: number) {
   detailLoading.value = true
@@ -102,27 +111,45 @@ async function fetchDetail(id: number) {
 async function postReply() {
   const text = replyContent.value.trim()
   if (!text || !discussId.value || replySending.value) return
+  // 记住本次是否带了验证码(loadReplyCaptcha 会清空它,需在清空前判断提示文案)
+  const hadCaptcha = !!captchaCode.value
   replySending.value = true
   replyError.value = ''
   try {
     const csrf = getCsrfToken()
+    // 洛谷原生讨论回复:验证码放请求体 {captcha, content},不是 X-Captcha 头。
+    const body: Record<string, string> = { content: text }
+    if (captchaCode.value)
+      body.captcha = captchaCode.value
     const res = await fetch(`https://www.luogu.com.cn/discuss/${discussId.value}/reply`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrf, 'X-Requested-With': 'XMLHttpRequest' },
       credentials: 'same-origin',
-      body: JSON.stringify({ content: text }),
+      headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrf, 'X-Requested-With': 'XMLHttpRequest' },
+      body: JSON.stringify(body),
     })
-    const json = await res.json()
-    if (json.code === 200 || json.rid || json.id) {
+    const json = await res.json().catch(() => ({}))
+    // 洛谷回复强制要求图形验证码 → 错误时弹出验证码框,用户填后重试
+    const needCaptcha = json?.errorType?.includes('Captcha') || json?.errorMessage?.includes('验证码') || json?.data?.includes?.('验证码')
+    if (needCaptcha) {
+      replyError.value = hadCaptcha ? '验证码错误,请重输' : '请输入下方验证码后再回复'
+      loadReplyCaptcha()
+      replySending.value = false
+      return
+    }
+    // 成功:原生返回 {reply:{id, author, ...}}(也兼容旧的 {rid}/{id})
+    const newId = json?.reply?.id || json?.rid || json?.id
+    if (json.code === 200 || newId) {
       replies.value.push({
-        id: json.rid || json.id || Date.now(),
-        author: { uid: Number((window as any).__guly_user?.uid) || 0, name: (window as any).__guly_user?.name || '', avatar: `https://cdn.luogu.com.cn/upload/usericon/${(window as any).__guly_user?.uid || 0}.png`, color: '' },
-        time: Math.floor(Date.now() / 1000),
+        id: newId || Date.now(),
+        author: json?.reply?.author || { uid: Number((window as any).__guly_user?.uid) || 0, name: (window as any).__guly_user?.name || '', avatar: `https://cdn.luogu.com.cn/upload/usericon/${(window as any).__guly_user?.uid || 0}.png`, color: '' },
+        time: json?.reply?.time || Math.floor(Date.now() / 1000),
         content: text,
       })
       replyContent.value = ''
+      // 验证码单次有效,成功后立刻取下一张(同原生)
+      loadReplyCaptcha()
     } else {
-      replyError.value = json?.data || json?.msg || '回复失败'
+      replyError.value = json?.errorMessage || json?.data || json?.msg || '回复失败'
     }
   } catch (e: any) { replyError.value = friendlyError(e) }
   replySending.value = false
@@ -132,8 +159,20 @@ function openPost(id: number) { navigateTo(AppPage.Blog, `https://www.luogu.com.
 function goToDiscussList() { navigateTo(AppPage.Blog, 'https://www.luogu.com.cn/discuss') }
 // Load appropriate content based on URL (list vs detail)
 function loadContent() {
-  if (discussId.value) { detail.value = null; fetchDetail(discussId.value) }
-  else { detail.value = null; currentPage.value = 1; posts.value = []; fetchPosts() }
+  if (discussId.value) {
+    detail.value = null
+    fetchDetail(discussId.value)
+    // 进入帖子即预取验证码(同原生:回复框一开始就画好验证码)
+    loadReplyCaptcha()
+  }
+  else {
+    detail.value = null
+    captchaSrc.value = ''
+    captchaCode.value = ''
+    currentPage.value = 1
+    posts.value = []
+    fetchPosts()
+  }
 }
 onMounted(loadContent)
 watch(discussId, () => loadContent())
@@ -212,6 +251,11 @@ onUnmounted(() => obs?.disconnect())
                 :style="{ opacity: (replySending || !replyContent.trim()) ? .5 : 1 }"
                 @click="postReply"
               >{{ replySending ? '发送中...' : '回复' }}</button>
+            </div>
+            <!-- 验证码(洛谷回复强制要求) -->
+            <div v-if="captchaSrc" mt-2 flex="~ items-center gap-2" p-2 rounded="$bew-radius" bg="$bew-fill-1">
+              <img :src="captchaSrc" style="height:36px;border-radius:4px;cursor:pointer" title="点击刷新" alt="验证码" @click="loadReplyCaptcha">
+              <input v-model="captchaCode" placeholder="输入验证码" style="flex:1;padding:6px 10px;background:var(--bew-bg);color:var(--bew-text-1);border:1px solid var(--bew-border-color);border-radius:4px;font-size:.85em;outline:none" @keydown.enter="postReply">
             </div>
             <div v-if="replyError" mt-2 p-2 rounded="$bew-radius" style="background:var(--bew-error-color-20);color:var(--bew-error-color);font-size:.85em">{{ replyError }}</div>
           </div>

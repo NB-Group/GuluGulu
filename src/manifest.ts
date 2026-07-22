@@ -62,12 +62,12 @@ export async function getManifest() {
     ],
     content_security_policy: isFirefox
       ? {
-          extension_pages: 'script-src \'self\'; object-src \'self\'',
+          extension_pages: 'script-src \'self\' \'wasm-unsafe-eval\'; object-src \'self\'',
         }
       : {
           extension_pages: isDev
-            ? `script-src 'self' http://localhost:${port}; object-src 'self' http://localhost:${port}`
-            : 'script-src \'self\'; object-src \'self\'',
+            ? `script-src 'self' 'wasm-unsafe-eval' http://localhost:${port}; object-src 'self' http://localhost:${port}`
+            : 'script-src \'self\' \'wasm-unsafe-eval\'; object-src \'self\'',
         },
     ...isFirefox
       ? {}

@@ -190,6 +190,15 @@ function handleSearch(keyword: string) {
 function openProblem(pid: string) {
   navigateTo(AppPage.ProblemDetail, `https://www.luogu.com.cn/problem/${pid}`)
 }
+// /problem/random 302 跳到一道随机题,fetch 跟随重定向后取最终 URL
+async function randomProblem() {
+  try {
+    const r = await fetch('https://www.luogu.com.cn/problem/random', { credentials: 'same-origin' })
+    if (r.url && /\/problem\/[A-Za-z0-9_]+/.test(r.url))
+      navigateTo(AppPage.ProblemDetail, r.url)
+  }
+  catch (e) { console.warn('[GuluGulu] random problem failed', e) }
+}
 function difficultyLabel(d: number) {
   return difficultyMap[d]?.label || '未知'
 }
@@ -230,6 +239,15 @@ function difficultyColor(d: number) {
           v-html="renderIcon('mingcute:code-line', 24)"
         />
         题库
+        <button
+          class="btn-press"
+          style="font-size:.8rem;font-weight:500;padding:4px 12px;border-radius:999px;border:1px solid var(--bew-border-color);background:var(--bew-fill-1);color:var(--bew-text-2);cursor:pointer"
+          flex="~ items-center gap-1"
+          title="随机来一题"
+          @click="randomProblem"
+        >
+          <span v-html="renderIcon('mingcute:sparkles-2-line', 16)" /><span>随机</span>
+        </button>
       </h1>
       <div mb-4>
         <SearchBar @search="handleSearch" />

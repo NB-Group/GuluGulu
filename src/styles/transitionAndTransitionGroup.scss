@@ -192,3 +192,8 @@
     animation: none !important;
   }
 }
+
+// 空态(暂无 xx):挂载时淡入 + 上移,避免突兀地直接出现
+.empty-state-fade {
+  animation: content-reveal-in 0.4s ease both;
+}

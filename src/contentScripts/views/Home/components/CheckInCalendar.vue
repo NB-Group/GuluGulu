@@ -12,8 +12,10 @@ const chineseWeekdays = ['星期日', '星期一', '星期二', '星期三', '�
 // Month size labels
 function getMonthSizeLabel(month: number, year: number): string {
   const daysInMonth = new Date(year, month + 1, 0).getDate()
-  if (daysInMonth === 31) return '大'
-  if (daysInMonth === 30) return '小'
+  if (daysInMonth === 31)
+    return '大'
+  if (daysInMonth === 30)
+    return '小'
   return '平'
 }
 
@@ -38,7 +40,7 @@ const cspRound2Days = daysUntil(CSP_ROUND_2_DATE)
 
 // === Persist check-in state across page switches ===
 // Module-level cache survives component mount/unmount cycles
-const todayStr = () => { const d = new Date(); return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}` }
+function todayStr() { const d = new Date(); return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}` }
 const checkInState = (window as any).__guly_checkin || ((window as any).__guly_checkin = { date: '', done: false, fortune: null as any })
 const checkInDone = ref(checkInState.date === todayStr() && checkInState.done)
 const checkInMsg = ref('')
@@ -60,7 +62,8 @@ function parsePunchHtml(html: string) {
   for (const m of html.matchAll(/宜：<[^>]*>([^<]+)<[^>]*>[\s\S]*?lg-small[^>]*>([^<]+)</g)) r.good.push(`${m[1].trim()} — ${m[2].trim()}`)
   for (const m of html.matchAll(/忌：<[^>]*>([^<]+)<[^>]*>[\s\S]*?lg-small[^>]*>([^<]+)</g)) r.bad.push(`${m[1].trim()} — ${m[2].trim()}`)
   const dm = html.match(/连续打卡了\s*<strong>(\d+)<\/strong>\s*天/)
-  if (dm) r.days = dm[1]
+  if (dm)
+    r.days = dm[1]
   return r
 }
 
@@ -78,7 +81,8 @@ async function fetchFortuneFromHome() {
   const res = await fetch('https://www.luogu.com.cn/', { credentials: 'same-origin' })
   const html = await res.text()
   const punchMatch = html.match(/lg-punch[^>]*>([\s\S]*?)<\/div>\s*<\/div>\s*<\/div>/)
-  if (punchMatch && punchMatch[1].includes('运势')) return parsePunchHtml(punchMatch[1])
+  if (punchMatch && punchMatch[1].includes('运势'))
+    return parsePunchHtml(punchMatch[1])
   return null
 }
 
@@ -92,13 +96,15 @@ onMounted(async () => {
       checkInDone.value = true
       saveCheckInState()
     }
-  } catch (e) { console.warn('[GuluGulu]', e) }
+  }
+  catch (e) { console.warn('[GuluGulu]', e) }
   checkInLoading.value = false
 })
 
 async function handleCheckIn() {
   if (!uid || uid === '0') { checkInMsg.value = '请先登录洛谷'; return }
-  if (checkInDone.value) return
+  if (checkInDone.value)
+    return
   checkInMsg.value = '打卡中...'
   try {
     const csrf = (window as any).__guly_user?.csrfToken || ''
@@ -113,25 +119,31 @@ async function handleCheckIn() {
       checkInDone.value = true
       saveCheckInState()
       checkInMsg.value = ''
-      // ajax_punch returns {code, message} with no fortune html — fetch the
-      // freshly-unlocked fortune from the homepage so it shows without refresh.
+      // ajax_punch returns {code, message, more:{html}} — the fortune HTML
+      // lives at more.html (verified against real Luogu 2026-07). Parse it
+      // directly; fall back to re-fetching the homepage if absent.
       try {
-        fortuneResult.value = data?.html ? parsePunchHtml(data.html) : await fetchFortuneFromHome()
-      } catch (e) { console.warn('[GuluGulu]', e) }
-    } else if (data?.code === 201 || data?.message?.includes('已经打过') || data?.message?.includes('已经打卡')) {
+        fortuneResult.value = data?.more?.html ? parsePunchHtml(data.more.html) : await fetchFortuneFromHome()
+      }
+      catch (e) { console.warn('[GuluGulu]', e) }
+    }
+    else if (data?.code === 201 || data?.message?.includes('已经打过') || data?.message?.includes('已经打卡')) {
       checkInDone.value = true
       saveCheckInState()
       checkInMsg.value = '今日已打卡'
-    } else if (res.status === 200) {
+    }
+    else if (res.status === 200) {
       // API returned 200 OK but unexpected body — treat as success
       checkInDone.value = true
       saveCheckInState()
       checkInMsg.value = ''
-    } else {
+    }
+    else {
       checkInMsg.value = data?.message || data?.data || '打卡失败，请重试'
     }
-  } catch (e: any) {
-    checkInMsg.value = '打卡失败：' + (e.message || '网络错误')
+  }
+  catch (e: any) {
+    checkInMsg.value = `打卡失败：${e.message || '网络错误'}`
   }
 }
 </script>
@@ -186,12 +198,20 @@ async function handleCheckIn() {
         {{ fortuneResult.level }}
       </div>
       <div v-if="fortuneResult.good.length" mb-2>
-        <div fw-bold mb-1 style="color:#52c41a">宜</div>
-        <div v-for="g in fortuneResult.good" :key="g" style="color:var(--bew-text-2)">{{ g }}</div>
+        <div fw-bold mb-1 style="color:#52c41a">
+          宜
+        </div>
+        <div v-for="g in fortuneResult.good" :key="g" style="color:var(--bew-text-2)">
+          {{ g }}
+        </div>
       </div>
       <div v-if="fortuneResult.bad.length" mb-2>
-        <div fw-bold mb-1 style="color:#e74c3c">忌</div>
-        <div v-for="b in fortuneResult.bad" :key="b" style="color:var(--bew-text-2)">{{ b }}</div>
+        <div fw-bold mb-1 style="color:#e74c3c">
+          忌
+        </div>
+        <div v-for="b in fortuneResult.bad" :key="b" style="color:var(--bew-text-2)">
+          {{ b }}
+        </div>
       </div>
       <div v-if="fortuneResult.days" text="center" mt-2 style="color:var(--bew-text-3)">
         连续打卡 <strong style="color:var(--bew-text-1)">{{ fortuneResult.days }}</strong> 天

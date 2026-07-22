@@ -6,12 +6,11 @@ import { computed, reactive, ref } from 'vue'
 import { useGulyApp } from '~/composables/useAppProvider'
 import { useDark } from '~/composables/useDark'
 import { useDelayedHover } from '~/composables/useDelayedHover'
+// === Message notification polling ===
+import { useMessagePolling } from '~/composables/useMessagePolling'
 import { AppPage } from '~/enums/appEnums'
 import { settings } from '~/logic'
 import { renderIcon } from '~/utils/icons'
-
-import type { UserInfo } from './types'
-
 import { searchKeyword } from '~/utils/luogu-api'
 
 const { activatedPage, scrollbarRef, reachTop, navigateTo } = useGulyApp()
@@ -24,7 +23,8 @@ async function logoutAndSwitch() {
   // Clear Luogu session, then go to homepage (shows login button)
   try {
     await browser.runtime.sendMessage({ contentScriptQuery: 'HOME.logout' })
-  } catch (e) { console.warn('[GuluGulu]', e) }
+  }
+  catch (e) { console.warn('[GuluGulu]', e) }
   location.href = 'https://www.luogu.com.cn/'
 }
 
@@ -54,8 +54,10 @@ onMounted(async () => {
   if (stored?.uid && stored.uid !== '0') {
     isLogin.value = true
     userUid.value = Number(stored.uid)
-    if (stored.name) userName.value = stored.name
-    if (stored.color) userColor.value = stored.color
+    if (stored.name)
+      userName.value = stored.name
+    if (stored.color)
+      userColor.value = stored.color
     return
   }
   // Fallback: fetch directly from frontend
@@ -66,15 +68,15 @@ onMounted(async () => {
     if (user?.uid) {
       isLogin.value = true
       userUid.value = Number(user.uid)
-      if (user.name) userName.value = user.name
-      if (user.color) userColor.value = user.color
+      if (user.name)
+        userName.value = user.name
+      if (user.color)
+        userColor.value = user.color
       ;(window as any).__guly_user = { uid: String(user.uid), name: user.name || '', color: user.color || '', csrfToken: '' }
     }
-  } catch (e) { console.warn('[GuluGulu]', e) }
+  }
+  catch (e) { console.warn('[GuluGulu]', e) }
 })
-
-// === Message notification polling ===
-import { useMessagePolling } from '~/composables/useMessagePolling'
 const { unreadMsgCount } = useMessagePolling()
 
 function goToMessages() {
@@ -189,12 +191,18 @@ function handleScroll() {
 onKeyStroke('/', (e: KeyboardEvent) => {
   const path = e.composedPath?.() || []
   for (const node of path) {
-    if (!(node instanceof HTMLElement)) continue
+    if (!(node instanceof HTMLElement))
+      continue
     const tag = node.tagName
     if (tag === 'TEXTAREA' || tag === 'INPUT' || tag === 'SELECT' || node.isContentEditable || node.getAttribute('contenteditable') === 'true') {
       import.meta.env.DEV && console.log('[TopBar] / blocked by:', tag)
       return
     }
+    // Monaco editor — its input may use the EditContext API (not a <textarea>),
+    // so the tag check above misses it. Bail when the keystroke originates
+    // anywhere inside a Monaco editor instance.
+    if (node.classList?.contains('monaco-editor') || node.classList?.contains('overflow-guard'))
+      return
   }
   import.meta.env.DEV && console.log('[TopBar] / triggering search')
   toggleTopBarVisible(true)
@@ -215,7 +223,7 @@ defineExpose({
     <header
       ref="headerTarget"
       w="full" transition="all 300 ease-in-out"
-      :class="{ 'hide': hideTopBar }"
+      :class="{ hide: hideTopBar }"
       :style="{ position: isTopBarFixed ? 'fixed' : 'absolute' }"
     >
       <main
@@ -275,7 +283,6 @@ defineExpose({
             <SearchBar
               v-if="showSearchBar"
               class="search-bar"
-              @search="handleSearch"
               :style="{
                 '--b-search-bar-normal-color': settings.disableFrostedGlass ? 'var(--bew-elevated)' : 'color-mix(in oklab, var(--bew-elevated-solid), transparent 60%)',
                 '--b-search-bar-hover-color': 'var(--bew-elevated-hover)',
@@ -283,6 +290,7 @@ defineExpose({
                 '--b-search-bar-normal-icon-color': 'var(--bew-text-1)',
                 '--b-search-bar-normal-text-color': 'var(--bew-text-1)',
               }"
+              @search="handleSearch"
             />
           </Transition>
         </div>
@@ -307,7 +315,7 @@ defineExpose({
                 style="display:flex;align-items:center;gap:6px;padding:0 16px;height:34px;border-radius:9999px;border:none;cursor:pointer;font-size:var(--bew-base-font-size);font-weight:700;background:var(--bew-theme-color-10);color:var(--bew-theme-color);border:1px solid var(--bew-theme-color-20);transition:all .2s"
                 @click="goToLogin"
               >
-                <span v-html="renderIcon('mingcute:user-4-line', 18)" style="display:contents" />
+                <span style="display:contents" v-html="renderIcon('mingcute:user-4-line', 18)" />
                 登录
               </button>
             </div>
@@ -325,35 +333,39 @@ defineExpose({
                   style="width:100%;height:100%;object-fit:cover;"
                   @error="(e) => { (e.target as HTMLImageElement).style.display = 'none'; (e.target as HTMLImageElement).parentElement!.querySelector('span')!.removeAttribute('hidden') }"
                 >
-                <span v-html="renderIcon('mingcute:user-4-line', 18)" style="position:absolute;top:8px;left:8px;" hidden />
+                <span style="position:absolute;top:8px;left:8px;" hidden v-html="renderIcon('mingcute:user-4-line', 18)" />
               </div>
-              <span v-if="userName" :style="{fontSize:'var(--bew-base-font-size)',color:userColor?`var(--bew-${userColor})`:'var(--bew-text-1)',fontWeight:600,whiteSpace:'nowrap',lineHeight:'var(--bew-top-bar-height)'}">{{ userName }}</span>
+              <span v-if="userName" :style="{ fontSize: 'var(--bew-base-font-size)', color: userColor ? `var(--bew-${userColor})` : 'var(--bew-text-1)', fontWeight: 600, whiteSpace: 'nowrap', lineHeight: 'var(--bew-top-bar-height)' }">{{ userName }}</span>
               <!-- User panel popup -->
               <Transition name="dropdown">
                 <div v-if="popupVisible.userPanel" class="user-panel-dropdown" @click.stop>
                   <div class="user-panel-header">
                     <img :src="`https://cdn.luogu.com.cn/upload/usericon/${userUid}.png`" style="width:48px;height:48px;border-radius:50%;object-fit:cover">
                     <div>
-                      <div style="font-size:var(--bew-base-font-size);font-weight:600;color:var(--bew-text-1)">{{ userName || 'UID:' + userUid }}</div>
-                      <div style="font-size:var(--bew-base-font-size);color:var(--bew-text-3)">UID: {{ userUid }}</div>
+                      <div style="font-size:var(--bew-base-font-size);font-weight:600;color:var(--bew-text-1)">
+                        {{ userName || `UID:${userUid}` }}
+                      </div>
+                      <div style="font-size:var(--bew-base-font-size);color:var(--bew-text-3)">
+                        UID: {{ userUid }}
+                      </div>
                     </div>
                   </div>
                   <div class="user-panel-divider" />
-                  <a :href="'https://www.luogu.com.cn/user/' + userUid" target="_blank" class="user-panel-item">
-                    <span v-html="renderIcon('mingcute:user-4-line', 16)" style="display:contents" />
+                  <a :href="`https://www.luogu.com.cn/user/${userUid}`" target="_blank" class="user-panel-item">
+                    <span style="display:contents" v-html="renderIcon('mingcute:user-4-line', 16)" />
                     个人主页
                   </a>
                   <a href="https://www.luogu.com.cn/chat" target="_blank" class="user-panel-item">
-                    <span v-html="renderIcon('mingcute:notification-line', 16)" style="display:contents" />
+                    <span style="display:contents" v-html="renderIcon('mingcute:notification-line', 16)" />
                     通知
                   </a>
                   <a href="https://www.luogu.com.cn/record/list" target="_blank" class="user-panel-item">
-                    <span v-html="renderIcon('mingcute:file-list-line', 16)" style="display:contents" />
+                    <span style="display:contents" v-html="renderIcon('mingcute:file-list-line', 16)" />
                     评测记录
                   </a>
                   <div class="user-panel-divider" />
                   <button class="user-panel-item" style="width:100%;text-align:left;border:none;background:none;cursor:pointer" @click="logoutAndSwitch">
-                    <span v-html="renderIcon('mingcute:exit-line', 16)" style="display:contents" />
+                    <span style="display:contents" v-html="renderIcon('mingcute:exit-line', 16)" />
                     切换账号
                   </button>
                 </div>
@@ -474,7 +486,7 @@ defineExpose({
 
     &:hover::after,
     &.hover::after {
-      content: '';
+      content: "";
       position: absolute;
       right: 0;
       top: 20px;

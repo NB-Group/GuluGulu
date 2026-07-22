@@ -4,14 +4,15 @@ import { cpp } from '@codemirror/lang-cpp'
 import { java } from '@codemirror/lang-java'
 import { javascript } from '@codemirror/lang-javascript'
 import { python } from '@codemirror/lang-python'
-import { bracketMatching, defaultHighlightStyle, indentUnit, StreamLanguage, syntaxHighlighting, syntaxTree } from '@codemirror/language'
+import { bracketMatching, defaultHighlightStyle, ensureSyntaxTree, indentUnit, StreamLanguage, syntaxHighlighting } from '@codemirror/language'
 import { pascal } from '@codemirror/legacy-modes/mode/pascal'
+import { forceLinting, linter, lintGutter } from '@codemirror/lint'
 import { search, searchKeymap } from '@codemirror/search'
 import type { Extension } from '@codemirror/state'
 import { Compartment, EditorState, StateEffect, StateField } from '@codemirror/state'
 import { oneDarkHighlightStyle } from '@codemirror/theme-one-dark'
-import { linter, lintGutter } from '@codemirror/lint'
-import { Decoration, DecorationSet, drawSelection, EditorView, highlightActiveLine, keymap, lineNumbers } from '@codemirror/view'
+import type { DecorationSet } from '@codemirror/view'
+import { Decoration, drawSelection, EditorView, highlightActiveLine, keymap, lineNumbers } from '@codemirror/view'
 import { onUnmounted, type Ref, ref, watch } from 'vue'
 
 // aceMode -> CodeMirror 语言扩展(洛谷 LUOGU_LANGUAGES[i].aceMode)
@@ -24,16 +25,25 @@ const LANG_EXT: Record<string, () => Extension> = {
   plain_text: () => [],
 }
 
-// 编辑器外观基于 --bew-* 变量(随 .dark 自动切换 bg/fg/gutter)
+// 编辑器外观基于 --bew-* 变量(随 .dark 自动切换 bg/fg/gutter)。
+// 字号跟随全局 --bew-base-font-size(在设置里调"基础字号"时编辑器同步缩放)。
 const baseTheme = EditorView.theme({
-  '&': { backgroundColor: 'var(--bew-fill-1)', color: 'var(--bew-text-1)', height: '100%', fontSize: '14px' },
-  '.cm-scroller': { fontFamily: 'Cascadia Code,Fira Code,JetBrains Mono,Consolas,monospace', lineHeight: '1.65' },
-  '.cm-content': { padding: '0px 0px' },
-  '.cm-gutters': { backgroundColor: 'var(--bew-fill-1)', color: 'var(--bew-text-4)', border: 'none' },
+  '&': { backgroundColor: 'var(--bew-fill-1)', color: 'var(--bew-text-1)', height: '100%', fontSize: 'var(--bew-base-font-size, 15px)' },
+  '.cm-scroller': { fontFamily: 'Cascadia Code,Fira Code,JetBrains Mono,Consolas,monospace', lineHeight: '1.7' },
+  '.cm-content': { padding: '8px 0px' },
+  '.cm-gutters': { backgroundColor: 'var(--bew-fill-1)', color: 'var(--bew-text-4)', border: 'none', fontSize: 'calc(var(--bew-base-font-size, 15px) - 2px)' },
   '&.cm-focused': { outline: 'none' },
   '.cm-activeLine': { backgroundColor: 'transparent' },
   '.cm-errline': { backgroundColor: 'rgba(228,64,76,0.18)' },
   '.cm-selectionBackground, ::selection': { background: 'var(--bew-theme-color-30)' },
+  // 语法检测:让波浪线/tooltip/gutter 醒目可见(@codemirror/lint 默认样式在某些主题下被吞)
+  '.cm-diagnostic': { color: 'var(--bew-text-2)', borderLeft: '3px solid var(--bew-error-color)', background: 'var(--bew-error-color-10, rgba(228,64,76,0.06))' },
+  '.cm-diagnosticText': { fontSize: 'calc(var(--bew-base-font-size, 15px) - 1px)' },
+  '.cm-lintRange': { backgroundPosition: 'left bottom', backgroundSize: '6px 4px' },
+  '.cm-lintRange-error': { backgroundImage: 'linear-gradient(45deg, transparent 65%, var(--bew-error-color) 80%, var(--bew-error-color) 90%, transparent 95%), linear-gradient(-45deg, transparent 65%, var(--bew-error-color) 80%, var(--bew-error-color) 90%, transparent 95%)', backgroundRepeat: 'repeat-x' },
+  '.cm-lintRange-warning': { backgroundImage: 'linear-gradient(45deg, transparent 65%, var(--bew-warning-color) 80%, var(--bew-warning-color) 90%, transparent 95%), linear-gradient(-45deg, transparent 65%, var(--bew-warning-color) 80%, var(--bew-warning-color) 90%, transparent 95%)', backgroundRepeat: 'repeat-x' },
+  '.cm-lint-marker-error, .cm-lint-marker-warning': { fontSize: '12px' },
+  '&.cm-tooltip.cm-tooltip-lint, & .cm-tooltip-lint': { background: 'var(--bew-content)', border: '1px solid var(--bew-border-color)', color: 'var(--bew-text-1)' },
 })
 
 /**
@@ -43,22 +53,26 @@ const baseTheme = EditorView.theme({
  * host 通常在 `v-if` 内,故用 `watch(host)`(flush:post)管理生命周期:
  * 出现即 `new EditorView`,消失即 `destroy()`——`onMounted` 抓不到 v-if 延迟出现的宿主。
  */
-// 实时语法检查:标记 Lezer 语法树里的错误节点(波浪线)。只对带 Lezer 文法的语言
-// (c_cpp/python/java/javascript)生效;plain_text/pascal 无文法则不报。
-const syntaxLinter = linter((view) => {
+// 实时语法检查:等 Lezer 语法树完整解析后,遍历并标记错误节点(波浪线)。
+// 只对带 Lezer 文法的语言(c_cpp/python/java/javascript)生效;plain_text/pascal 无文法则不报。
+// 异步 + ensureSyntaxTree 是关键:同步读 syntaxTree 常拿到未解析完的部分树,漏报错误。
+const syntaxLinter = linter(async (view) => {
   const diags: Array<{ from: number, to: number, severity: 'warning', message: string }> = []
   try {
-    syntaxTree(view.state).iterate({
+    const tree = await ensureSyntaxTree(view.state, view.state.doc.length, 500)
+    if (!tree)
+      return diags // 解析超时,本轮跳过(下次 keystroke 再试)
+    tree.iterate({
       enter(node) {
         const t = node.type as any
         if (t && t.isError && node.to > node.from)
-          diags.push({ from: node.from, to: node.to, severity: 'warning', message: '语法错误' })
+          diags.push({ from: node.from, to: node.to, severity: 'error', message: '语法错误:此处无法解析' })
       },
     })
   }
   catch { /* never let lint break the editor */ }
   return diags.slice(0, 50)
-})
+}, { delay: 400 })
 
 // 报错行高亮:外部把 CE/RE 报错解析出的行号喂进来,编辑器高亮对应行。
 const setHighlight = StateEffect.define<number[]>()
@@ -153,6 +167,12 @@ export function useCodeMirror(opts: {
       }
     })
     darkObs.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] })
+    // 初始载入代码(如 lastCode)时强制跑一次语法检测——linter 默认只在文档变更时触发,
+    // 而 EditorState.create 的初始 doc 不算 update,否则打开就有错也不显示波浪线。
+    setTimeout(() => {
+      if (view)
+        forceLinting(view)
+    }, 150)
   }
 
   function destroy() {

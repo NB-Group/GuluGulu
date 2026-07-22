@@ -15,6 +15,7 @@ export enum AppPage {
   Messages = 'Messages',
   Solution = 'Solution',
   Article = 'Article',
+  UserSetting = 'UserSetting',
   MyProblems = 'MyProblems',
   MyContests = 'MyContests',
   TrainingFav = 'TrainingFav',
