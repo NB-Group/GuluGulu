@@ -72,19 +72,22 @@ export function useDark() {
       flipTheme()
       return
     }
-    // 分数 devicePixelRatio(110/125/150/166% 等)下,VT 在设备像素↔CSS px 重投影时把快照整体
-    // 偏移,clip-path 圆心会比点击点高/偏(85d22f2 当年为此弃用 VT)。检测到分数 dpr 就不启用
-    // clip-path 圆扩散,改走 VT 默认交叉淡入:两侧仍是真实内容快照,且无圆心定位 → 无可察觉偏移。
-    const dpr = window.devicePixelRatio || 1
-    const useClipPath = Math.abs(dpr - Math.round(dpr)) <= 0.01
     ensureViewTransitionCss()
-    document.documentElement.classList.toggle('guly-vt-clip', useClipPath)
+    document.documentElement.classList.add('guly-vt-clip')
     // VT 回调内必须【同步】改变 DOM(否则 VT 捕获的新旧一致→无过渡)。
     // flipTheme 改 reactive setting,class 由 watch 异步施加,所以这里同步补一次 setAppAppearance。
     const t = d.startViewTransition(() => { flipTheme(); setAppAppearance() })
-    if (!useClipPath)
-      return // 分数 dpr:VT 默认交叉淡入,不做 clip-path
     t.ready.then(() => {
+      // 调查分数 dpr 下圆心偏移:记录伪元素几何 + 点击坐标,据此精确补偿圆心(临时日志,修后删)。
+      try {
+        const dpr = window.devicePixelRatio || 1
+        if (Math.abs(dpr - Math.round(dpr)) > 0.01) {
+          const g = getComputedStyle(document.documentElement, '::view-transition-group(root)')
+          const n = getComputedStyle(document.documentElement, '::view-transition-new(root)')
+          console.debug('[guly-vt-offset]', JSON.stringify({ dpr, vw: innerWidth, vh: innerHeight, click: { x, y }, group: { top: g.top, left: g.left, w: g.width, h: g.height }, new: { top: n.top, left: n.left, w: n.width, h: n.height } }))
+        }
+      }
+      catch {}
       const maxR = Math.hypot(Math.max(x, window.innerWidth - x), Math.max(y, window.innerHeight - y))
       document.documentElement.animate(
         { clipPath: [`circle(0px at ${x}px ${y}px)`, `circle(${maxR}px at ${x}px ${y}px)`] },
