@@ -1,12 +1,12 @@
 <script setup lang="ts">
-import { useGulyApp } from '~/composables/useAppProvider'
+import { useGuluApp } from '~/composables/useAppProvider'
 import { AppPage } from '~/enums/appEnums'
 import { renderIcon } from '~/utils/icons'
 import { friendlyError } from '~/utils/luogu-api'
 import { timeAgo } from '~/utils/main'
 
 const props = withDefaults(defineProps<{ embedded?: boolean }>(), { embedded: false })
-const { currentUrl, navigateTo } = useGulyApp()
+const { currentUrl, navigateTo } = useGuluApp()
 
 // ============================================================
 // Type taxonomy (洛谷标准, 2026-07 抓包确认)

@@ -1,11 +1,11 @@
 <script setup lang="ts">
-import { useGulyApp } from '~/composables/useAppProvider'
+import { useGuluApp } from '~/composables/useAppProvider'
 import { AppPage } from '~/enums/appEnums'
 import { renderIcon } from '~/utils/icons'
 import { fetchLentilleContext, friendlyError, getCsrfToken } from '~/utils/luogu-api'
 import { captchaImageUrl, uploadAndSetAvatar } from '~/utils/upload'
 
-const { navigateTo } = useGulyApp()
+const { navigateTo } = useGuluApp()
 
 type SettingTab = 'profile' | 'prize' | 'preferences'
 
@@ -59,7 +59,7 @@ onUnmounted(() => {
 // ============================================================
 // 当前用户
 // ============================================================
-const myUid = computed(() => Number((window as any).__guly_user?.uid) || 0)
+const myUid = computed(() => Number((window as any).__gulu_user?.uid) || 0)
 
 // ============================================================
 // Toast 提示(简单内联,参考 Blog.vue 的提示风格)

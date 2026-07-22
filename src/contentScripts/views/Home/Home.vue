@@ -2,13 +2,13 @@
 import { useThrottleFn } from '@vueuse/core'
 
 import Sidebar from './components/Sidebar.vue'
-import { useGulyApp } from '~/composables/useAppProvider'
+import { useGuluApp } from '~/composables/useAppProvider'
 import { HomeSubPage } from '~/enums/appEnums'
 import type { HomeTab } from '~/stores/mainStore'
 import { useMainStore } from '~/stores/mainStore'
 
 const mainStore = useMainStore()
-const { handleBackToTop, scrollbarRef } = useGulyApp()
+const { handleBackToTop, scrollbarRef } = useGuluApp()
 const handleThrottledBackToTop = useThrottleFn((targetScrollTop: number = 0) => handleBackToTop(targetScrollTop), 1000)
 
 // Fetch Luogu homepage banner image

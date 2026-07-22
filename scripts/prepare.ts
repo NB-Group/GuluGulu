@@ -11,7 +11,7 @@ import { isDev, isFirefox, isSafari, log, r } from './utils'
  * Monaco's ESM build `import`s ~90 `.css` files as JS modules. A raw browser
  * ESM context (no bundler) rejects CSS-as-module (`Failed to load module …
  * MIME type text/css`). We strip those side-effect imports from the copied
- * tree and instead concatenate all CSS into one JS module (`_guly_styles.js`)
+ * tree and instead concatenate all CSS into one JS module (`_gulu_styles.js`)
  * that the content script injects into the editor's shadow root at runtime.
  * Relative url() refs (codicon font) are rewritten to a placeholder the
  * runtime swaps for the chrome-extension base URL.
@@ -51,8 +51,8 @@ function flattenMonacoCss(esmDir: string) {
     }
   }
   collect(esmDir)
-  fs.writeFileSync(path.join(esmDir, '_guly_styles.js'), `export default ${JSON.stringify(cssChunks.join('\n'))};\n`)
-  log('PRE', `monaco css flattened: ${cssChunks.length} files → _guly_styles.js`)
+  fs.writeFileSync(path.join(esmDir, '_gulu_styles.js'), `export default ${JSON.stringify(cssChunks.join('\n'))};\n`)
+  log('PRE', `monaco css flattened: ${cssChunks.length} files → _gulu_styles.js`)
 
   // Monaco 0.56 dom.js calls `customElements.get(...)` at module-eval time.
   // In the content-script worker / about:blank frame `customElements` is null,

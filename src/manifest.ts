@@ -90,7 +90,7 @@ export async function getManifest() {
   if (isFirefox) {
     manifest.browser_specific_settings = {
       gecko: {
-        id: 'addon@gulyguly.com',
+        id: 'addon@gulugulu.com',
       },
     }
   }

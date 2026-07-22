@@ -2,13 +2,13 @@
 import { onKeyStroke } from '@vueuse/core'
 import { computed, onBeforeUnmount, ref, watch } from 'vue'
 
-import { useGulyApp } from '~/composables/useAppProvider'
+import { useGuluApp } from '~/composables/useAppProvider'
 import type { VerdictResult } from '~/utils/luogu-api'
 import { AppPage } from '~/enums/appEnums'
 
 const props = defineProps<{ result: VerdictResult | null }>()
 const emit = defineEmits<{ dismiss: [] }>()
-const { mainAppRef, navigateTo } = useGulyApp()
+const { mainAppRef, navigateTo } = useGuluApp()
 
 // 查看记录:in-SPA 跳转到 Record 页(而非 target=_blank 开新标签,后者体验割裂)
 function viewRecord() {

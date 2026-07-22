@@ -28,7 +28,7 @@ const isLoggedIn = async ctx => {
 async function waitForMount(page, ms = 60000) {
   const t0 = Date.now()
   while (Date.now() - t0 < ms) {
-    const ok = await page.evaluate(() => !!document.querySelector('#guly')?.shadowRoot)
+    const ok = await page.evaluate(() => !!document.querySelector('#gulu')?.shadowRoot)
     if (ok) return true
     await sleep(1000)
   }
@@ -38,7 +38,7 @@ async function waitForMount(page, ms = 60000) {
 // Run an inline fn inside the page with access to the shadow root + document.
 async function evalShadow(page, fn) {
   return page.evaluate(fnSrc => {
-    const sr = document.querySelector('#guly')?.shadowRoot
+    const sr = document.querySelector('#gulu')?.shadowRoot
     if (!sr) return { __noShadow: true }
     // eslint-disable-next-line no-new-func
     return (new Function('sr', 'document', `return (${fnSrc})(sr, document)`))(sr, document)
@@ -68,7 +68,7 @@ check('登录态', await isLoggedIn(ctx), await isLoggedIn(ctx) ? '已登录' : 
 console.log('\n[首页] https://www.luogu.com.cn/')
 await page.goto(HOME, { waitUntil: 'domcontentloaded' }).catch(() => {})
 const homeMounted = await waitForMount(page)
-check('#guly shadow 挂载', homeMounted)
+check('#gulu shadow 挂载', homeMounted)
 
 if (homeMounted) {
   const fontCheck = await page.evaluate(async () => {

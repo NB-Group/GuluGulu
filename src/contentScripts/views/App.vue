@@ -2,7 +2,7 @@
 import { useThrottleFn, useToggle } from '@vueuse/core'
 import type { Ref } from 'vue'
 
-import type { GulyAppProvider } from '~/composables/useAppProvider'
+import type { GuluAppProvider } from '~/composables/useAppProvider'
 import { useDark } from '~/composables/useDark'
 import { GULY_MOUNTED, OVERLAY_SCROLL_BAR_SCROLL } from '~/constants/globalEvents'
 import { AppPage } from '~/enums/appEnums'
@@ -130,7 +130,7 @@ const handleThrottledBackToTop = useThrottleFn(() => handleBackToTop(), 1000)
 const topBarRef = ref()
 const reachTop = ref<boolean>(true)
 
-const showGulyPage = computed((): boolean => {
+const showGuluPage = computed((): boolean => {
   if (isInIframe())
     return false
   // Show GuluGulu full UI on all supported Luogu pages
@@ -177,7 +177,7 @@ watch(
 
 // Apply theme color CSS variables to the shadow root
 function applyThemeColor() {
-  const el = document.getElementById('guly')
+  const el = document.getElementById('gulu')
   if (!el)
     return
   const color = settings.value.themeColor
@@ -192,14 +192,14 @@ watch(() => settings.value.themeColor, applyThemeColor, { immediate: true })
 
 // Apply base font size
 watch(() => settings.value.baseFontSize, (size) => {
-  const el = document.getElementById('guly')
+  const el = document.getElementById('gulu')
   if (el)
     el.style.setProperty('--bew-base-font-size', `${size}px`)
 }, { immediate: true })
 
 // Apply page max width
 watch(() => settings.value.pageMaxWidth, (width) => {
-  const el = document.getElementById('guly')
+  const el = document.getElementById('gulu')
   if (el)
     el.style.setProperty('--bew-page-max-width', `${width}px`)
 }, { immediate: true })
@@ -365,7 +365,7 @@ function openIframeDrawer(url: string) {
   openLinkToNewTab(url)
 }
 
-provide<GulyAppProvider>('GULY_APP', {
+provide<GuluAppProvider>('GULY_APP', {
   activatedPage,
   currentUrl,
   mainAppRef,
@@ -383,14 +383,14 @@ provide<GulyAppProvider>('GULY_APP', {
 
 <template>
   <div
-    id="guly-wrapper"
+    id="gulu-wrapper"
     ref="mainAppRef"
-    class="guly-wrapper"
+    class="gulu-wrapper"
     :class="{ dark: isDark }"
     text="$bew-text-1 size-$bew-base-font-size"
   >
     <!-- Background -->
-    <template v-if="showGulyPage">
+    <template v-if="showGuluPage">
       <AppBackground :activated-page="activatedPage" />
     </template>
 
@@ -430,11 +430,11 @@ provide<GulyAppProvider>('GULY_APP', {
     <div
       pos="absolute top-0 left-0" w-full h-full
       :style="{
-        height: showGulyPage ? '100dvh' : '0',
+        height: showGuluPage ? '100dvh' : '0',
       }"
     >
       <Transition name="fade">
-        <template v-if="showGulyPage">
+        <template v-if="showGuluPage">
           <OverlayScrollbarsComponent ref="scrollbarRef" element="div" h-inherit defer @os-scroll="handleOsScroll">
             <main m-auto max-w="$bew-page-max-width">
               <div

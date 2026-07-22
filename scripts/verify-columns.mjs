@@ -19,11 +19,11 @@ const sleep = ms => new Promise(r => setTimeout(r, ms))
 for (const w of WIDTHS) {
   await page.setViewportSize({ width: w, height: 900 })
   await page.goto(URL_, { waitUntil: 'domcontentloaded', timeout: 60000 }).catch(() => {})
-  await page.waitForFunction(() => !!document.querySelector('#guly')?.shadowRoot, { timeout: 45000 }).catch(() => {})
+  await page.waitForFunction(() => !!document.querySelector('#gulu')?.shadowRoot, { timeout: 45000 }).catch(() => {})
   await sleep(4500) // let profile + layout render
 
   const geom = await page.evaluate(() => {
-    const sr = document.querySelector('#guly')?.shadowRoot
+    const sr = document.querySelector('#gulu')?.shadowRoot
     if (!sr) return { mounted: false }
     const side = sr.querySelector('.profile-sidebar-col')
     const main = side?.nextElementSibling
@@ -45,13 +45,13 @@ for (const w of WIDTHS) {
   let sticky = 'n/a'
   if (w >= 1024 && geom.hasOsViewport) {
     await page.evaluate(() => {
-      const sr = document.querySelector('#guly')?.shadowRoot
+      const sr = document.querySelector('#gulu')?.shadowRoot
       const vp = sr.querySelector('.os-viewport') || sr.querySelector('[data-overlayscrollbars-viewport]')
       if (vp) vp.scrollTop = 700
     })
     await sleep(600)
     const topAfter = await page.evaluate(() => {
-      const sr = document.querySelector('#guly')?.shadowRoot
+      const sr = document.querySelector('#gulu')?.shadowRoot
       return Math.round(sr.querySelector('.profile-sidebar-col')?.getBoundingClientRect()?.top || 0)
     })
     sticky = `topAfterScroll=${topAfter} (held=${topAfter > 0 && topAfter < 250})`

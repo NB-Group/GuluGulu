@@ -2,13 +2,13 @@
 import { renderIcon } from '~/utils/icons'
 import { timeAgo } from '~/utils/main'
 import { AppPage } from '~/enums/appEnums'
-import { useGulyApp } from '~/composables/useAppProvider'
+import { useGuluApp } from '~/composables/useAppProvider'
 
 defineProps<{
   discussions: Array<{ id: number, title: string, author: any, time: number, replyCount: number }>
 }>()
 
-const { navigateTo } = useGulyApp()
+const { navigateTo } = useGuluApp()
 </script>
 
 <template>

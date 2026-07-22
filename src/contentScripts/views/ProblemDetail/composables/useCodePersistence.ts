@@ -13,7 +13,7 @@ export function useCodePersistence(opts: {
   problemId: Ref<string> | ComputedRef<string>
 }) {
   function localCodeKey(pid: string) {
-    return `guly:code:${pid}`
+    return `gulu:code:${pid}`
   }
 
   function loadLocalCode(pid: string): { code: string, lang: number } | null {

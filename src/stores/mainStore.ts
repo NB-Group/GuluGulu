@@ -10,7 +10,7 @@ export interface DockItem {
   openInNewTab: boolean
   useOriginalLuoguPage: boolean
   url: string
-  hasGulyPage: boolean // Whether GuluGulu has a page for this item
+  hasGuluPage: boolean // Whether GuluGulu has a page for this item
 }
 
 export interface HomeTab {
@@ -29,7 +29,7 @@ export const useMainStore = defineStore('main', () => {
         openInNewTab: false,
         useOriginalLuoguPage: false,
         url: 'https://www.luogu.com.cn/',
-        hasGulyPage: true,
+        hasGuluPage: true,
       },
       {
         i18nKey: 'nav.problem_list',
@@ -39,7 +39,7 @@ export const useMainStore = defineStore('main', () => {
         openInNewTab: false,
         useOriginalLuoguPage: false,
         url: 'https://www.luogu.com.cn/problem/list',
-        hasGulyPage: true,
+        hasGuluPage: true,
       },
       {
         i18nKey: 'nav.contest_list',
@@ -49,7 +49,7 @@ export const useMainStore = defineStore('main', () => {
         openInNewTab: false,
         useOriginalLuoguPage: false,
         url: 'https://www.luogu.com.cn/contest/list',
-        hasGulyPage: true,
+        hasGuluPage: true,
       },
       {
         i18nKey: 'nav.ranking',
@@ -59,7 +59,7 @@ export const useMainStore = defineStore('main', () => {
         openInNewTab: false,
         useOriginalLuoguPage: false,
         url: 'https://www.luogu.com.cn/ranking',
-        hasGulyPage: true,
+        hasGuluPage: true,
       },
       {
         i18nKey: 'nav.blog',
@@ -69,7 +69,7 @@ export const useMainStore = defineStore('main', () => {
         openInNewTab: false,
         useOriginalLuoguPage: false,
         url: 'https://www.luogu.com.cn/discuss',
-        hasGulyPage: true,
+        hasGuluPage: true,
       },
       {
         i18nKey: 'nav.training',
@@ -79,7 +79,7 @@ export const useMainStore = defineStore('main', () => {
         openInNewTab: false,
         useOriginalLuoguPage: false,
         url: 'https://www.luogu.com.cn/training/list',
-        hasGulyPage: true,
+        hasGuluPage: true,
       },
       {
         i18nKey: 'nav.record',
@@ -89,7 +89,7 @@ export const useMainStore = defineStore('main', () => {
         openInNewTab: false,
         useOriginalLuoguPage: false,
         url: 'https://www.luogu.com.cn/record/list',
-        hasGulyPage: true,
+        hasGuluPage: true,
       },
       {
         i18nKey: 'nav.messages',
@@ -99,7 +99,7 @@ export const useMainStore = defineStore('main', () => {
         openInNewTab: false,
         useOriginalLuoguPage: false,
         url: 'https://www.luogu.com.cn/chat',
-        hasGulyPage: true,
+        hasGuluPage: true,
       },
       {
         i18nKey: 'nav.article',
@@ -109,7 +109,7 @@ export const useMainStore = defineStore('main', () => {
         openInNewTab: false,
         useOriginalLuoguPage: false,
         url: 'https://www.luogu.com.cn/article',
-        hasGulyPage: true,
+        hasGuluPage: true,
       },
     ]
   })

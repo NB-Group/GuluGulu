@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import { renderIcon } from '~/utils/icons'
 import { AppPage } from '~/enums/appEnums'
-import { useGulyApp } from '~/composables/useAppProvider'
+import { useGuluApp } from '~/composables/useAppProvider'
 
-const { navigateTo } = useGulyApp()
+const { navigateTo } = useGuluApp()
 
 interface Problem {
   pid: string; title: string; difficulty: number

@@ -2,9 +2,9 @@
 import { renderIcon } from '~/utils/icons'
 import { timeAgo } from '~/utils/main'
 import { AppPage } from '~/enums/appEnums'
-import { useGulyApp } from '~/composables/useAppProvider'
+import { useGuluApp } from '~/composables/useAppProvider'
 
-const { navigateTo } = useGulyApp()
+const { navigateTo } = useGuluApp()
 
 interface Post {
   id: number; title: string; time: number; topped: boolean; locked: boolean

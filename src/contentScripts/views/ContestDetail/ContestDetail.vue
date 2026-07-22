@@ -3,11 +3,11 @@ import { renderIcon } from '~/utils/icons'
 import { getCsrfToken, ideExecLabel, isLoggedIn as checkLuoguLogin, LUOGU_LANGUAGES, parseErrorLines, parseIdeExecute, pollRecordVerdict, submitCode, friendlyError } from '~/utils/luogu-api'
 import type { VerdictResult } from '~/utils/luogu-api'
 import { parseMarkdownContent } from '~/utils/markdown'
-import { useGulyApp } from '~/composables/useAppProvider'
+import { useGuluApp } from '~/composables/useAppProvider'
 import { useTween } from '~/composables/useTween'
 import { AppPage } from '~/enums/appEnums'
 
-const { currentUrl, navigateTo } = useGulyApp()
+const { currentUrl, navigateTo } = useGuluApp()
 
 // ============================================================
 // Contest ID from URL
@@ -250,7 +250,7 @@ async function runSelfTest() {
   if (testRunning.value) return
   testRunning.value = true; testVerdict.value = ''; testActualOutput.value = '编译运行中…'
   cleanupWs()
-  const csrf = (window as any).__guly_user?.csrfToken || ''
+  const csrf = (window as any).__gulu_user?.csrfToken || ''
   let resolved = false
   activeWs = new WebSocket('wss://ws.luogu.com.cn/ws')
   const ws = activeWs
@@ -443,7 +443,7 @@ function openRecord(rid: number) { navigateTo(AppPage.Record, `https://www.luogu
 // Current user's per-problem scores (from the scoreboard), so the problem list
 // shows real attainment instead of the always-100 max. Null until the
 // scoreboard loads or if the user isn't on it (not registered / not started).
-const myUid = computed(() => Number((window as any).__guly_user?.uid) || 0)
+const myUid = computed(() => Number((window as any).__gulu_user?.uid) || 0)
 // 每行按当前 problems 顺序从 details 派生每题分 + 预计算每个格子的色块样式。
 // 派生放 computed 里:① 对齐避免 fetch 时 problems 未就绪的竞态;② memoize 后只在
 // scoreboard/problems 变化时重算——否则进行中的比赛每秒 nowTs tick 触发整组件重渲染,

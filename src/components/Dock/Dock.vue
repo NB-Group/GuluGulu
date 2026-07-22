@@ -3,7 +3,7 @@ import { useElementSize, useWindowSize } from '@vueuse/core'
 import { computed, reactive, ref } from 'vue'
 
 import { renderIcon } from '~/utils/icons'
-import { useGulyApp } from '~/composables/useAppProvider'
+import { useGuluApp } from '~/composables/useAppProvider'
 import { useDark } from '~/composables/useDark'
 import { useMessagePolling } from '~/composables/useMessagePolling'
 import { useDelayedHover } from '~/composables/useDelayedHover'
@@ -29,7 +29,7 @@ const emit = defineEmits<{
 const mainStore = useMainStore()
 const { isDark, toggleDark } = useDark()
 const { unreadMsgCount } = useMessagePolling()
-const { reachTop } = useGulyApp()
+const { reachTop } = useGuluApp()
 
 const hideDock = ref<boolean>(false)
 const dockContentHover = ref<boolean>(false)

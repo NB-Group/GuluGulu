@@ -18,7 +18,7 @@ function toggleNotify() {
 }
 
 async function poll() {
-  const uid = (window as any).__guly_user?.uid
+  const uid = (window as any).__gulu_user?.uid
   if (!uid || uid === '0') return
   const lastPollKey = 'gulugulu-last-poll'
   const lastPoll = Number(localStorage.getItem(lastPollKey) || '0')
@@ -56,7 +56,7 @@ async function poll() {
     }
 
     prevUnreadCount.value = total
-    if (!(window as any).__guly_viewing_messages) unreadMsgCount.value = total
+    if (!(window as any).__gulu_viewing_messages) unreadMsgCount.value = total
     if (onNewData) onNewData(json)
   } catch {}
 }
@@ -81,7 +81,7 @@ function resetUnread() {
 
 export function useMessagePolling() {
   onMounted(() => {
-    const uid = (window as any).__guly_user?.uid
+    const uid = (window as any).__gulu_user?.uid
     if (uid && uid !== '0') start()
   })
   onUnmounted(() => stop())

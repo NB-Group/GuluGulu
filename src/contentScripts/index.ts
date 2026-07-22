@@ -174,10 +174,10 @@ export function isSupportedIframePages(): boolean {
 
 let beforeLoadedStyleEl: HTMLStyleElement | undefined
 
-// Apply dark mode + guly-design class on ALL Luogu pages (including auth)
+// Apply dark mode + gulu-design class on ALL Luogu pages (including auth)
 if (/https?:\/\/(?:www\.)?luogu\.com(?:\.cn)?/.test(currentUrl)
   || /https?:\/\/(?:www\.)?luogu\.org/.test(currentUrl)) {
-  document.documentElement.classList.add('guly-design')
+  document.documentElement.classList.add('gulu-design')
   // Set dark class synchronously before Vue mounts to prevent flash
   // Cache is written by useDark.ts whenever theme changes
   try {
@@ -204,10 +204,10 @@ if (/https?:\/\/(?:www\.)?luogu\.com(?:\.cn)?/.test(currentUrl)
   // opaque themed base under everything means any snapshot gap reveals the
   // correct color instead of white. This style is NEVER removed.
   injectCSS(`
-    html.guly-design {
+    html.gulu-design {
       background-color: #f5f5f5;
     }
-    html.guly-design.dark {
+    html.gulu-design.dark {
       background-color: #1a1a1a;
     }
   `)
@@ -286,7 +286,7 @@ async function onDOMLoaded() {
       try {
         const punchEl = document.querySelector('.lg-punch')
         if (punchEl && punchEl.innerHTML.includes('运势')) {
-          ;(window as any).__guly_punch = { done: true, html: punchEl.innerHTML }
+          ;(window as any).__gulu_punch = { done: true, html: punchEl.innerHTML }
           break
         }
       }
@@ -298,7 +298,7 @@ async function onDOMLoaded() {
     try {
       const lcEl = document.getElementById('lentille-context')
       if (lcEl?.textContent?.trim()) {
-        (window as any).__guly_lentille = JSON.parse(lcEl.textContent)
+        (window as any).__gulu_lentille = JSON.parse(lcEl.textContent)
       }
     } catch (e) { console.warn('[GuluGulu]', e) }
 
@@ -319,7 +319,7 @@ async function onDOMLoaded() {
     }
 
     // Store user data for the Vue app
-    ;(window as any).__guly_user = {
+    ;(window as any).__gulu_user = {
       uid: userIdCookie,
       name: userName,
       csrfToken,
@@ -373,12 +373,12 @@ else
   document.addEventListener('DOMContentLoaded', () => waitForBodyThenInject())
 
 // 后退/前进恢复:Chrome 可能不重跑本内容脚本就还原页面(bfcache,或 instant/prerender
-// 等非 bfcache 路径)。只要还原出的页面 #guly 缺失且 URL 受支持,就重注——不限定
-// event.persisted,否则非 bfcache 后退若脚本没重跑、#guly 仍缺时会漏注(用户反映
-// "后退有时不加载插件")。#guly 已存在 = 应用内后退,App.vue 的 popstate 已处理,跳过。
-// onDOMLoaded 的 injecting 锁防止与首次注入并发;#guly 存在性挡住 double-inject。
+// 等非 bfcache 路径)。只要还原出的页面 #gulu 缺失且 URL 受支持,就重注——不限定
+// event.persisted,否则非 bfcache 后退若脚本没重跑、#gulu 仍缺时会漏注(用户反映
+// "后退有时不加载插件")。#gulu 已存在 = 应用内后退,App.vue 的 popstate 已处理,跳过。
+// onDOMLoaded 的 injecting 锁防止与首次注入并发;#gulu 存在性挡住 double-inject。
 window.addEventListener('pageshow', () => {
-  if (document.querySelector('#guly'))
+  if (document.querySelector('#gulu'))
     return
   currentUrl = document.URL // refresh stale module-level URL
   if (!(isSupportedPages() || isSupportedIframePages()))
@@ -397,10 +397,10 @@ function _injectAppWhenIdle() {
 }
 
 function injectApp() {
-  // Remove guly element if it already exists and the version is older
-  const gulyElArr: NodeListOf<Element> = document.querySelectorAll('#guly')
-  if (gulyElArr.length > 0) {
-    gulyElArr.forEach((el: Element) => {
+  // Remove gulu element if it already exists and the version is older
+  const guluElArr: NodeListOf<Element> = document.querySelectorAll('#gulu')
+  if (guluElArr.length > 0) {
+    guluElArr.forEach((el: Element) => {
       const elVersion = el.getAttribute('data-version') || '0.0.0'
       const elIsDev = el.getAttribute('data-dev') === 'true'
 
@@ -415,7 +415,7 @@ function injectApp() {
 
   // Mount component to context window
   const container = document.createElement('div')
-  container.id = 'guly'
+  container.id = 'gulu'
   container.setAttribute('data-version', version)
   container.setAttribute('data-dev', import.meta.env.DEV ? 'true' : 'false')
   // Apply dark class BEFORE Shadow DOM creation to prevent any flash

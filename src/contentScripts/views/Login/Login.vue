@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { renderIcon } from '~/utils/icons'
 
-const uid = computed(() => (window as any).__guly_user?.uid || '')
+const uid = computed(() => (window as any).__gulu_user?.uid || '')
 const isLoggedIn = computed(() => !!uid.value && uid.value !== '0')
 
 function doLogin() {

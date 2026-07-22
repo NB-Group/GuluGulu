@@ -1,12 +1,12 @@
 <script setup lang="ts">
-import { useGulyApp } from '~/composables/useAppProvider'
+import { useGuluApp } from '~/composables/useAppProvider'
 import { AppPage } from '~/enums/appEnums'
 import { renderIcon } from '~/utils/icons'
 import { friendlyError, getCsrfToken, isLoggedIn as checkLuoguLogin } from '~/utils/luogu-api'
 import { timeAgo } from '~/utils/main'
 import { parseMarkdownContent } from '~/utils/markdown'
 
-const { currentUrl, navigateTo } = useGulyApp()
+const { currentUrl, navigateTo } = useGuluApp()
 
 // 分类映射(洛谷专栏固定 6 类)
 const catLabels: Record<number, string> = { 1: '算法', 2: '游记', 3: '题解', 4: '杂谈', 5: '科技', 6: '生活' }
@@ -328,9 +328,9 @@ async function postReply() {
       replies.value.push({
         id: newId || Date.now(),
         author: json?.reply?.author || {
-          uid: Number((window as any).__guly_user?.uid) || 0,
-          name: (window as any).__guly_user?.name || '',
-          avatar: `https://cdn.luogu.com.cn/upload/usericon/${(window as any).__guly_user?.uid || 0}.png`,
+          uid: Number((window as any).__gulu_user?.uid) || 0,
+          name: (window as any).__gulu_user?.name || '',
+          avatar: `https://cdn.luogu.com.cn/upload/usericon/${(window as any).__gulu_user?.uid || 0}.png`,
           color: '',
         },
         time: json?.reply?.time || Math.floor(Date.now() / 1000),
@@ -475,35 +475,35 @@ onUnmounted(() => obs?.disconnect())
           <!-- 互动栏:赞 / 踩 / 评论 / 收藏 —— 统一 chip 样式 -->
           <div mt-6 pt-4 border="t-1 $bew-border-color" flex="~ items-center gap-2 wrap">
             <button
-              class="guly-art-chip"
-              :class="{ 'guly-art-chip--active': Number(detail.voted) === 1 }"
+              class="gulu-art-chip"
+              :class="{ 'gulu-art-chip--active': Number(detail.voted) === 1 }"
               :disabled="voteSending"
               @click="voteArticle(1)"
             >
-              <span class="guly-art-chip-ico" v-html="renderIcon('mingcute:thumb-up-line', 16)" />
+              <span class="gulu-art-chip-ico" v-html="renderIcon('mingcute:thumb-up-line', 16)" />
               <span>{{ detail.upvote ?? 0 }}</span>
             </button>
             <button
-              class="guly-art-chip"
-              :class="{ 'guly-art-chip--active-warn': Number(detail.voted) === -1 }"
+              class="gulu-art-chip"
+              :class="{ 'gulu-art-chip--active-warn': Number(detail.voted) === -1 }"
               :disabled="voteSending"
               :title="Number(detail.voted) === -1 ? '已踩,再次点击取消' : '不喜欢'"
               @click="voteArticle(-1)"
             >
-              <span class="guly-art-chip-ico" v-html="renderIcon('mingcute:thumb-down-line', 16)" />
+              <span class="gulu-art-chip-ico" v-html="renderIcon('mingcute:thumb-down-line', 16)" />
               <span>踩</span>
             </button>
-            <span class="guly-art-chip guly-art-chip--static">
-              <span class="guly-art-chip-ico" v-html="renderIcon('mingcute:comment-line', 16)" />
+            <span class="gulu-art-chip gulu-art-chip--static">
+              <span class="gulu-art-chip-ico" v-html="renderIcon('mingcute:comment-line', 16)" />
               <span>{{ detail.replyCount ?? replies.length }}</span>
             </span>
             <button
-              class="guly-art-chip"
-              :class="{ 'guly-art-chip--active': detail.favored }"
+              class="gulu-art-chip"
+              :class="{ 'gulu-art-chip--active': detail.favored }"
               :disabled="favorSending"
               @click="toggleFavor"
             >
-              <span class="guly-art-chip-ico" v-html="renderIcon('mingcute:star-line', 16)" />
+              <span class="gulu-art-chip-ico" v-html="renderIcon('mingcute:star-line', 16)" />
               <span>{{ detail.favorCount ?? 0 }}</span>
             </button>
           </div>
@@ -686,7 +686,7 @@ onUnmounted(() => obs?.disconnect())
 
 <style lang="scss" scoped>
 // 统一的互动 chip:图标 + 文字内联,所有按钮同款
-.guly-art-chip {
+.gulu-art-chip {
   display: inline-flex;
   align-items: center;
   gap: 6px;
@@ -715,12 +715,12 @@ onUnmounted(() => obs?.disconnect())
     cursor: wait;
   }
 }
-.guly-art-chip-ico {
+.gulu-art-chip-ico {
   display: inline-flex;
   align-items: center;
   line-height: 0; // 让 svg 垂直居中,不撑高行
 }
-.guly-art-chip--static {
+.gulu-art-chip--static {
   cursor: default;
   &:hover {
     background: var(--bew-fill-1);
@@ -728,7 +728,7 @@ onUnmounted(() => obs?.disconnect())
   }
 }
 // 已赞 / 已收藏:主题色实心
-.guly-art-chip--active {
+.gulu-art-chip--active {
   background: var(--bew-theme-color);
   border-color: var(--bew-theme-color);
   color: #fff;
@@ -739,7 +739,7 @@ onUnmounted(() => obs?.disconnect())
   }
 }
 // 已踩:警告色实心
-.guly-art-chip--active-warn {
+.gulu-art-chip--active-warn {
   background: var(--bew-error-color);
   border-color: var(--bew-error-color);
   color: #fff;

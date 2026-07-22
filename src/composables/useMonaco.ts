@@ -2,7 +2,7 @@ import type { Ref } from 'vue'
 import { onUnmounted, ref, watch } from 'vue'
 import browser from 'webextension-polyfill'
 
-import { bracketDiagnostics, checkGulySyntax, ensureMonaco, prettyFormat } from '~/utils/monaco'
+import { bracketDiagnostics, checkGuluSyntax, ensureMonaco, prettyFormat } from '~/utils/monaco'
 import { lintCpp } from '~/utils/treeSitterLint'
 
 /**
@@ -59,7 +59,7 @@ function readBaseFontSize(host: HTMLElement): number {
 
 const MONO_FONT = `'JetBrains Mono','Fira Code','Cascadia Code','Source Code Pro','DejaVu Sans Mono',Consolas,ui-monospace,monospace`
 const CUSTOM_CSS = `
-.guly-errline { background: rgba(228,64,76,0.18) !important; }
+.gulu-errline { background: rgba(228,64,76,0.18) !important; }
 .monaco-editor .overflow-guard { border-radius: inherit; }
 .monaco-editor, .monaco-editor-background, .monaco-editor .margin {
   background-color: var(--bew-fill-1);
@@ -94,7 +94,7 @@ export function useMonaco(opts: {
   // the shadow DOM too). Idempotent. Call BEFORE creating the editor so the
   // font is available for Monaco's metric measurement.
   function injectFontFace() {
-    if (document.getElementById('guly-monaco-fontface'))
+    if (document.getElementById('gulu-monaco-fontface'))
       return
     const fm = (w: number) => browser.runtime.getURL(`/assets/fonts/jetbrains-mono/jetbrains-mono-${w}.woff2`)
     const css = `
@@ -103,35 +103,35 @@ export function useMonaco(opts: {
 @font-face { font-family: 'JetBrains Mono'; font-weight: 700; font-style: normal; font-display: swap; src: url(${fm(700)}) format('woff2'); }
 `
     const el = document.createElement('style')
-    el.id = 'guly-monaco-fontface'
+    el.id = 'gulu-monaco-fontface'
     el.textContent = css
     document.head.appendChild(el)
   }
 
   function injectCustomCss(root: ShadowRoot) {
-    if ((root as any).__gulyMonacoCss)
+    if ((root as any).__guluMonacoCss)
       return
     const el = document.createElement('style')
     el.textContent = CUSTOM_CSS
     root.appendChild(el)
-    ;(root as any).__gulyMonacoCss = true
+    ;(root as any).__guluMonacoCss = true
   }
 
   // Monaco's CSS was stripped from the ESM tree at build time (browser won't
   // load CSS as a JS module). It's flattened into one stylesheet exported by
-  // _guly_styles.js; load it, swap the font URL placeholder for the real
+  // _gulu_styles.js; load it, swap the font URL placeholder for the real
   // chrome-extension base, and inject into the shadow root where Monaco lives.
   async function injectMonacoStyles(root: ShadowRoot) {
-    if ((root as any).__gulyMonacoStyles)
+    if ((root as any).__guluMonacoStyles)
       return
     try {
       const base = browser.runtime.getURL('/assets/monaco/esm')
-      const mod = await import(/* @vite-ignore */ `${base}/_guly_styles.js`) as any
+      const mod = await import(/* @vite-ignore */ `${base}/_gulu_styles.js`) as any
       const css = String(mod.default || '').replace(/__GULY_MONACO_BASE__/g, base)
       const el = document.createElement('style')
       el.textContent = css
       root.appendChild(el)
-      ;(root as any).__gulyMonacoStyles = true
+      ;(root as any).__guluMonacoStyles = true
     }
     catch (e) { console.warn('[GuluGulu] monaco styles inject failed:', e) }
   }
@@ -158,10 +158,10 @@ export function useMonaco(opts: {
           ...tsMarkers.map(m => ({ ...m, severity: Err })),
           ...bracketDiagnostics(code).map(m => ({ ...m, severity: Err })),
         ]
-        monacoNS.editor.setModelMarkers(model, 'guly-syntax', merged)
+        monacoNS.editor.setModelMarkers(model, 'gulu-syntax', merged)
       }
       else {
-        checkGulySyntax(monacoNS, model)
+        checkGuluSyntax(monacoNS, model)
       }
     }
     lintTimer = setTimeout(fire, immediate ? 0 : 350)
@@ -302,7 +302,7 @@ export function useMonaco(opts: {
         return
       const items = lines.filter(l => l >= 1).map(ln => ({
         range: new monacoNS.Range(ln, 1, ln, 1),
-        options: { isWholeLine: true, className: 'guly-errline' },
+        options: { isWholeLine: true, className: 'gulu-errline' },
       }))
       decorations.set(items)
     },
@@ -321,7 +321,7 @@ export function useMonaco(opts: {
         return
       const next = prettyFormat(model.getValue())
       if (next !== model.getValue())
-        editor.executeEdits('guly-format', [{ range: model.getFullModelRange(), text: next }])
+        editor.executeEdits('gulu-format', [{ range: model.getFullModelRange(), text: next }])
     },
   }
 }

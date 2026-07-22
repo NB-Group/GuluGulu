@@ -4,9 +4,9 @@ import { renderIcon } from '~/utils/icons'
 import { timeAgo } from '~/utils/main'
 import { diffLabel, diffColor } from '~/utils/difficulty'
 import { AppPage } from '~/enums/appEnums'
-import { useGulyApp } from '~/composables/useAppProvider'
+import { useGuluApp } from '~/composables/useAppProvider'
 
-const { navigateTo } = useGulyApp()
+const { navigateTo } = useGuluApp()
 
 interface Item {
   id: string; type: 'contest' | 'discuss'

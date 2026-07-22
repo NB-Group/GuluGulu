@@ -1,12 +1,12 @@
 <script setup lang="ts">
-import { useGulyApp } from '~/composables/useAppProvider'
+import { useGuluApp } from '~/composables/useAppProvider'
 import { AppPage } from '~/enums/appEnums'
 import { ccfColor, ccfLabel, diffColor, diffLabel } from '~/utils/difficulty'
 import { renderIcon } from '~/utils/icons'
 import { getCsrfToken } from '~/utils/luogu-api'
 import { parseMarkdownContent } from '~/utils/markdown'
 
-const { navigateTo } = useGulyApp()
+const { navigateTo } = useGuluApp()
 
 // Embedded sub-views reused as tab content (GitHub-style inline tabs)
 const PracticeView = defineAsyncComponent(() => import('../Practice/Practice.vue'))
@@ -77,7 +77,7 @@ const followLoading = ref(false)
 const followLoaded = ref<Set<'following' | 'followers'>>(new Set())
 
 const isOwnProfile = computed(() => {
-  const myUid = (window as any).__guly_user?.uid
+  const myUid = (window as any).__gulu_user?.uid
   return myUid && String(uid.value) === String(myUid)
 })
 

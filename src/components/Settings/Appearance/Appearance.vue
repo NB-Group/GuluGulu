@@ -44,7 +44,7 @@ const transitionSpeedOptions = computed<Array<{ value: string; label: string }>>
   { label: '舒缓', value: 'slow' },
 ])
 
-// Map transitionSpeed → --bew-time-scale written on documentElement (cascades into #guly shadow DOM).
+// Map transitionSpeed → --bew-time-scale written on documentElement (cascades into #gulu shadow DOM).
 const transitionSpeedScale: Record<string, number> = {
   fast: 0.7,
   normal: 1,
@@ -222,11 +222,11 @@ function handleRemoveCustomWallpaper() {
     </SettingsItemGroup>
 
     <SettingsItemGroup>
-      <SettingsItem title="自定义 CSS" desc="⚠️ 实验性 · 内容已保存但注入逻辑尚未启用（需在 App.vue 挂载处接入 #guly shadow root），错误的 CSS 可能导致界面异常">
+      <SettingsItem title="自定义 CSS" desc="⚠️ 实验性 · 内容已保存但注入逻辑尚未启用（需在 App.vue 挂载处接入 #gulu shadow root），错误的 CSS 可能导致界面异常">
         <Radio v-model="settings.customizeCSS" />
         <!-- TODO(customizeCSS): injection is not wired up yet.
              To enable, on App.vue mount, watch settings.customizeCSS/ customizeCSSContent
-             and inject a <style id="guly-custom-css"> into document.querySelector('#guly')?.shadowRoot
+             and inject a <style id="gulu-custom-css"> into document.querySelector('#gulu')?.shadowRoot
              (falling back to document.head). Remove this TODO once the App.vue side lands. -->
         <template v-if="settings.customizeCSS" #bottom>
           <textarea

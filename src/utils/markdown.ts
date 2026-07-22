@@ -117,7 +117,7 @@ let hljsDarkEl: HTMLStyleElement | null = null
 export function injectKatexCSS() {
   if (cssInjected) return
   try {
-    const host = document.querySelector('#guly')?.shadowRoot
+    const host = document.querySelector('#gulu')?.shadowRoot
     if (host) {
       const kaTeXStyle = document.createElement('style')
       kaTeXStyle.textContent = katexCSS
@@ -126,23 +126,23 @@ export function injectKatexCSS() {
       // Light theme (default visible)
       hljsLightEl = document.createElement('style')
       hljsLightEl.textContent = hljsLightCSS
-      hljsLightEl.id = 'guly-hljs-light'
+      hljsLightEl.id = 'gulu-hljs-light'
       host.appendChild(hljsLightEl)
 
       // Dark theme (hidden by default)
       hljsDarkEl = document.createElement('style')
       hljsDarkEl.textContent = hljsDarkCSS
-      hljsDarkEl.id = 'guly-hljs-dark'
+      hljsDarkEl.id = 'gulu-hljs-dark'
       hljsDarkEl.disabled = true
       host.appendChild(hljsDarkEl)
 
       // Toggle on theme change
       const observer = new MutationObserver(() => {
-        const isDark = document.querySelector('#guly')?.classList.contains('dark')
+        const isDark = document.querySelector('#gulu')?.classList.contains('dark')
         if (hljsLightEl) hljsLightEl.disabled = !!isDark
         if (hljsDarkEl) hljsDarkEl.disabled = !isDark
       })
-      observer.observe(document.querySelector('#guly')!, { attributes: true, attributeFilter: ['class'] })
+      observer.observe(document.querySelector('#gulu')!, { attributes: true, attributeFilter: ['class'] })
 
       cssInjected = true
     }

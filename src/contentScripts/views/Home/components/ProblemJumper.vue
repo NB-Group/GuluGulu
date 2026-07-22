@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { AppPage } from '~/enums/appEnums'
-import { useGulyApp } from '~/composables/useAppProvider'
+import { useGuluApp } from '~/composables/useAppProvider'
 
-const { navigateTo } = useGulyApp()
+const { navigateTo } = useGuluApp()
 const problemId = ref('')
 
 function normalizeProblemId(input: string): string {

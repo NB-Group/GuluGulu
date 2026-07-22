@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { AppPage } from '~/enums/appEnums'
-import { useGulyApp } from '~/composables/useAppProvider'
+import { useGuluApp } from '~/composables/useAppProvider'
 import type { GridLayoutType } from '~/logic'
 import { renderIcon } from '~/utils/icons'
 import { searchKeyword } from '~/utils/luogu-api'
@@ -18,7 +18,7 @@ interface ProblemItem {
   totalAccepted: number
 }
 
-const { navigateTo } = useGulyApp()
+const { navigateTo } = useGuluApp()
 const localGridLayout = ref<GridLayoutType>('adaptive')
 const currentPage = ref(1)
 const pageSize = 50
@@ -137,10 +137,10 @@ function resetAndFetch() {
 
 // Mount: check window bridge from TopBar search
 onMounted(() => {
-  const pending = (window as any).__guly_search_pending
+  const pending = (window as any).__gulu_search_pending
   if (pending) {
     searchKeyword.value = pending
-    delete (window as any).__guly_search_pending
+    delete (window as any).__gulu_search_pending
   }
   fetchProblems()
 })

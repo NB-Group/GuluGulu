@@ -3,7 +3,7 @@ import { onKeyStroke } from '@vueuse/core'
 import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
 
 import Button from '~/components/Button.vue'
-import { useGulyApp } from '~/composables/useAppProvider'
+import { useGuluApp } from '~/composables/useAppProvider'
 
 const props = withDefaults(defineProps<{
   title?: string
@@ -44,7 +44,7 @@ onKeyStroke('Escape', (e: KeyboardEvent) => {
 })
 
 const showShortcut = ref<boolean>(false)
-const { mainAppRef } = useGulyApp()
+const { mainAppRef } = useGuluApp()
 const showDialog = ref<boolean>(props.visible)
 
 const dialogWidth = computed(() => {

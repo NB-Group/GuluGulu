@@ -67,7 +67,7 @@ export async function ensureMonaco(): Promise<MonacoNS | null> {
         KeyCode: mod.KeyCode,
       } as unknown as MonacoNS
       monacoInstance = monaco
-      registerGulyProviders(monaco)
+      registerGuluProviders(monaco)
       return monaco
     }
     catch (e) {
@@ -131,11 +131,11 @@ export function bracketDiagnostics(text: string) {
 }
 
 // Legacy wrapper: set bracket markers directly on the model (used for non-C/C++ langs).
-export function checkGulySyntax(monaco: any, model: any) {
+export function checkGuluSyntax(monaco: any, model: any) {
   if (!monaco || !model)
     return
   const diags = bracketDiagnostics(model.getValue())
-  monaco.editor.setModelMarkers(model, 'guly-syntax', diags.map(d => ({ ...d, severity: monaco.MarkerSeverity.Error })))
+  monaco.editor.setModelMarkers(model, 'gulu-syntax', diags.map(d => ({ ...d, severity: monaco.MarkerSeverity.Error })))
 }
 
 // ---- 自动格式化:基于括号深度的缩进格式化(C++/Java/JS 等大括号语言)----
@@ -227,7 +227,7 @@ export function prettyFormat(text: string): string {
 
 const FORMAT_LANGS = ['cpp', 'c', 'java', 'javascript', 'typescript', 'pascal', 'go', 'rust', 'php', 'csharp']
 let providersRegistered = false
-export function registerGulyProviders(monaco: any) {
+export function registerGuluProviders(monaco: any) {
   if (providersRegistered || !monaco?.languages)
     return
   providersRegistered = true

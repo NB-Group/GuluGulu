@@ -1,6 +1,6 @@
 import { ref, type Ref } from 'vue'
 import { AppPage } from '~/enums/appEnums'
-import { useGulyApp } from '~/composables/useAppProvider'
+import { useGuluApp } from '~/composables/useAppProvider'
 import type { LuoguLanguage } from '~/utils/luogu-api'
 import { RECORD_STATUS_MAP, submitCode } from '~/utils/luogu-api'
 
@@ -19,7 +19,7 @@ export function useProblemSubmit(opts: {
   enableO2: Ref<boolean>
 }) {
   const { code, isLoggedIn, problemId, inContestMode, contestId, lang, enableO2 } = opts
-  const { navigateTo } = useGulyApp()
+  const { navigateTo } = useGuluApp()
 
   const submitting = ref(false)
   const submitError = ref('')
@@ -44,7 +44,7 @@ export function useProblemSubmit(opts: {
       return
     myRecordsLoading.value = true
     try {
-      const uid = (window as any).__guly_user?.uid
+      const uid = (window as any).__gulu_user?.uid
       const res = await fetch(`https://www.luogu.com.cn/record/list?pid=${problemId.value}&user=${uid}&_contentOnly=1`, { credentials: 'same-origin' })
       const j = await res.json()
       myRecords.value = j?.data?.records?.result || j?.currentData?.records?.result || []

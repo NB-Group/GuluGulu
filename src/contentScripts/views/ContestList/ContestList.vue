@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { AppPage } from '~/enums/appEnums'
-import { useGulyApp } from '~/composables/useAppProvider'
+import { useGuluApp } from '~/composables/useAppProvider'
 import { renderIcon } from '~/utils/icons'
 import { friendlyError } from '~/utils/luogu-api'
 
@@ -9,7 +9,7 @@ interface Contest {
   type: string; rated: boolean; host?: { name: string }
 }
 
-const { navigateTo } = useGulyApp()
+const { navigateTo } = useGuluApp()
 const contests = ref<Contest[]>([])
 const loading = ref(true); const errorMsg = ref('')
 const totalCount = ref(0)

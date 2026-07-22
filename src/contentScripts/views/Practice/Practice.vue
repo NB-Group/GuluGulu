@@ -1,11 +1,11 @@
 <script setup lang="ts">
-import { useGulyApp } from '~/composables/useAppProvider'
+import { useGuluApp } from '~/composables/useAppProvider'
 import { AppPage } from '~/enums/appEnums'
 import { diffColor, diffLabel } from '~/utils/difficulty'
 import { renderIcon } from '~/utils/icons'
 
 const props = withDefaults(defineProps<{ embedded?: boolean, uid?: number | null }>(), { embedded: false, uid: null })
-const { navigateTo, currentUrl } = useGulyApp()
+const { navigateTo, currentUrl } = useGuluApp()
 const uid = computed(() => {
   if (props.uid)
     return props.uid

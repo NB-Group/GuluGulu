@@ -39,7 +39,7 @@ export function useSelfTest(opts: {
       return
     testRunning.value = true; testVerdict.value = ''; testActualOutput.value = '编译运行中…'
     cleanupWs()
-    const csrf = (window as any).__guly_user?.csrfToken || ''
+    const csrf = (window as any).__gulu_user?.csrfToken || ''
     let resolved = false
     activeWs = new WebSocket('wss://ws.luogu.com.cn/ws')
     const ws = activeWs

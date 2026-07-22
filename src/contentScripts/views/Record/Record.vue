@@ -4,7 +4,7 @@ import cpp from 'highlight.js/lib/languages/cpp'
 import java from 'highlight.js/lib/languages/java'
 import python from 'highlight.js/lib/languages/python'
 
-import { useGulyApp } from '~/composables/useAppProvider'
+import { useGuluApp } from '~/composables/useAppProvider'
 import { AppPage } from '~/enums/appEnums'
 import { renderIcon } from '~/utils/icons'
 import type { VerdictResult } from '~/utils/luogu-api'
@@ -17,7 +17,7 @@ hljs.registerLanguage('c', cpp)
 hljs.registerLanguage('python', python)
 hljs.registerLanguage('java', java)
 
-const { currentUrl, navigateTo } = useGulyApp()
+const { currentUrl, navigateTo } = useGuluApp()
 
 function highlightCode(code: string, lang: string): string {
   try {

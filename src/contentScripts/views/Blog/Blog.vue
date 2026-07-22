@@ -4,9 +4,9 @@ import { timeAgo } from '~/utils/main'
 import { friendlyError, getCsrfToken, isLoggedIn as checkLuoguLogin } from '~/utils/luogu-api'
 import { parseMarkdownContent } from '~/utils/markdown'
 import { AppPage } from '~/enums/appEnums'
-import { useGulyApp } from '~/composables/useAppProvider'
+import { useGuluApp } from '~/composables/useAppProvider'
 
-const { currentUrl, navigateTo } = useGulyApp()
+const { currentUrl, navigateTo } = useGuluApp()
 
 interface Post {
   id: number; title: string; time: number; topped: boolean; locked: boolean
@@ -141,7 +141,7 @@ async function postReply() {
     if (json.code === 200 || newId) {
       replies.value.push({
         id: newId || Date.now(),
-        author: json?.reply?.author || { uid: Number((window as any).__guly_user?.uid) || 0, name: (window as any).__guly_user?.name || '', avatar: `https://cdn.luogu.com.cn/upload/usericon/${(window as any).__guly_user?.uid || 0}.png`, color: '' },
+        author: json?.reply?.author || { uid: Number((window as any).__gulu_user?.uid) || 0, name: (window as any).__gulu_user?.name || '', avatar: `https://cdn.luogu.com.cn/upload/usericon/${(window as any).__gulu_user?.uid || 0}.png`, color: '' },
         time: json?.reply?.time || Math.floor(Date.now() / 1000),
         content: text,
       })

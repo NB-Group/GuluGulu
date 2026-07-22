@@ -25,7 +25,7 @@ const results = []
 const check = (n, c, d = '') => { results.push({ n, c }); console.log(`  ${c ? '✓' : '✗'} ${n}${d ? ' — ' + d : ''}`) }
 
 async function waitForMount() {
-  await page.waitForFunction(() => !!document.querySelector('#guly')?.shadowRoot, { timeout: 45000 }).catch(() => {})
+  await page.waitForFunction(() => !!document.querySelector('#gulu')?.shadowRoot, { timeout: 45000 }).catch(() => {})
   await sleep(5000)
 }
 async function openSubmitTab() {
@@ -41,7 +41,7 @@ console.log(`[1] 打开 ${URL}(无草稿路径)`)
 await page.goto(URL, { waitUntil: 'domcontentloaded' }).catch(() => {})
 await waitForMount()
 // Wipe any prior local draft so the load path has nothing to restore.
-await page.evaluate(() => { for (const k of Object.keys(localStorage)) if (k.startsWith('guly:code:')) localStorage.removeItem(k) })
+await page.evaluate(() => { for (const k of Object.keys(localStorage)) if (k.startsWith('gulu:code:')) localStorage.removeItem(k) })
 await openSubmitTab()
 
 const initial = (await editorText()).trim()
@@ -52,11 +52,11 @@ console.log(`[2] 输入标记代码 → 等防抖落盘`)
 await page.locator('.cm-content').first().click()
 await page.keyboard.type(MARKER)
 await sleep(1100) // > 600ms debounce
-const saved = await page.evaluate(k => localStorage.getItem(k), `guly:code:${PID}`)
+const saved = await page.evaluate(k => localStorage.getItem(k), `gulu:code:${PID}`)
 let savedCode = ''
 try { savedCode = saved ? JSON.parse(saved).code : '' } catch {}
 check('输入后写入 localStorage', typeof saved === 'string' && savedCode.includes(MARKER),
-  `key=guly:code:${PID}, hasMarker=${savedCode.includes(MARKER)}`)
+  `key=gulu:code:${PID}, hasMarker=${savedCode.includes(MARKER)}`)
 
 console.log(`[3] 刷新页面 → 验证恢复`)
 await page.reload({ waitUntil: 'domcontentloaded' }).catch(() => {})

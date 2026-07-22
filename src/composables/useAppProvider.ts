@@ -3,7 +3,7 @@ import { inject } from 'vue'
 
 import type { AppPage } from '~/enums/appEnums'
 
-export interface GulyAppProvider {
+export interface GuluAppProvider {
   activatedPage: Ref<AppPage>
   currentUrl: Ref<string>
   scrollbarRef: Ref<any>
@@ -18,8 +18,8 @@ export interface GulyAppProvider {
   navigateTo: (page: AppPage, url?: string) => void
 }
 
-export function useGulyApp(): GulyAppProvider {
-  const provider = inject<GulyAppProvider>('GULY_APP')
+export function useGuluApp(): GuluAppProvider {
+  const provider = inject<GuluAppProvider>('GULY_APP')
 
   if (import.meta.env.DEV && !provider)
     throw new Error('AppProvider is not injected')

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { useGulyApp } from '~/composables/useAppProvider'
+import { useGuluApp } from '~/composables/useAppProvider'
 import { AppPage } from '~/enums/appEnums'
 import { renderIcon } from '~/utils/icons'
 import { friendlyError } from '~/utils/luogu-api'
@@ -7,7 +7,7 @@ import { timeAgo } from '~/utils/main'
 import { parseMarkdownContent } from '~/utils/markdown'
 
 const props = defineProps<{ mode: 'author' | 'fav', uid?: number }>()
-const { navigateTo } = useGulyApp()
+const { navigateTo } = useGuluApp()
 
 const catLabels: Record<number, string> = { 1: '算法', 2: '游记', 3: '题解', 4: '杂谈', 5: '科技', 6: '生活' }
 

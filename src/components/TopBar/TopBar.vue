@@ -3,7 +3,7 @@ import { onClickOutside, onKeyStroke, useMouseInElement } from '@vueuse/core'
 import type { Ref } from 'vue'
 import { computed, reactive, ref } from 'vue'
 
-import { useGulyApp } from '~/composables/useAppProvider'
+import { useGuluApp } from '~/composables/useAppProvider'
 import { useDark } from '~/composables/useDark'
 import { useDelayedHover } from '~/composables/useDelayedHover'
 // === Message notification polling ===
@@ -13,7 +13,7 @@ import { settings } from '~/logic'
 import { renderIcon } from '~/utils/icons'
 import { searchKeyword } from '~/utils/luogu-api'
 
-const { activatedPage, scrollbarRef, reachTop, navigateTo } = useGulyApp()
+const { activatedPage, scrollbarRef, reachTop, navigateTo } = useGuluApp()
 
 function goToLogin() {
   location.href = 'https://www.luogu.com.cn/auth/login'
@@ -31,7 +31,7 @@ async function logoutAndSwitch() {
 function handleSearch(keyword: string) {
   import.meta.env.DEV && console.log('[GuluGulu TopBar] search:', keyword)
   searchKeyword.value = keyword
-  ;(window as any).__guly_search_pending = keyword
+  ;(window as any).__gulu_search_pending = keyword
   if (activatedPage.value === AppPage.ProblemList) {
     // Already on problem list — watcher will handle the refetch
   }
@@ -50,7 +50,7 @@ const { isOutside: isOutsideTopBar } = useMouseInElement(headerTarget)
 // Check login state via frontend API fetch
 const isLogin = ref(false)
 onMounted(async () => {
-  const stored = (window as any).__guly_user
+  const stored = (window as any).__gulu_user
   if (stored?.uid && stored.uid !== '0') {
     isLogin.value = true
     userUid.value = Number(stored.uid)
@@ -72,7 +72,7 @@ onMounted(async () => {
         userName.value = user.name
       if (user.color)
         userColor.value = user.color
-      ;(window as any).__guly_user = { uid: String(user.uid), name: user.name || '', color: user.color || '', csrfToken: '' }
+      ;(window as any).__gulu_user = { uid: String(user.uid), name: user.name || '', color: user.color || '', csrfToken: '' }
     }
   }
   catch (e) { console.warn('[GuluGulu]', e) }

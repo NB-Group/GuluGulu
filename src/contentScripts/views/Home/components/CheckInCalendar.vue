@@ -41,7 +41,7 @@ const cspRound2Days = daysUntil(CSP_ROUND_2_DATE)
 // === Persist check-in state across page switches ===
 // Module-level cache survives component mount/unmount cycles
 function todayStr() { const d = new Date(); return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}` }
-const checkInState = (window as any).__guly_checkin || ((window as any).__guly_checkin = { date: '', done: false, fortune: null as any })
+const checkInState = (window as any).__gulu_checkin || ((window as any).__gulu_checkin = { date: '', done: false, fortune: null as any })
 const checkInDone = ref(checkInState.date === todayStr() && checkInState.done)
 const checkInMsg = ref('')
 const fortuneResult = ref(checkInState.date === todayStr() ? checkInState.fortune : null)
@@ -49,7 +49,7 @@ function saveCheckInState() {
   checkInState.date = todayStr(); checkInState.done = checkInDone.value; checkInState.fortune = fortuneResult.value
 }
 
-const uid = (window as any).__guly_user?.uid
+const uid = (window as any).__gulu_user?.uid
 
 function parsePunchHtml(html: string) {
   const r = { level: '', levelColor: 'var(--bew-text-2)', good: [] as string[], bad: [] as string[], days: '' }
@@ -75,7 +75,7 @@ const checkInLoading = ref(true)
 // a successful check-in, so the result shows without a manual page refresh.
 async function fetchFortuneFromHome() {
   // 优先用 contentScripts/index.ts 预抓并缓存的打卡卡 HTML(避免重复 fetch + 脆弱正则)。
-  const cached = (window as any).__guly_punch?.html
+  const cached = (window as any).__gulu_punch?.html
   if (cached && cached.includes('运势'))
     return parsePunchHtml(cached)
   const res = await fetch('https://www.luogu.com.cn/', { credentials: 'same-origin' })
@@ -107,7 +107,7 @@ async function handleCheckIn() {
     return
   checkInMsg.value = '打卡中...'
   try {
-    const csrf = (window as any).__guly_user?.csrfToken || ''
+    const csrf = (window as any).__gulu_user?.csrfToken || ''
     const res = await fetch('https://www.luogu.com.cn/index/ajax_punch', {
       method: 'POST',
       headers: { 'X-CSRF-TOKEN': csrf, 'X-Requested-With': 'XMLHttpRequest' },

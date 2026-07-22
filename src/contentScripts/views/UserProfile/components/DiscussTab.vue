@@ -1,11 +1,11 @@
 <script setup lang="ts">
-import { useGulyApp } from '~/composables/useAppProvider'
+import { useGuluApp } from '~/composables/useAppProvider'
 import { AppPage } from '~/enums/appEnums'
 import { renderIcon } from '~/utils/icons'
 import { friendlyError } from '~/utils/luogu-api'
 import { timeAgo } from '~/utils/main'
 
-const { navigateTo } = useGulyApp()
+const { navigateTo } = useGuluApp()
 
 interface PostItem {
   id: number

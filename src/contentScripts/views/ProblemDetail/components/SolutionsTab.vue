@@ -2,7 +2,7 @@
 import { renderIcon } from '~/utils/icons'
 import { timeAgo } from '~/utils/main'
 import { AppPage } from '~/enums/appEnums'
-import { useGulyApp } from '~/composables/useAppProvider'
+import { useGuluApp } from '~/composables/useAppProvider'
 import Loading from '~/components/Loading.vue'
 
 defineProps<{
@@ -12,7 +12,7 @@ defineProps<{
   problemId: string
 }>()
 
-const { navigateTo } = useGulyApp()
+const { navigateTo } = useGuluApp()
 </script>
 
 <template>

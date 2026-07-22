@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import { AppPage } from '~/enums/appEnums'
-import { useGulyApp } from '~/composables/useAppProvider'
+import { useGuluApp } from '~/composables/useAppProvider'
 import { renderIcon } from '~/utils/icons'
 
-const { navigateTo } = useGulyApp()
+const { navigateTo } = useGuluApp()
 
 interface Contest {
   id: number; name: string; startTime: number; endTime: number

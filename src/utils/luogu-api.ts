@@ -47,7 +47,7 @@ export const LUOGU_LANGUAGES: LuoguLanguage[] = [
 
 /**
  * Extract CSRF token from the current page's meta tag.
- * Falls back to window.__guly_user.csrfToken (saved before body clear).
+ * Falls back to window.__gulu_user.csrfToken (saved before body clear).
  * The token format is "timestamp:hash" and is sent as X-CSRF-TOKEN header.
  */
 export function getCsrfToken(): string {
@@ -55,14 +55,14 @@ export function getCsrfToken(): string {
   const meta = document.querySelector('meta[name="csrf-token"]')
   if (meta) return meta.getAttribute('content') || ''
   // Fallback to saved token
-  return (window as any).__guly_user?.csrfToken || ''
+  return (window as any).__gulu_user?.csrfToken || ''
 }
 
 /**
  * Refresh the CSRF token by fetching the homepage (same-origin) and re-parsing
  * <meta name="csrf-token">. The cached token goes stale ("会话超时") after long
  * idle, failing POSTs. Call lazily on auth failure and retry once. Updates both
- * __guly_user.csrfToken and the injected <meta> so getCsrfToken() returns fresh.
+ * __gulu_user.csrfToken and the injected <meta> so getCsrfToken() returns fresh.
  */
 export async function refreshCsrf(): Promise<string> {
   try {
@@ -70,8 +70,8 @@ export async function refreshCsrf(): Promise<string> {
     const html = await res.text()
     const m = html.match(/<meta\s+name="csrf-token"\s+content="([^"]+)"/)
     if (m?.[1]) {
-      const prev = (window as any).__guly_user || {}
-      ;(window as any).__guly_user = { ...prev, csrfToken: m[1] }
+      const prev = (window as any).__gulu_user || {}
+      ;(window as any).__gulu_user = { ...prev, csrfToken: m[1] }
       let meta = document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement | null
       if (!meta) { meta = document.createElement('meta'); meta.name = 'csrf-token'; document.head.appendChild(meta) }
       meta.setAttribute('content', m[1])
@@ -86,7 +86,7 @@ export async function refreshCsrf(): Promise<string> {
  * Check if user is logged in on Luogu.
  */
 export function isLoggedIn(): boolean {
-  const uid = (window as any).__guly_user?.uid
+  const uid = (window as any).__gulu_user?.uid
   return !!uid && uid !== '0'
 }
 
@@ -94,7 +94,7 @@ export function isLoggedIn(): boolean {
  * Get current user info from stored data.
  */
 export function getCurrentUser(): { uid: string } | null {
-  const uid = (window as any).__guly_user?.uid
+  const uid = (window as any).__gulu_user?.uid
   if (uid && uid !== '0') return { uid }
   return null
 }
@@ -110,7 +110,7 @@ export function extractProblemData(): any {
     catch (e) { console.warn('[GuluGulu] Failed to parse lentille-context:', e) }
   }
   // Fallback: data was saved before body clear by content script
-  const saved = (window as any).__guly_lentille
+  const saved = (window as any).__gulu_lentille
   if (saved) return saved
   return null
 }
@@ -282,7 +282,7 @@ export function friendlyError(e: any): string {
   const msg = e.message || String(e)
   if (msg.includes('Failed to fetch') || msg.includes('NetworkError')) return '网络连接失败，请检查网络'
   if (msg.includes('JSON') || msg.includes('Unexpected token') || msg.includes('is not valid JSON'))
-    return '请先登录洛谷后再使用 GuluGuly'
+    return '请先登录洛谷后再使用 GuluGulu'
   return '加载失败，请先登录洛谷后刷新重试'
 }
 

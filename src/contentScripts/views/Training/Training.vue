@@ -2,10 +2,10 @@
 import { renderIcon } from '~/utils/icons'
 import { friendlyError } from '~/utils/luogu-api'
 import { AppPage } from '~/enums/appEnums'
-import { useGulyApp } from '~/composables/useAppProvider'
+import { useGuluApp } from '~/composables/useAppProvider'
 import { diffLabel, diffColor } from '~/utils/difficulty'
 
-const { navigateTo, currentUrl } = useGulyApp()
+const { navigateTo, currentUrl } = useGuluApp()
 
 function backToList() {
   const ref = document.referrer || ''

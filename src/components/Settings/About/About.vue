@@ -12,7 +12,7 @@ import SettingsItemGroup from '../components/SettingsItemGroup.vue'
       </SettingsItem>
       <SettingsItem title="项目地址">
         <a
-          href="https://github.com/NB-Group/GuluGuly"
+          href="https://github.com/NB-Group/GuluGulu"
           target="_blank"
           style="color:var(--bew-theme-color);font-size:var(--bew-base-font-size);text-decoration:none"
         >

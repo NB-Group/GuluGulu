@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { useGulyApp } from '~/composables/useAppProvider'
+import { useGuluApp } from '~/composables/useAppProvider'
 import { useMonaco } from '~/composables/useMonaco'
 import { AppPage } from '~/enums/appEnums'
 import { renderIcon } from '~/utils/icons'
@@ -20,7 +20,7 @@ const props = defineProps<{
   pid?: string
 }>()
 
-const { currentUrl, navigateTo } = useGulyApp()
+const { currentUrl, navigateTo } = useGuluApp()
 
 // ============================================================
 // Problem ID — from URL or props

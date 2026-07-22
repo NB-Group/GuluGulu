@@ -37,8 +37,8 @@ const msgTotalPages = ref(0)
 const newMsg = ref('')
 const sending = ref(false)
 
-const currentUid = computed(() => Number((window as any).__guly_user?.uid) || 0)
-const currentName = computed(() => (window as any).__guly_user?.name || '')
+const currentUid = computed(() => Number((window as any).__gulu_user?.uid) || 0)
+const currentName = computed(() => (window as any).__gulu_user?.name || '')
 
 // Refs for auto-scroll
 const msgListRef = ref<HTMLDivElement>()
@@ -302,8 +302,8 @@ function handleKeydown(e: KeyboardEvent) {
   if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage() }
 }
 
-onMounted(() => { (window as any).__guly_viewing_messages = true; fetchConversations(); resetUnread() })
-onUnmounted(() => { (window as any).__guly_viewing_messages = false })
+onMounted(() => { (window as any).__gulu_viewing_messages = true; fetchConversations(); resetUnread() })
+onUnmounted(() => { (window as any).__gulu_viewing_messages = false })
 
 // When polling detects new messages, merge into conversation list
 onMessagePoll((json: any) => {

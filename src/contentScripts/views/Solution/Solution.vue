@@ -4,9 +4,9 @@ import { timeAgo } from '~/utils/main'
 import { friendlyError, fetchLentilleContext } from '~/utils/luogu-api'
 import { parseMarkdownContent } from '~/utils/markdown'
 import { AppPage } from '~/enums/appEnums'
-import { useGulyApp } from '~/composables/useAppProvider'
+import { useGuluApp } from '~/composables/useAppProvider'
 
-const { currentUrl, navigateTo } = useGulyApp()
+const { currentUrl, navigateTo } = useGuluApp()
 
 interface Solution {
   lid: string; title: string; time: number

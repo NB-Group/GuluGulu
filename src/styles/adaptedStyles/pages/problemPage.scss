@@ -2,9 +2,9 @@
 // Applied when user is on luogu.com.cn/problem/* pages
 
 .problemPage {
-  // Hide the original Luogu problem page content since GulyGuly replaces it
+  // Hide the original Luogu problem page content since GuluGulu replaces it
   // The original content is still accessible but visually hidden
-  #app > *:not(#guly) {
-    // Keep visible for now — GulyGuly renders on top via Shadow DOM
+  #app > *:not(#gulu) {
+    // Keep visible for now — GuluGulu renders on top via Shadow DOM
   }
 }
