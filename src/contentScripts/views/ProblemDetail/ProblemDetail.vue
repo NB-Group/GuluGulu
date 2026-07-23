@@ -795,7 +795,7 @@ onUnmounted(() => {
           <!-- Right: Code Editor + Controls -->
           <div class="ide-editor-panel" :style="{ flex: `0 0 ${100 - splitRatio - 0.5}%`, display: 'flex', flexDirection: 'column', gap: '6px', overflowY: 'auto' }">
             <!-- Editor Card -->
-            <div bg="$bew-content" rounded="$bew-radius" border="1 $bew-border-color" style="backdrop-filter:var(--bew-filter-glass-1);display:flex;flex-direction:column;flex:1;min-height:0">
+            <div bg="$bew-content" rounded="$bew-radius" border="1 $bew-border-color" style="backdrop-filter:var(--bew-filter-glass-1);display:flex;flex-direction:column;flex:1;min-height:0;overflow:hidden">
               <!-- Top bar: all controls -->
               <div style="display:flex;align-items:center;gap:6px;flex-shrink:0;padding:5px 10px;border-bottom:1px solid var(--bew-border-color);font-size:1em;overflow-x:auto">
                 <div v-if="contestProblems.length > 0" style="display:flex;align-items:center;gap:3px">
