@@ -138,6 +138,14 @@ function onLangChange(lang: LuoguLanguage) {
   selectedLang.value = lang
 }
 
+// 语言下拉用的 {label,value} 选项 + 按 id 切换的 handler(配合自写 Select 组件)
+const langOptions = computed(() => LUOGU_LANGUAGES.map(l => ({ label: l.name, value: l.id })))
+function onLangIdChange(id: string | number | null) {
+  const lang = LUOGU_LANGUAGES.find(l => l.id === id)
+  if (lang)
+    onLangChange(lang)
+}
+
 // ============================================================
 // Computed
 // ============================================================
@@ -592,22 +600,11 @@ onUnmounted(() => {
             <div flex="~ col md:row gap-4" mb-4 items="end">
               <div flex="~ col gap-1" flex-1>
                 <label text="sm $bew-text-2" fw-bold mb-1>编程语言</label>
-                <select
-                  v-model="selectedLang.id"
-                  class="lang-select"
-                  bg="$bew-fill-1" rounded="$bew-radius-half" p="x-3 y-2"
-                  border="1 $bew-border-color" text="sm $bew-text-1"
-                  outline-none cursor-pointer
-                  style="backdrop-filter: var(--bew-filter-glass-1)"
-                  @change="() => {
-                    const lang = LUOGU_LANGUAGES.find(l => l.id === selectedLang.id)
-                    if (lang) onLangChange(lang)
-                  }"
-                >
-                  <option v-for="lang in LUOGU_LANGUAGES" :key="lang.id" :value="lang.id">
-                    {{ lang.name }}
-                  </option>
-                </select>
+                <Select
+                  :model-value="selectedLang.id"
+                  :options="langOptions"
+                  @update:model-value="onLangIdChange"
+                />
               </div>
 
               <label
@@ -795,17 +792,18 @@ onUnmounted(() => {
           <!-- Right: Code Editor + Controls -->
           <div class="ide-editor-panel" :style="{ flex: `0 0 ${100 - splitRatio - 0.5}%`, display: 'flex', flexDirection: 'column', gap: '6px', overflowY: 'auto' }">
             <!-- Editor Card -->
-            <div bg="$bew-content" rounded="$bew-radius" border="1 $bew-border-color" style="backdrop-filter:var(--bew-filter-glass-1);display:flex;flex-direction:column;flex:1;min-height:0;overflow:hidden">
+            <div bg="$bew-content" rounded="$bew-radius" border="1 $bew-border-color" style="backdrop-filter:var(--bew-filter-glass-1);display:flex;flex-direction:column;flex:1;min-height:0">
               <!-- Top bar: all controls -->
               <div style="display:flex;align-items:center;gap:6px;flex-shrink:0;padding:5px 10px;border-bottom:1px solid var(--bew-border-color);font-size:1em;overflow-x:auto">
                 <div v-if="contestProblems.length > 0" style="display:flex;align-items:center;gap:3px">
                   <span v-for="cp in contestProblems" :key="cp.no" style="padding:0 6px;border-radius:999px;cursor:pointer;font-size:0.9em;font-weight:600;white-space:nowrap" :style="{ background: cp.pid === problemId ? 'var(--bew-theme-color)' : 'var(--bew-fill-2)', color: cp.pid === problemId ? '#fff' : 'var(--bew-text-2)' }" @click="switchToProblem(cp.pid)">{{ cp.no }}</span>
                 </div>
-                <select :value="selectedLang.id" style="padding:2px 4px;background:var(--bew-fill-1);color:var(--bew-text-1);border:1px solid var(--bew-border-color);border-radius:var(--bew-radius-half);font-size:1.05em;outline:none" @change="(e: Event) => { const lang = LUOGU_LANGUAGES.find(l => l.id === Number((e.target as HTMLSelectElement).value)); if (lang) onLangChange(lang) }">
-                  <option v-for="l in LUOGU_LANGUAGES" :key="l.id" :value="l.id">
-                    {{ l.name }}
-                  </option>
-                </select>
+                <Select
+                  :model-value="selectedLang.id"
+                  :options="langOptions"
+                  style="width:150px;flex-shrink:0"
+                  @update:model-value="onLangIdChange"
+                />
                 <label v-if="selectedLang.canO2" style="display:flex;align-items:center;gap:3px;color:var(--bew-text-2);cursor:pointer;white-space:nowrap;font-size:1.05em">
                   <input v-model="enableO2" type="checkbox" style="width:13px;height:13px;cursor:pointer"> O2
                 </label>
@@ -831,7 +829,7 @@ onUnmounted(() => {
                   {{ submitting ? '…' : '提交' }}
                 </button>
               </div>
-              <div style="flex:1;position:relative;overflow:hidden">
+              <div style="flex:1;position:relative;overflow:hidden;border-bottom-left-radius:var(--bew-radius);border-bottom-right-radius:var(--bew-radius)">
                 <div ref="cmHost" style="position:absolute;inset:0;overflow:hidden" />
               </div>
             </div>
@@ -936,15 +934,6 @@ onUnmounted(() => {
 <style lang="scss" scoped>
 .resize-handle:hover {
   background: var(--bew-fill-2) !important;
-}
-.lang-select {
-  appearance: none;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23666' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
-  background-repeat: no-repeat;
-  background-position: right 12px center;
-  padding-right: 2rem;
-  width: 100%;
-  max-width: 300px;
 }
 
 .code-editor {
