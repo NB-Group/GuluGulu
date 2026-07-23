@@ -174,6 +174,9 @@ async function fetchDetail(lid: string) {
     const html = await res.text()
     const ctx = parseLentille(html)
     if (ctx?.data?.article) {
+      // 临时:确认 luogu article lentille 里收藏/点赞相关字段的真实 key 名
+      const a = ctx.data.article
+      console.debug('[guly-article] article keys:', Object.keys(a), '| favor/vote:', { favored: a.favored, voted: a.voted, favorCount: a.favorCount, favCount: a.favCount, voteState: a.voteState })
       detail.value = ctx.data.article
     }
     else {
@@ -785,7 +788,7 @@ onUnmounted(() => obs?.disconnect())
   border-radius: 50%;
   border: 2px solid var(--bew-theme-color);
   opacity: 0;
-  animation: burst-ring var(--bew-dur-slow) ease-out;
+  animation: burst-ring var(--bew-dur-slow) ease-out forwards;
 }
 @keyframes burst-ring {
   0% { transform: scale(0.3); opacity: 0.75; }
@@ -800,7 +803,7 @@ onUnmounted(() => obs?.disconnect())
   margin: -2px 0 0 -2px;
   border-radius: 50%;
   background: var(--bew-theme-color);
-  animation: burst-dot var(--bew-dur-slow) var(--bew-ease-overshoot);
+  animation: burst-dot var(--bew-dur-slow) var(--bew-ease-overshoot) forwards;
 }
 @keyframes burst-dot {
   0% {
