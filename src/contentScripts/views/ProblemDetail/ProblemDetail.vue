@@ -344,7 +344,7 @@ onUnmounted(() => {
                   flex="~ items-center gap-1"
                   :style="{ backgroundColor: `${difficultyColor}20`, color: difficultyColor }"
                 >
-                  <span style="display:contents" v-html="renderIcon('mingcute:fire-line', 12)" />
+                  <span style="display:contents" v-html="renderIcon('mingcute:fire-line', 14)" />
                   {{ problem.difficultyLabel }}
                 </span>
               </div>
@@ -517,8 +517,8 @@ onUnmounted(() => {
                   <div class="sample-header" flex="~ items-center justify-between">
                     <span><span style="display:contents" v-html="renderIcon('mingcute:arrow-right-line', 14)" /> 样例 {{ idx + 1 }} — 输入</span>
                     <button class="sample-copy-btn" :class="{ copied: copiedSample === `in-${idx}` }" @click="copyWithFeedback(`in-${idx}`, sample.input)">
-                      <span v-if="copiedSample === `in-${idx}`" style="display:contents" v-html="renderIcon('mingcute:check-circle-fill', 12)" />
-                      <span v-else style="display:contents" v-html="renderIcon('mingcute:copy-line', 12)" />
+                      <span v-if="copiedSample === `in-${idx}`" style="display:contents" v-html="renderIcon('mingcute:check-circle-fill', 14)" />
+                      <span v-else style="display:contents" v-html="renderIcon('mingcute:copy-line', 14)" />
                       {{ copiedSample === `in-${idx}` ? '已复制' : '复制' }}
                     </button>
                   </div>
@@ -527,8 +527,8 @@ onUnmounted(() => {
                   <div class="sample-header" style="border-top: 1px solid var(--bew-border-color)" flex="~ items-center justify-between">
                     <span><span style="display:contents" v-html="renderIcon('mingcute:arrow-left-line', 14)" /> 样例 {{ idx + 1 }} — 输出</span>
                     <button class="sample-copy-btn" :class="{ copied: copiedSample === `out-${idx}` }" @click="copyWithFeedback(`out-${idx}`, sample.output)">
-                      <span v-if="copiedSample === `out-${idx}`" style="display:contents" v-html="renderIcon('mingcute:check-circle-fill', 12)" />
-                      <span v-else style="display:contents" v-html="renderIcon('mingcute:copy-line', 12)" />
+                      <span v-if="copiedSample === `out-${idx}`" style="display:contents" v-html="renderIcon('mingcute:check-circle-fill', 14)" />
+                      <span v-else style="display:contents" v-html="renderIcon('mingcute:copy-line', 14)" />
                       {{ copiedSample === `out-${idx}` ? '已复制' : '复制' }}
                     </button>
                   </div>
@@ -666,8 +666,8 @@ onUnmounted(() => {
               >
                 <img :src="captchaSrc" style="max-width:200px;border-radius:4px" alt="验证码">
                 <div flex="~ items-center gap-2">
-                  <input v-model="captchaCode" placeholder="输入验证码" style="flex:1;padding:6px 10px;background:var(--bew-bg);color:var(--bew-text-1);border:1px solid var(--bew-border-color);border-radius:4px;font-size:.85em;outline:none" @keydown.enter="handleSubmit">
-                  <button :disabled="!captchaCode" style="background:var(--bew-theme-color);color:#fff;border:none;border-radius:4px;padding:6px 12px;cursor:pointer;font-size:.85em;font-weight:600;white-space:nowrap" @click="handleSubmit">
+                  <input v-model="captchaCode" placeholder="输入验证码" style="flex:1;padding:6px 10px;background:var(--bew-bg);color:var(--bew-text-1);border:1px solid var(--bew-border-color);border-radius:4px;font-size:1.05em;outline:none" @keydown.enter="handleSubmit">
+                  <button :disabled="!captchaCode" style="background:var(--bew-theme-color);color:#fff;border:none;border-radius:4px;padding:6px 12px;cursor:pointer;font-size:1.05em;font-weight:600;white-space:nowrap" @click="handleSubmit">
                     提交
                   </button>
                 </div>
@@ -685,7 +685,7 @@ onUnmounted(() => {
                   <span>{{ submitError }}</span>
                   <button
                     v-if="submitError.includes('验证码')"
-                    style="background:var(--bew-theme-color);color:#fff;border:none;border-radius:4px;padding:3px 10px;cursor:pointer;font-size:.82em;font-weight:600;white-space:nowrap;flex-shrink:0"
+                    style="background:var(--bew-theme-color);color:#fff;border:none;border-radius:4px;padding:3px 10px;cursor:pointer;font-size:1em;font-weight:600;white-space:nowrap;flex-shrink:0"
                     @click="loadCaptcha()"
                   >
                     刷新验证码
@@ -740,7 +740,7 @@ onUnmounted(() => {
               <span text="$bew-text-3" font-mono>{{ problem.pid }}</span> {{ problem.title }}
             </h1>
             <div flex="~ gap-2 wrap" style="font-size:.8em;color:var(--bew-text-2)">
-              <span v-if="problem.difficultyLabel" flex="~ items-center gap-1" px-2 py-0.5 rounded-full :style="{ backgroundColor: `${difficultyColor}20`, color: difficultyColor }"><span style="display:contents" v-html="renderIcon('mingcute:fire-line', 12)" /> {{ problem.difficultyLabel }}</span>
+              <span v-if="problem.difficultyLabel" flex="~ items-center gap-1" px-2 py-0.5 rounded-full :style="{ backgroundColor: `${difficultyColor}20`, color: difficultyColor }"><span style="display:contents" v-html="renderIcon('mingcute:fire-line', 14)" /> {{ problem.difficultyLabel }}</span>
               <span>{{ problem.timeLimit }}</span>
               <span>{{ problem.memoryLimit }}</span>
             </div>
@@ -756,23 +756,23 @@ onUnmounted(() => {
                     <div flex="~ items-center justify-between" mb-1>
                       <span text="xs $bew-text-3">输入 #{{ idx + 1 }}</span>
                       <button class="sample-copy-btn" :class="{ copied: copiedSample === `in-${idx}` }" @click="copyWithFeedback(`in-${idx}`, String(Array.isArray(sample) ? sample[0] : sample.input))">
-                        <span v-if="copiedSample === `in-${idx}`" style="display:contents" v-html="renderIcon('mingcute:check-circle-fill', 12)" />
-                        <span v-else style="display:contents" v-html="renderIcon('mingcute:copy-line', 12)" />
+                        <span v-if="copiedSample === `in-${idx}`" style="display:contents" v-html="renderIcon('mingcute:check-circle-fill', 14)" />
+                        <span v-else style="display:contents" v-html="renderIcon('mingcute:copy-line', 14)" />
                         {{ copiedSample === `in-${idx}` ? '已复制' : '复制' }}
                       </button>
                     </div>
-                    <pre style="margin:0;white-space:pre-wrap;font-size:.85em;color:var(--bew-text-1);font-family:Consolas,monospace">{{ Array.isArray(sample) ? sample[0] : sample.input }}</pre>
+                    <pre style="margin:0;white-space:pre-wrap;font-size:1.05em;color:var(--bew-text-1);font-family:Consolas,monospace">{{ Array.isArray(sample) ? sample[0] : sample.input }}</pre>
                   </div>
                   <div bg="$bew-fill-1" rounded="$bew-radius" p-3>
                     <div flex="~ items-center justify-between" mb-1>
                       <span text="xs $bew-text-3">输出 #{{ idx + 1 }}</span>
                       <button class="sample-copy-btn" :class="{ copied: copiedSample === `out-${idx}` }" @click="copyWithFeedback(`out-${idx}`, String(Array.isArray(sample) ? sample[1] : sample.output))">
-                        <span v-if="copiedSample === `out-${idx}`" style="display:contents" v-html="renderIcon('mingcute:check-circle-fill', 12)" />
-                        <span v-else style="display:contents" v-html="renderIcon('mingcute:copy-line', 12)" />
+                        <span v-if="copiedSample === `out-${idx}`" style="display:contents" v-html="renderIcon('mingcute:check-circle-fill', 14)" />
+                        <span v-else style="display:contents" v-html="renderIcon('mingcute:copy-line', 14)" />
                         {{ copiedSample === `out-${idx}` ? '已复制' : '复制' }}
                       </button>
                     </div>
-                    <pre style="margin:0;white-space:pre-wrap;font-size:.85em;color:var(--bew-text-1);font-family:Consolas,monospace">{{ Array.isArray(sample) ? sample[1] : sample.output }}</pre>
+                    <pre style="margin:0;white-space:pre-wrap;font-size:1.05em;color:var(--bew-text-1);font-family:Consolas,monospace">{{ Array.isArray(sample) ? sample[1] : sample.output }}</pre>
                   </div>
                   <div v-if="(Array.isArray(sample) ? sample[2] : sample.explanation)" mt-1 text="xs" style="color:var(--bew-text-3)">
                     说明: {{ Array.isArray(sample) ? sample[2] : sample.explanation }}
@@ -782,7 +782,7 @@ onUnmounted(() => {
               <div v-if="problem.hint" class="markdown-body" mt-4 v-html="renderedHint" />
             </div>
             <div style="margin-top:auto;padding-top:12px;border-top:1px solid var(--bew-border-color);display:flex;align-items:center;gap:4px;color:var(--bew-text-4);font-size:.75em">
-              <span style="display:contents" v-html="renderIcon('mingcute:check-line', 12)" />
+              <span style="display:contents" v-html="renderIcon('mingcute:check-line', 14)" />
               题目正文结束
             </div>
           </div>
@@ -797,37 +797,37 @@ onUnmounted(() => {
             <!-- Editor Card -->
             <div bg="$bew-content" rounded="$bew-radius" border="1 $bew-border-color" style="backdrop-filter:var(--bew-filter-glass-1);display:flex;flex-direction:column;flex:1;min-height:0">
               <!-- Top bar: all controls -->
-              <div style="display:flex;align-items:center;gap:6px;flex-shrink:0;padding:5px 10px;border-bottom:1px solid var(--bew-border-color);font-size:.82em;overflow-x:auto">
+              <div style="display:flex;align-items:center;gap:6px;flex-shrink:0;padding:5px 10px;border-bottom:1px solid var(--bew-border-color);font-size:1em;overflow-x:auto">
                 <div v-if="contestProblems.length > 0" style="display:flex;align-items:center;gap:3px">
-                  <span v-for="cp in contestProblems" :key="cp.no" style="padding:0 6px;border-radius:999px;cursor:pointer;font-size:.72em;font-weight:600;white-space:nowrap" :style="{ background: cp.pid === problemId ? 'var(--bew-theme-color)' : 'var(--bew-fill-2)', color: cp.pid === problemId ? '#fff' : 'var(--bew-text-2)' }" @click="switchToProblem(cp.pid)">{{ cp.no }}</span>
+                  <span v-for="cp in contestProblems" :key="cp.no" style="padding:0 6px;border-radius:999px;cursor:pointer;font-size:0.9em;font-weight:600;white-space:nowrap" :style="{ background: cp.pid === problemId ? 'var(--bew-theme-color)' : 'var(--bew-fill-2)', color: cp.pid === problemId ? '#fff' : 'var(--bew-text-2)' }" @click="switchToProblem(cp.pid)">{{ cp.no }}</span>
                 </div>
-                <select :value="selectedLang.id" style="padding:2px 4px;background:var(--bew-fill-1);color:var(--bew-text-1);border:1px solid var(--bew-border-color);border-radius:var(--bew-radius-half);font-size:.85em;outline:none" @change="(e: Event) => { const lang = LUOGU_LANGUAGES.find(l => l.id === Number((e.target as HTMLSelectElement).value)); if (lang) onLangChange(lang) }">
+                <select :value="selectedLang.id" style="padding:2px 4px;background:var(--bew-fill-1);color:var(--bew-text-1);border:1px solid var(--bew-border-color);border-radius:var(--bew-radius-half);font-size:1.05em;outline:none" @change="(e: Event) => { const lang = LUOGU_LANGUAGES.find(l => l.id === Number((e.target as HTMLSelectElement).value)); if (lang) onLangChange(lang) }">
                   <option v-for="l in LUOGU_LANGUAGES" :key="l.id" :value="l.id">
                     {{ l.name }}
                   </option>
                 </select>
-                <label v-if="selectedLang.canO2" style="display:flex;align-items:center;gap:3px;color:var(--bew-text-2);cursor:pointer;white-space:nowrap;font-size:.85em">
+                <label v-if="selectedLang.canO2" style="display:flex;align-items:center;gap:3px;color:var(--bew-text-2);cursor:pointer;white-space:nowrap;font-size:1.05em">
                   <input v-model="enableO2" type="checkbox" style="width:13px;height:13px;cursor:pointer"> O2
                 </label>
                 <span style="flex:1" />
-                <button style="display:flex;align-items:center;gap:4px;background:none;border:1px solid var(--bew-border-color);border-radius:var(--bew-radius-half);padding:2px 8px;cursor:pointer;color:var(--bew-text-2);font-size:.82em;white-space:nowrap" @click="copyMarkdown">
-                  <span style="display:contents" v-html="renderIcon(copiedMarkdown ? 'mingcute:check-circle-fill' : 'mingcute:copy-line', 12)" />
+                <button style="display:flex;align-items:center;gap:4px;background:none;border:1px solid var(--bew-border-color);border-radius:var(--bew-radius-half);padding:4px 10px;cursor:pointer;color:var(--bew-text-2);font-size:1em;white-space:nowrap" @click="copyMarkdown">
+                  <span style="display:contents" v-html="renderIcon(copiedMarkdown ? 'mingcute:check-circle-fill' : 'mingcute:copy-line', 14)" />
                   {{ copiedMarkdown ? '已复制' : '复制MD' }}
                 </button>
-                <button style="display:flex;align-items:center;gap:4px;background:none;border:1px solid var(--bew-border-color);border-radius:var(--bew-radius-half);padding:2px 8px;cursor:pointer;color:var(--bew-text-2);font-size:.82em;white-space:nowrap" @click="showTestPanel = !showTestPanel">
-                  <span style="display:contents" v-html="renderIcon(showTestPanel ? 'mingcute:down-line' : 'mingcute:right-line', 12)" />
+                <button style="display:flex;align-items:center;gap:4px;background:none;border:1px solid var(--bew-border-color);border-radius:var(--bew-radius-half);padding:4px 10px;cursor:pointer;color:var(--bew-text-2);font-size:1em;white-space:nowrap" @click="showTestPanel = !showTestPanel">
+                  <span style="display:contents" v-html="renderIcon(showTestPanel ? 'mingcute:down-line' : 'mingcute:right-line', 14)" />
                   自测
                 </button>
-                <button style="display:flex;align-items:center;gap:4px;background:none;border:1px solid var(--bew-border-color);border-radius:var(--bew-radius-half);padding:2px 8px;cursor:pointer;color:var(--bew-text-2);font-size:.82em;white-space:nowrap" title="格式化代码(基于括号深度对齐缩进)" @click="cm.formatDocument()">
-                  <span style="display:contents" v-html="renderIcon('mingcute:code-line', 12)" />
+                <button style="display:flex;align-items:center;gap:4px;background:none;border:1px solid var(--bew-border-color);border-radius:var(--bew-radius-half);padding:4px 10px;cursor:pointer;color:var(--bew-text-2);font-size:1em;white-space:nowrap" title="格式化代码(基于括号深度对齐缩进)" @click="cm.formatDocument()">
+                  <span style="display:contents" v-html="renderIcon('mingcute:code-line', 14)" />
                   格式化
                 </button>
-                <button style="display:flex;align-items:center;gap:4px;background:none;border:1px solid var(--bew-border-color);border-radius:var(--bew-radius-half);padding:2px 8px;cursor:pointer;color:var(--bew-text-2);font-size:.82em;white-space:nowrap" @click="ideMode = false">
-                  <span style="display:contents" v-html="renderIcon('mingcute:exit-line', 12)" />
+                <button style="display:flex;align-items:center;gap:4px;background:none;border:1px solid var(--bew-border-color);border-radius:var(--bew-radius-half);padding:4px 10px;cursor:pointer;color:var(--bew-text-2);font-size:1em;white-space:nowrap" @click="ideMode = false">
+                  <span style="display:contents" v-html="renderIcon('mingcute:exit-line', 14)" />
                   退出
                 </button>
-                <button class="btn-press" :disabled="submitting" style="display:flex;align-items:center;gap:4px;background:var(--bew-theme-color);color:#fff;border:none;border-radius:var(--bew-radius-half);padding:3px 12px;cursor:pointer;font-size:.85em;font-weight:600;white-space:nowrap" @click="handleSubmit">
-                  <span style="display:contents" v-html="renderIcon('mingcute:send-line', 12)" />
+                <button class="btn-press" :disabled="submitting" style="display:flex;align-items:center;gap:4px;background:var(--bew-theme-color);color:#fff;border:none;border-radius:var(--bew-radius-half);padding:3px 12px;cursor:pointer;font-size:1.05em;font-weight:600;white-space:nowrap" @click="handleSubmit">
+                  <span style="display:contents" v-html="renderIcon('mingcute:send-line', 14)" />
                   {{ submitting ? '…' : '提交' }}
                 </button>
               </div>
@@ -837,14 +837,14 @@ onUnmounted(() => {
             </div>
 
             <!-- Submit feedback (IDE/contest split view — was missing: result/captcha/error) -->
-            <div v-if="submitResult || submitError || captchaSrc" style="flex-shrink:0;display:flex;flex-direction:column;gap:6px;margin-top:6px;padding:8px 10px;background:var(--bew-content);border:1px solid var(--bew-border-color);border-radius:var(--bew-radius);font-size:.82em">
+            <div v-if="submitResult || submitError || captchaSrc" style="flex-shrink:0;display:flex;flex-direction:column;gap:6px;margin-top:6px;padding:8px 10px;background:var(--bew-content);border:1px solid var(--bew-border-color);border-radius:var(--bew-radius);font-size:1em">
               <div v-if="submitResult" style="color:var(--bew-success-color);font-weight:600">
                 {{ submitResult }}
               </div>
               <div v-if="captchaSrc" style="display:flex;flex-direction:column;gap:6px">
                 <img :src="captchaSrc" style="max-width:180px;border-radius:4px" alt="验证码">
                 <div style="display:flex;align-items:center;gap:6px">
-                  <input v-model="captchaCode" placeholder="输入验证码" style="flex:1;padding:5px 8px;background:var(--bew-fill-1);color:var(--bew-text-1);border:1px solid var(--bew-border-color);border-radius:var(--bew-radius-half);font-size:.85em;outline:none" @keydown.enter="handleSubmit">
+                  <input v-model="captchaCode" placeholder="输入验证码" style="flex:1;padding:5px 8px;background:var(--bew-fill-1);color:var(--bew-text-1);border:1px solid var(--bew-border-color);border-radius:var(--bew-radius-half);font-size:1.05em;outline:none" @keydown.enter="handleSubmit">
                   <button class="btn-press" :disabled="!captchaCode" style="background:var(--bew-theme-color);color:#fff;border:none;border-radius:var(--bew-radius-half);padding:5px 10px;cursor:pointer;font-weight:600;white-space:nowrap" @click="handleSubmit">
                     提交
                   </button>
@@ -855,7 +855,7 @@ onUnmounted(() => {
               </div>
               <div v-if="submitError" style="display:flex;align-items:center;justify-content:space-between;gap:8px;color:var(--bew-error-color)">
                 <span>{{ submitError }}</span>
-                <button v-if="submitError.includes('验证码')" style="background:var(--bew-theme-color);color:#fff;border:none;border-radius:var(--bew-radius-half);padding:3px 8px;cursor:pointer;font-size:.82em;font-weight:600;white-space:nowrap;flex-shrink:0" @click="loadCaptcha()">
+                <button v-if="submitError.includes('验证码')" style="background:var(--bew-theme-color);color:#fff;border:none;border-radius:var(--bew-radius-half);padding:3px 8px;cursor:pointer;font-size:1em;font-weight:600;white-space:nowrap;flex-shrink:0" @click="loadCaptcha()">
                   刷新验证码
                 </button>
               </div>
@@ -868,8 +868,8 @@ onUnmounted(() => {
                   <span>自测输入</span>
                   <span flex="~ items-center gap-1">
                     <span v-if="testVerdict" style="padding:0 6px;border-radius:999px;font-size:.75em;font-weight:700;line-height:1.5" :style="{ background: testVerdict.startsWith('AC') || testVerdict.startsWith('运行完成') ? 'var(--bew-success-color-20)' : 'var(--bew-error-color-20)', color: testVerdict.startsWith('AC') || testVerdict.startsWith('运行完成') ? 'var(--bew-success-color)' : 'var(--bew-error-color)' }">{{ testVerdict }}</span>
-                    <button :disabled="testRunning" style="display:flex;align-items:center;gap:4px;background:var(--bew-theme-color);color:#fff;border:none;border-radius:var(--bew-radius-half);padding:2px 8px;cursor:pointer;font-size:.82em;font-weight:600;white-space:nowrap" @click="runTest">
-                      <span style="display:contents" v-html="renderIcon('mingcute:play-fill', 12)" />
+                    <button :disabled="testRunning" style="display:flex;align-items:center;gap:4px;background:var(--bew-theme-color);color:#fff;border:none;border-radius:var(--bew-radius-half);padding:4px 10px;cursor:pointer;font-size:1em;font-weight:600;white-space:nowrap" @click="runTest">
+                      <span style="display:contents" v-html="renderIcon('mingcute:play-fill', 14)" />
                       {{ testRunning ? '…' : '运行测试' }}
                     </button>
                   </span>
