@@ -176,7 +176,7 @@ async function fetchDetail(lid: string) {
     if (ctx?.data?.article) {
       // 临时:确认 luogu article lentille 里收藏/点赞相关字段的真实 key 名
       const a = ctx.data.article
-      console.debug('[guly-article] article keys:', Object.keys(a), '| favor/vote:', { favored: a.favored, voted: a.voted, favorCount: a.favorCount, favCount: a.favCount, voteState: a.voteState })
+      console.log('[guly-article] article keys:', Object.keys(a), '| favor/vote:', { favored: a.favored, voted: a.voted, favorCount: a.favorCount, favCount: a.favCount, voteState: a.voteState })
       detail.value = ctx.data.article
     }
     else {
