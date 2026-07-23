@@ -510,7 +510,7 @@ onUnmounted(() => obs?.disconnect())
               @click="toggleFavor"
             >
               <span class="favor-star-wrap">
-                <span class="gulu-art-chip-ico" :class="{ 'is-favored': detail.favored }" v-html="renderIcon('mingcute:star-line', 16)" />
+                <span class="gulu-art-chip-ico" :class="{ 'is-favored': detail.favored }" v-html="renderIcon(detail.favored ? 'mingcute:star-fill' : 'mingcute:star-line', 16)" />
                 <!-- 收藏成功迸射:放大 pop + 8 个光点辐射 + 主题色光环 -->
                 <span v-if="detail.favored" :key="favorBurstKey" class="star-burst" aria-hidden="true">
                   <span class="star-burst-ring" />
