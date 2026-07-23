@@ -251,6 +251,8 @@ async function voteArticle(v: 1 | -1) {
 
 // ===== 收藏 / 取消收藏 =====
 const favorSending = ref(false)
+// 收藏成功时自增,用于重播 CSS 迸射动画(作为 :key 触发重挂载)
+const favorBurstKey = ref(0)
 async function toggleFavor() {
   const lid = articleLid.value
   if (!lid || favorSending.value || !detail.value)
@@ -271,11 +273,15 @@ async function toggleFavor() {
     })
     const json = await res.json().catch(() => ({}))
     if (json.lid !== undefined || res.ok) {
+      const nowFavored = !favored
       detail.value = {
         ...detail.value,
-        favored: !favored,
+        favored: nowFavored,
         favorCount: Math.max(0, (detail.value.favorCount || 0) + (favored ? -1 : 1)),
       }
+      // 收藏(非取消)成功 → 触发迸射动画
+      if (nowFavored)
+        favorBurstKey.value++
     }
     else {
       voteError.value = json?.errorMessage || json?.data || json?.msg || '操作失败'
@@ -498,12 +504,19 @@ onUnmounted(() => obs?.disconnect())
               <span>{{ detail.replyCount ?? replies.length }}</span>
             </span>
             <button
-              class="gulu-art-chip"
+              class="gulu-art-chip favor-btn"
               :class="{ 'gulu-art-chip--active': detail.favored }"
               :disabled="favorSending"
               @click="toggleFavor"
             >
-              <span class="gulu-art-chip-ico" v-html="renderIcon('mingcute:star-line', 16)" />
+              <span class="favor-star-wrap">
+                <span class="gulu-art-chip-ico" :class="{ 'is-favored': detail.favored }" v-html="renderIcon('mingcute:star-line', 16)" />
+                <!-- 收藏成功迸射:放大 pop + 8 个光点辐射 + 主题色光环 -->
+                <span v-if="detail.favored" :key="favorBurstKey" class="star-burst" aria-hidden="true">
+                  <span class="star-burst-ring" />
+                  <span v-for="i in 8" :key="i" class="star-burst-dot" :style="{ '--angle': `${(i - 1) * 45}deg` }" />
+                </span>
+              </span>
               <span>{{ detail.favorCount ?? 0 }}</span>
             </button>
           </div>
@@ -737,6 +750,71 @@ onUnmounted(() => obs?.disconnect())
     color: #fff;
     filter: brightness(1.08);
   }
+}
+
+// —— 收藏五角星迸射效果(纯 CSS,零依赖)——
+// 点亮瞬间:星星放大 pop + 8 个光点向外辐射 + 主题色光环淡出。
+// 用 favorBurstKey 作 :key 触发重挂载,让动画每次收藏都重播一次。
+.favor-star-wrap {
+  position: relative;
+  display: inline-flex;
+}
+.favor-star-wrap .gulu-art-chip-ico.is-favored {
+  animation: star-pop var(--bew-dur-cozy) var(--bew-ease-overshoot);
+}
+@keyframes star-pop {
+  0% { transform: scale(1); }
+  45% { transform: scale(1.55); }
+  100% { transform: scale(1); }
+}
+.star-burst {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 0;
+  height: 0;
+  pointer-events: none;
+}
+.star-burst-ring {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 26px;
+  height: 26px;
+  margin: -13px 0 0 -13px;
+  border-radius: 50%;
+  border: 2px solid var(--bew-theme-color);
+  opacity: 0;
+  animation: burst-ring var(--bew-dur-slow) ease-out;
+}
+@keyframes burst-ring {
+  0% { transform: scale(0.3); opacity: 0.75; }
+  100% { transform: scale(2.6); opacity: 0; }
+}
+.star-burst-dot {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 4px;
+  height: 4px;
+  margin: -2px 0 0 -2px;
+  border-radius: 50%;
+  background: var(--bew-theme-color);
+  animation: burst-dot var(--bew-dur-slow) var(--bew-ease-overshoot);
+}
+@keyframes burst-dot {
+  0% {
+    transform: rotate(var(--angle)) translate(0, 0) scale(1);
+    opacity: 1;
+  }
+  100% {
+    transform: rotate(var(--angle)) translate(15px, 0) scale(0.2);
+    opacity: 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .star-burst { display: none; }
+  .favor-star-wrap .gulu-art-chip-ico.is-favored { animation: none; }
 }
 // 已踩:警告色实心
 .gulu-art-chip--active-warn {
