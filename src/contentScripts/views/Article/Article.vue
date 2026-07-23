@@ -174,10 +174,13 @@ async function fetchDetail(lid: string) {
     const html = await res.text()
     const ctx = parseLentille(html)
     if (ctx?.data?.article) {
-      // 临时:确认 luogu article lentille 里收藏/点赞相关字段的真实 key 名
       const a = ctx.data.article
-      console.log('[guly-article] article keys:', Object.keys(a), '| favor/vote:', { favored: a.favored, voted: a.voted, favorCount: a.favorCount, favCount: a.favCount, voteState: a.voteState })
-      detail.value = ctx.data.article
+      // luogu article lentille 不暴露 favored 字段(实测 keys 无 favored),
+      // 刷新后读不到 → 用 localStorage 持久化用户在本扩展内的收藏态。
+      // 服务端若将来给出 a.favored 则优先用它。
+      const aLid = a.lid || lid
+      const favoredLocal = localStorage.getItem(`gulu:article-favor:${aLid}`) === '1'
+      detail.value = { ...a, favored: a.favored ?? favoredLocal }
     }
     else {
       detailError.value = '请先登录洛谷或文章不存在'
@@ -285,6 +288,8 @@ async function toggleFavor() {
       // 收藏(非取消)成功 → 触发迸射动画
       if (nowFavored)
         favorBurstKey.value++
+      // 持久化收藏态(lentille 不返回 favored,刷新靠这个恢复)
+      localStorage.setItem(`gulu:article-favor:${lid}`, nowFavored ? '1' : '0')
     }
     else {
       voteError.value = json?.errorMessage || json?.data || json?.msg || '操作失败'
