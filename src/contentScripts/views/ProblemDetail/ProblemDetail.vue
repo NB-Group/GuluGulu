@@ -794,7 +794,7 @@ onUnmounted(() => {
             <!-- Editor Card -->
             <div bg="$bew-content" rounded="$bew-radius" border="1 $bew-border-color" style="backdrop-filter:var(--bew-filter-glass-1);display:flex;flex-direction:column;flex:1;min-height:0">
               <!-- Top bar: all controls -->
-              <div style="display:flex;align-items:center;gap:6px;flex-shrink:0;padding:5px 10px;border-bottom:1px solid var(--bew-border-color);font-size:1em;overflow-x:auto">
+              <div style="display:flex;align-items:center;flex-wrap:wrap;gap:6px;flex-shrink:0;padding:5px 10px;border-bottom:1px solid var(--bew-border-color);font-size:1em;row-gap:5px">
                 <div v-if="contestProblems.length > 0" style="display:flex;align-items:center;gap:3px">
                   <span v-for="cp in contestProblems" :key="cp.no" style="padding:0 6px;border-radius:999px;cursor:pointer;font-size:0.9em;font-weight:600;white-space:nowrap" :style="{ background: cp.pid === problemId ? 'var(--bew-theme-color)' : 'var(--bew-fill-2)', color: cp.pid === problemId ? '#fff' : 'var(--bew-text-2)' }" @click="switchToProblem(cp.pid)">{{ cp.no }}</span>
                 </div>
@@ -807,8 +807,7 @@ onUnmounted(() => {
                 <label v-if="selectedLang.canO2" style="display:flex;align-items:center;gap:3px;color:var(--bew-text-2);cursor:pointer;white-space:nowrap;font-size:1.05em">
                   <input v-model="enableO2" type="checkbox" style="width:13px;height:13px;cursor:pointer"> O2
                 </label>
-                <span style="flex:1" />
-                <button style="display:flex;align-items:center;gap:4px;background:none;border:1px solid var(--bew-border-color);border-radius:var(--bew-radius-half);padding:4px 10px;cursor:pointer;color:var(--bew-text-2);font-size:1em;white-space:nowrap" @click="copyMarkdown">
+                <button style="display:flex;align-items:center;gap:4px;background:none;border:1px solid var(--bew-border-color);border-radius:var(--bew-radius-half);padding:4px 10px;cursor:pointer;color:var(--bew-text-2);font-size:1em;white-space:nowrap;margin-left:auto" @click="copyMarkdown">
                   <span style="display:contents" v-html="renderIcon(copiedMarkdown ? 'mingcute:check-circle-fill' : 'mingcute:copy-line', 14)" />
                   {{ copiedMarkdown ? '已复制' : '复制MD' }}
                 </button>
