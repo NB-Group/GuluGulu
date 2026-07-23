@@ -862,6 +862,7 @@ onUnmounted(() => {
             </div>
 
             <!-- Test Panels -->
+            <Transition name="test-panel-slide">
             <div v-if="showTestPanel" style="flex-shrink:0;display:flex;gap:6px;min-height:120px">
               <div bg="$bew-content" rounded="$bew-radius" style="backdrop-filter:var(--bew-filter-glass-1);display:flex;flex-direction:column;flex:1;overflow:hidden;border:1px solid var(--bew-border-color)">
                 <div style="display:flex;align-items:center;justify-content:space-between;padding:6px 10px 2px;font-size:.75em;color:var(--bew-text-3);border-bottom:1px solid var(--bew-border-color)">
@@ -891,6 +892,7 @@ onUnmounted(() => {
                 </div>
               </div>
             </div>
+            </Transition>
           </div>
         </div>
         </Transition>

@@ -238,4 +238,17 @@
 @media (prefers-reduced-motion: reduce) {
   .empty-state-fade, .ide-statement-panel, .ide-editor-panel { animation: none !important; }
   .ide-view-fade-enter-active, .ide-view-fade-leave-active { transition: none !important; }
+  .test-panel-slide-enter-active, .test-panel-slide-leave-active { transition: none !important; }
+}
+
+// IDE 自测面板展开/收起:从顶部滑下 + 淡入,收起时反向滑回。
+.test-panel-slide-enter-active,
+.test-panel-slide-leave-active {
+  transition: opacity var(--bew-dur-cozy) var(--bew-ease-smooth),
+              transform var(--bew-dur-cozy) var(--bew-ease-smooth);
+}
+.test-panel-slide-enter-from,
+.test-panel-slide-leave-to {
+  opacity: 0;
+  transform: translateY(-12px);
 }
