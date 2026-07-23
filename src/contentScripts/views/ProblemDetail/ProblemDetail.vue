@@ -644,6 +644,11 @@ onUnmounted(() => {
                   在洛谷 IDE 打开
                 </Button>
 
+                <Button type="secondary" title="格式化代码(基于括号深度对齐缩进)" @click="cm.formatDocument()">
+                  <span style="display:contents" v-html="renderIcon('mingcute:code-line', 16)" />
+                  格式化
+                </Button>
+
                 <span
                   v-if="submitResult"
                   text="sm"
@@ -812,6 +817,10 @@ onUnmounted(() => {
                 <button style="display:flex;align-items:center;gap:4px;background:none;border:1px solid var(--bew-border-color);border-radius:var(--bew-radius-half);padding:2px 8px;cursor:pointer;color:var(--bew-text-2);font-size:.82em;white-space:nowrap" @click="showTestPanel = !showTestPanel">
                   <span style="display:contents" v-html="renderIcon(showTestPanel ? 'mingcute:down-line' : 'mingcute:right-line', 12)" />
                   自测
+                </button>
+                <button style="display:flex;align-items:center;gap:4px;background:none;border:1px solid var(--bew-border-color);border-radius:var(--bew-radius-half);padding:2px 8px;cursor:pointer;color:var(--bew-text-2);font-size:.82em;white-space:nowrap" title="格式化代码(基于括号深度对齐缩进)" @click="cm.formatDocument()">
+                  <span style="display:contents" v-html="renderIcon('mingcute:code-line', 12)" />
+                  格式化
                 </button>
                 <button style="display:flex;align-items:center;gap:4px;background:none;border:1px solid var(--bew-border-color);border-radius:var(--bew-radius-half);padding:2px 8px;cursor:pointer;color:var(--bew-text-2);font-size:.82em;white-space:nowrap" @click="ideMode = false">
                   <span style="display:contents" v-html="renderIcon('mingcute:exit-line', 12)" />
