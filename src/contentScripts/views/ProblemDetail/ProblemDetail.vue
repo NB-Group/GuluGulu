@@ -861,9 +861,10 @@ onUnmounted(() => {
               </div>
             </div>
 
-            <!-- Test Panels -->
-            <Transition name="test-panel-slide">
-            <div v-if="showTestPanel" style="flex-shrink:0;display:flex;gap:6px;min-height:120px">
+            <!-- Test Panels: grid 0fr↔1fr 折叠,高度动画,上方编辑器随之伸缩 -->
+            <div class="test-panel-collapse" :class="{ 'is-open': showTestPanel }">
+              <div class="test-panel-collapse-inner">
+            <div style="display:flex;gap:6px;min-height:120px">
               <div bg="$bew-content" rounded="$bew-radius" style="backdrop-filter:var(--bew-filter-glass-1);display:flex;flex-direction:column;flex:1;overflow:hidden;border:1px solid var(--bew-border-color)">
                 <div style="display:flex;align-items:center;justify-content:space-between;padding:6px 10px 2px;font-size:.75em;color:var(--bew-text-3);border-bottom:1px solid var(--bew-border-color)">
                   <span>自测输入</span>
@@ -892,7 +893,8 @@ onUnmounted(() => {
                 </div>
               </div>
             </div>
-            </Transition>
+              </div>
+            </div>
           </div>
         </div>
         </Transition>

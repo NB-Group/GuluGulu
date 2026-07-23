@@ -238,17 +238,22 @@
 @media (prefers-reduced-motion: reduce) {
   .empty-state-fade, .ide-statement-panel, .ide-editor-panel { animation: none !important; }
   .ide-view-fade-enter-active, .ide-view-fade-leave-active { transition: none !important; }
-  .test-panel-slide-enter-active, .test-panel-slide-leave-active { transition: none !important; }
+  .test-panel-collapse { transition: none !important; grid-template-rows: 1fr !important; }
 }
 
-// IDE 自测面板展开/收起:从顶部滑下 + 淡入,收起时反向滑回。
-.test-panel-slide-enter-active,
-.test-panel-slide-leave-active {
-  transition: opacity var(--bew-dur-cozy) var(--bew-ease-smooth),
-              transform var(--bew-dur-cozy) var(--bew-ease-smooth);
+// IDE 自测面板折叠:grid 行高 0fr↔1fr 做真正的高度动画,
+// 上方编辑器(flex:1 兄弟)随之伸缩,而不是整体滑入。
+// 内层 overflow:hidden 在收起时裁掉内容;flex-shrink:0 保证不压缩。
+.test-panel-collapse {
+  display: grid;
+  grid-template-rows: 0fr;
+  flex-shrink: 0;
+  transition: grid-template-rows var(--bew-dur-cozy) var(--bew-ease-smooth);
 }
-.test-panel-slide-enter-from,
-.test-panel-slide-leave-to {
-  opacity: 0;
-  transform: translateY(-12px);
+.test-panel-collapse.is-open {
+  grid-template-rows: 1fr;
+}
+.test-panel-collapse-inner {
+  overflow: hidden;
+  min-height: 0;
 }
