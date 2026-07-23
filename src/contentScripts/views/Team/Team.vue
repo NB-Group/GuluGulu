@@ -819,9 +819,20 @@ watch(() => currentUrl.value, () => loadContent())
   gap: 4px;
   border-bottom: 1px solid var(--bew-border-color);
   overflow-x: auto;
-  scrollbar-width: none;
+  scrollbar-width: thin;
+  scrollbar-color: var(--bew-fill-3) transparent;
   &::-webkit-scrollbar {
-    display: none;
+    height: 6px;
+  }
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  &::-webkit-scrollbar-thumb {
+    background: var(--bew-fill-3);
+    border-radius: 999px;
+  }
+  &::-webkit-scrollbar-thumb:hover {
+    background: var(--bew-fill-4);
   }
 }
 .team-tab {

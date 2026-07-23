@@ -150,9 +150,13 @@ function toggleTabContentLoading(loading: boolean) {
   gap: 4px;
   height: 100%;
   overflow-x: auto;
-  scrollbar-width: none;
+  scrollbar-width: thin;
+  scrollbar-color: var(--bew-fill-3) transparent;
 }
-.tab-scroll::-webkit-scrollbar { display: none; }
+.tab-scroll::-webkit-scrollbar { height: 6px; }
+.tab-scroll::-webkit-scrollbar-track { background: transparent; }
+.tab-scroll::-webkit-scrollbar-thumb { background: var(--bew-fill-3); border-radius: 999px; }
+.tab-scroll::-webkit-scrollbar-thumb:hover { background: var(--bew-fill-4); }
 
 .tab-btn {
   padding: 0 12px;

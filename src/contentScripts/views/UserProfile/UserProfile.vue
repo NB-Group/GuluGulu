@@ -1078,7 +1078,13 @@ watch(uid, () => {
   gap: 10px;
   width: 100%;
   overflow-x: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--bew-fill-3) transparent;
 }
+.heatmap-wrap::-webkit-scrollbar { height: 6px; }
+.heatmap-wrap::-webkit-scrollbar-track { background: transparent; }
+.heatmap-wrap::-webkit-scrollbar-thumb { background: var(--bew-fill-3); border-radius: 999px; }
+.heatmap-wrap::-webkit-scrollbar-thumb:hover { background: var(--bew-fill-4); }
 .heatmap-grid {
   display: grid;
   gap: 2px;

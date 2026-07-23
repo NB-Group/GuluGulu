@@ -159,6 +159,28 @@ img {
   height: 0;
 }
 
+// Thin visible scrollbar — opt-in via `.bew-scroll`. Overrides the global hide
+// above (class specificity beats `*`) so horizontal scroll regions (code blocks,
+// tab/chip rows) stay draggable / discoverable without a trackpad two-finger swipe.
+.bew-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: var(--bew-fill-3) transparent;
+}
+.bew-scroll::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+.bew-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+.bew-scroll::-webkit-scrollbar-thumb {
+  background: var(--bew-fill-3);
+  border-radius: 999px;
+}
+.bew-scroll::-webkit-scrollbar-thumb:hover {
+  background: var(--bew-fill-4);
+}
+
 /* Color Mode transition
  *
  * NOTE: The `::view-transition-*` control rules are NOT defined here. This

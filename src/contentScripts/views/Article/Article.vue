@@ -790,6 +790,12 @@ onUnmounted(() => obs?.disconnect())
     border-radius: var(--bew-radius);
     overflow-x: auto;
     border: 1px solid var(--bew-border-color);
+    scrollbar-width: thin;
+    scrollbar-color: var(--bew-fill-3) transparent;
+    &::-webkit-scrollbar { height: 6px; }
+    &::-webkit-scrollbar-track { background: transparent; }
+    &::-webkit-scrollbar-thumb { background: var(--bew-fill-3); border-radius: 999px; }
+    &::-webkit-scrollbar-thumb:hover { background: var(--bew-fill-4); }
     :deep(code) {
       background: none;
       padding: 0;
