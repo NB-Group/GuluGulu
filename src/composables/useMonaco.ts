@@ -230,6 +230,10 @@ export function useMonaco(opts: {
       guides: { bracketPairs: true, indentation: true },
       minimap: { enabled: false },
       inlineSuggest: { enabled: true }, // AI ghost-text 补全
+      // 关闭基于词的补全:content script 跨页 origin,Monaco 的 textualSuggest 起不了
+      // web worker(chrome-extension worker URL 被页面 origin 拦),会刷Failed to construct
+      // Worker + 主线程回退卡顿。我们有 AI 补全,不需要它。
+      wordBasedSuggestions: 'off',
       scrollBeyondLastLine: false,
       smoothScrolling: true,
       cursorSmoothCaretAnimation: 'on',

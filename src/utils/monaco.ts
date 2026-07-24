@@ -275,7 +275,13 @@ function scheduleGhostRefresh() {
   triggerQueued = true
   setTimeout(() => {
     triggerQueued = false
-    try { activeEditor?.getAction('editor.action.inlineSuggest.trigger')?.run() }
+    // .run() 返回的 promise 在 Monaco 取消上一条 inline 请求时会 reject('Canceled'),
+    // 吞掉避免控制台刷 "Uncaught (in promise) Canceled"。
+    try {
+      const p: any = activeEditor?.getAction('editor.action.inlineSuggest.trigger')?.run()
+      if (p && typeof p.catch === 'function')
+        p.catch(() => {})
+    }
     catch { /* ignore */ }
   }, 45)
 }
