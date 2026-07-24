@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { renderIcon } from '~/utils/icons'
-import { friendlyError } from '~/utils/luogu-api'
+import { friendlyError, getCsrfToken } from '~/utils/luogu-api'
 import { AppPage } from '~/enums/appEnums'
 import { useGuluApp } from '~/composables/useAppProvider'
 import { diffLabel, diffColor } from '~/utils/difficulty'
@@ -49,6 +49,47 @@ const detailName = ref('')
 const detailLoading = ref(false)
 const detailMeta = ref<any>(null)
 
+// 题单类型(实测 lentille training.type):1=公开 2=团队私有 3=私有
+const TRAINING_TYPE_LABEL: Record<number, string> = { 1: '公开', 2: '团队私有', 3: '私有' }
+
+// 收藏题单:接口 POST /training/{id}/mark(取消带 ?remove=1)—— luogu 用 marked/markCount 字段
+const favorSending = ref(false)
+const favorError = ref('')
+async function toggleFavor() {
+  const id = trainingId.value
+  if (!id || !detailMeta.value || favorSending.value)
+    return
+  favorSending.value = true; favorError.value = ''
+  const marked = !!detailMeta.value.marked
+  try {
+    const res = await fetch(`${location.origin}/training/${id}/mark${marked ? '?remove=1' : ''}`, {
+      method: 'POST',
+      credentials: 'same-origin',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRF-TOKEN': getCsrfToken(),
+        'X-Requested-With': 'XMLHttpRequest',
+      },
+      body: '{}',
+    })
+    const j = await res.json().catch(() => ({}))
+    if (res.ok) {
+      detailMeta.value = {
+        ...detailMeta.value,
+        marked: !marked,
+        markCount: Math.max(0, (detailMeta.value.markCount || 0) + (marked ? -1 : 1)),
+      }
+    }
+    else {
+      favorError.value = j?.errorMessage || j?.data || `操作失败(${res.status})`
+    }
+  }
+  catch (e: any) {
+    favorError.value = friendlyError(e)
+  }
+  favorSending.value = false
+}
+
 async function fetchDetail(id: number) {
   detailLoading.value = true
   try {
@@ -59,7 +100,14 @@ async function fetchDetail(id: number) {
       const ctx = JSON.parse(m[1])
       const t = ctx?.data?.training || ctx?.currentData?.training || {}
       detailName.value = t.name || t.title || ''
-      detailMeta.value = { problemCount: t.problems?.length || 0, markCount: t.markCount || 0 }
+      detailMeta.value = {
+        problemCount: t.problems?.length || 0,
+        markCount: t.markCount || 0,
+        type: t.type,
+        typeLabel: TRAINING_TYPE_LABEL[t.type] || (t.type != null ? `类型${t.type}` : ''),
+        author: t.provider?.name || t.author?.name || '',
+        marked: !!t.marked,
+      }
       // Luogu training.problems may be pid strings, flat {pid,title,...}, or
       // nested {problem:{pid,...}, title}. Normalize pid (esp. the nested
       // p.problem.pid case) — an empty pid navigates to /problem/ which
@@ -106,10 +154,30 @@ watch(trainingId, () => loadTrainingContent())
       <div bg="$bew-content" rounded="$bew-radius" p-6 mb-6 shadow="[var(--bew-shadow-1),var(--bew-shadow-edge-glow-1)]" border="1 $bew-border-color" style="backdrop-filter:var(--bew-filter-glass-1)">
         <button @click="backToList" style="background:none;border:none;cursor:pointer;color:var(--bew-theme-color);font-size:var(--bew-base-font-size)" mb-2>← 返回</button>
         <h1 style="font-size:var(--bew-base-font-size);color:var(--bew-text-1);font-weight:700">{{ detailName || '加载中...' }}</h1>
-        <div v-if="detailMeta" mt-2 flex="~ gap-4" style="font-size:.85em;color:var(--bew-text-3)">
+        <div v-if="detailMeta" mt-2 flex="~ wrap items-center gap-4" style="font-size:.85em;color:var(--bew-text-3)">
+          <span v-if="detailMeta.typeLabel" px-2 py-0.5 rounded-full style="background:var(--bew-fill-2);color:var(--bew-text-2)">{{ detailMeta.typeLabel }}</span>
           <span>{{ detailMeta.problemCount }} 题</span>
           <span>{{ detailMeta.markCount }} 人收藏</span>
+          <span v-if="detailMeta.author">创建者 {{ detailMeta.author }}</span>
+          <span style="flex:1" />
+          <button
+            class="btn-press"
+            :disabled="favorSending"
+            :style="{
+              display: 'inline-flex', alignItems: 'center', gap: '4px',
+              padding: '4px 12px', borderRadius: 'var(--bew-radius-half)', cursor: 'pointer',
+              fontSize: '.85em', fontWeight: 600, whiteSpace: 'nowrap', border: '1px solid',
+              background: detailMeta.marked ? 'var(--bew-theme-color)' : 'transparent',
+              color: detailMeta.marked ? '#fff' : 'var(--bew-text-2)',
+              borderColor: detailMeta.marked ? 'var(--bew-theme-color)' : 'var(--bew-border-color)',
+            }"
+            @click="toggleFavor"
+          >
+            <span style="display:contents" v-html="renderIcon(detailMeta.marked ? 'mingcute:star-fill' : 'mingcute:star-line', 14)" />
+            {{ detailMeta.marked ? '已收藏' : '收藏' }}
+          </button>
         </div>
+        <div v-if="favorError" mt-2 style="color:var(--bew-error-color);font-size:.8em">{{ favorError }}</div>
       </div>
       <Loading v-if="detailLoading" />
       <Transition name="content-reveal">
