@@ -270,14 +270,85 @@ export function registerGuluProviders(monaco: any) {
   registerInlineAiProvider(monaco)
 }
 
-// ---- AI inline 补全(Monaco 原生 ghost:有语法高亮、Tab 原生处理)----
-// 注意:Monaco 的 inline suggestion 按「位置+model版本」缓存,同一位置无内容变更时不会
-// 重新调 provider/不会替换 ghost → 原生 ghost 无法逐字流式刷新(VSCode Copilot 也是生成完
-// 再整段显示)。所以这里 provider 等整段结果回来后用原生 ghost 一次性显示;网络仍走流式拉
-// (TTFB 低),结果齐了交给 Monaco 渲染(带高亮)。用户继续打字(新位置)→ 取消旧流、重算。
+// ---- AI inline 补全(Monaco 原生 ghost + 流式刷新:surgical hook)----
+// Monaco 的 inline suggestion 按「位置+版本+triggerKind」缓存(UpdateRequest.satisfies)。
+// 缓存是必要的(光标闪烁/空闲不重复请求、Tab 接受靠它)。要让它流式刷新,只 patch
+// satisfies:在我们主动刷新的那一拍让它返回 false(缓存未命中 → 重抓 provider → 拿最新累积
+// 文本),其余时刻原样。provider 同位置活跃流就返回当前 partial,配合刷新 → 原生 ghost 逐字
+// 更新(带高亮)。patch 失败则降级为「等整段一次显示」。用户打字(新位置)→ 取消旧流、重算。
 const AI_LANGS = ['cpp', 'c', 'java', 'javascript', 'typescript', 'pascal', 'python', 'go', 'rust', 'php', 'csharp']
 
-// 最新请求序号:用户打字产生新请求时,旧请求结果过期丢弃(返回空,不覆盖更新的 ghost)
+let activeEditor: any = null
+export function setActiveEditor(e: any) {
+  activeEditor = e
+  if (e)
+    // 编辑器就绪后尽快 patch(模型可能要一拍才创建,refreshGhost 里也会再尝试)
+    setTimeout(tryPatchSatisfies, 0)
+}
+
+// ---- hook:让 satisfies 在「强制刷新」那一拍 miss ----
+let satisfiesPatched = false
+let streamingHookReady = false
+let forceMiss = false        // 只在我们 refreshGhost 的一拍为 true
+let refreshQueued = false
+
+function getModel(): any {
+  try {
+    const ctrl = activeEditor?.getContribution?.('editor.contrib.inlineCompletionsController')
+    return ctrl?.model?.get?.() ?? ctrl?.model
+  }
+  catch { return null }
+}
+function tryPatchSatisfies() {
+  if (satisfiesPatched)
+    return
+  try {
+    const source = getModel()?._source
+    // 从已缓存的结果里取一个 UpdateRequest 实例拿原型(首次可能还没有,下次再试)
+    const req = source?.inlineCompletions?.get?.()?.request ?? source?._updateOperation?.value?.request
+    if (!req)
+      return
+    const proto = Object.getPrototypeOf(req)
+    if (proto.__gulyPatched)
+      return
+    const origSatisfies = proto.satisfies
+    proto.satisfies = function (other: any) {
+      if (forceMiss)
+        return false // 我们的刷新拍:强制 miss → 重抓 provider
+      return origSatisfies.call(this, other)
+    }
+    proto.__gulyPatched = satisfiesPatched = streamingHookReady = true
+    console.warn('[guly-ai] streaming hook ready')
+  }
+  catch { /* 内部结构不符 → 静默降级 */ }
+}
+function refreshGhost() {
+  if (refreshQueued)
+    return
+  refreshQueued = true
+  setTimeout(() => {
+    refreshQueued = false
+    tryPatchSatisfies()
+    const model = getModel()
+    if (!model)
+      return
+    // 强制 miss 一拍,然后触发 explicit 重算 → source 重抓 → provider 返回最新 partial
+    forceMiss = true
+    try {
+      if (typeof model.triggerExplicitly === 'function')
+        model.triggerExplicitly()
+      else
+        model.trigger?.(undefined, { explicit: true })
+    }
+    catch { /* ignore */ }
+    // satisfies 检查在 trigger 同步段内完成,随后复位
+    setTimeout(() => { forceMiss = false }, 0)
+  }, 50)
+}
+
+// 当前活跃流
+let stream: { id: number, posKey: string, preLen: number, partial: string, done: boolean } | null = null
+let nextStreamId = 0
 let aiSeq = 0
 
 function registerInlineAiProvider(monaco: any) {
@@ -299,23 +370,47 @@ function registerInlineAiProvider(monaco: any) {
           if (pre.trim().length < 3)
             return { items: [] }
 
-          // 取消上一条还在路上的流(省带宽);await 整段结果回来
+          const posKey = `${position.lineNumber}:${position.column}`
+          const mkRange = () => new monaco.Range(position.lineNumber, position.column, position.lineNumber, position.column)
+
+          // hook 就绪 + 同位置活跃流 → 直接返回当前累积文本(流式逐字刷新靠这个)
+          if (streamingHookReady && stream && stream.posKey === posKey && stream.preLen === pre.length) {
+            if (!stream.partial)
+              return { items: [] }
+            return { items: [{ insertText: stream.partial, range: mkRange() }] }
+          }
+
+          // 新位置 → 取消旧流、开新流
           const { abortAiStream, streamInlineCompletion } = await import('./aiCompletion')
           abortAiStream()
+          const id = ++nextStreamId
+          stream = { id, posKey, preLen: pre.length, partial: '', done: false }
+
+          if (streamingHookReady) {
+            // 流式:每来一段 chunk 更新 partial 并强制刷新原生 ghost
+            streamInlineCompletion(lang, pre, suf, (acc) => {
+              if (!stream || stream.id !== id)
+                return
+              stream.partial = acc
+              refreshGhost()
+            }).then((final) => {
+              if (!stream || stream.id !== id)
+                return
+              stream.partial = final || stream.partial
+              stream.done = true
+              console.warn('[guly-ai] ghost final', JSON.stringify(stream.partial).slice(0, 160))
+              refreshGhost()
+            })
+            return { items: [] }
+          }
+
+          // 降级(hook 没装上):等整段结果一次显示
           const final = await streamInlineCompletion(lang, pre, suf, () => {})
-          // 过期(用户已打字,有更新的请求)→ 丢弃,不覆盖更新的 ghost
           if (my !== aiSeq)
             return { items: [] }
-          console.warn('[guly-ai] ghost show', JSON.stringify(final).slice(0, 160))
           if (!final)
             return { items: [] }
-          // 折叠范围:在光标处纯插入(FIM 文本进前后缀之间)
-          return {
-            items: [{
-              insertText: final,
-              range: new monaco.Range(position.lineNumber, position.column, position.lineNumber, position.column),
-            }],
-          }
+          return { items: [{ insertText: final, range: mkRange() }] }
         },
         // Monaco dispose 时会调这些,provider 必须提供,给 no-op
         freeInlineCompletions() {},
