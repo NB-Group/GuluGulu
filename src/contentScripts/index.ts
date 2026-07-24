@@ -267,19 +267,41 @@ async function onDOMLoaded() {
     const csrfMeta = document.querySelector<HTMLMetaElement>('meta[name="csrf-token"]')
     const csrfToken = csrfMeta?.getAttribute('content') || ''
 
-    // Fetch user info via frontend API (same-origin cookies, always works when logged in)
+    // 登录态:优先用当前页 lentille 的 user(任何页都带,server 渲染登录态,不依赖 WAF 接口)。
+    // 之前只 fetch /record/list(列表页,被 C3VK WAF 拦)→ 直接进文章页时 WAF cookie 未就绪,
+    // 该 fetch 302 读不到 uid,误判"需要登录"。现在 lentille.user 优先,record/list 兜底。
     let userIdCookie = ''
     let userName = ''
+
+    // Extract lentille-context JSON BEFORE clearing body (Vue app reads it after mount)
+    let lentilleUser: any = null
     try {
-      const res = await fetch('https://www.luogu.com.cn/record/list?_contentOnly=1', { credentials: 'same-origin' })
-      const json = await res.json()
-      const user = json?.user || json?.currentUser
-      if (user?.uid) {
-        userIdCookie = String(user.uid)
-        userName = user.name || ''
+      const lcEl = document.getElementById('lentille-context')
+      if (lcEl?.textContent?.trim()) {
+        const lc = JSON.parse(lcEl.textContent)
+        ;(window as any).__gulu_lentille = lc
+        lentilleUser = lc?.user || lc?.currentUser
       }
     }
     catch (e) { console.warn('[GuluGulu]', e) }
+
+    if (lentilleUser?.uid) {
+      userIdCookie = String(lentilleUser.uid)
+      userName = lentilleUser.name || ''
+    }
+    else {
+      // 兜底:当前页 lentille 没带 user(极少数页面),退回 record/list 接口
+      try {
+        const res = await fetch('https://www.luogu.com.cn/record/list?_contentOnly=1', { credentials: 'same-origin' })
+        const json = await res.json()
+        const user = json?.user || json?.currentUser
+        if (user?.uid) {
+          userIdCookie = String(user.uid)
+          userName = user.name || ''
+        }
+      }
+      catch (e) { console.warn('[GuluGulu]', e) }
+    }
 
     // Wait up to 2s for Luogu's punch card to render, then extract it
     for (let i = 0; i < 20; i++) {
@@ -293,14 +315,6 @@ async function onDOMLoaded() {
       catch (e) { console.warn('[GuluGulu]', e) }
       await new Promise(r => setTimeout(r, 100))
     }
-
-    // Extract lentille-context JSON BEFORE clearing body (Vue app reads it after mount)
-    try {
-      const lcEl = document.getElementById('lentille-context')
-      if (lcEl?.textContent?.trim()) {
-        (window as any).__gulu_lentille = JSON.parse(lcEl.textContent)
-      }
-    } catch (e) { console.warn('[GuluGulu]', e) }
 
     // Try to find and preserve the Luogu top bar
     originalTopBar = document.querySelector<HTMLElement>(
