@@ -51,6 +51,7 @@
     "@codemirror/view": "^6",
     "@types/md5": "^2.3.5",
     "dompurify": "^3.1.5",
+    "grid-layout-plus": "^1.1.1",
     "highlight.js": "^11.11.1",
     "katex": "^0.17.0",
     "marked": "^18.0.5",
@@ -59,14 +60,14 @@
     "mitt": "^3.0.1",
     "monaco-editor": "^0.56.0",
     "overlayscrollbars": "2.7.3",
-    "tree-sitter-wasms": "^0.1.13",
-    "web-tree-sitter": "^0.20.8",
     "overlayscrollbars-vue": "^0.5.9",
     "pinia": "^2.1.7",
     "qrcode.vue": "^3.4.1",
+    "tree-sitter-wasms": "^0.1.13",
     "vue-i18n": "^9.13.1",
     "vue-toastification": "2.0.0-rc.5",
-    "vuedraggable": "^4.1.0"
+    "vuedraggable": "^4.1.0",
+    "web-tree-sitter": "^0.20.8"
   },
   "devDependencies": {
     "@antfu/eslint-config": "^2.21.1",

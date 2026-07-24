@@ -53,6 +53,16 @@ export interface Settings {
 
   // Dock items configuration
   dockItemsConfig: { page: AppPage, visible: boolean, openInNewTab: boolean, useOriginalLuoguPage: boolean }[]
+
+  // 主页「开始」tab 的可定制 widget 布局(Apple 小组件式网格):{i:widgetId, x,y,w,h}(网格单元)
+  startLayout: { i: string, x: number, y: number, w: number, h: number }[]
+
+  // AI 自动补全(OpenAI 兼容端点)
+  aiCompletionEnabled: boolean
+  aiBaseURL: string // 如 https://api.openai.com/v1
+  aiApiKey: string
+  aiModelName: string
+  aiIntensity: 'off' | 'light' | 'strong' | 'guide'
 }
 
 export const originalSettings: Settings = {
@@ -107,6 +117,16 @@ export const originalSettings: Settings = {
     { page: 'Training' as AppPage, visible: true, openInNewTab: false, useOriginalLuoguPage: false },
     { page: 'Record' as AppPage, visible: true, openInNewTab: false, useOriginalLuoguPage: false },
   ],
+
+  // startLayout 初始值在 Start.vue 启动时按 widgets 注册表 defaultLayout 自动生成;
+  // 这里给空数组占位,mergeDefaults 会保留用户已有布局。
+  startLayout: [],
+
+  aiCompletionEnabled: false,
+  aiBaseURL: '',
+  aiApiKey: '',
+  aiModelName: '',
+  aiIntensity: 'off',
 }
 
 export const settings = useStorageLocal('settings', ref<Settings>(originalSettings), { mergeDefaults: true })
