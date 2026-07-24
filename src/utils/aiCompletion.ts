@@ -42,7 +42,7 @@ const FIM_CONFIG: Record<'light' | 'strong', { maxTokens: number, stop: string[]
 
 // chat 力度档 token。guide 给到 384:思考模式开启时,推理模型会把 token 花在内部 reasoning,
 // 预算太小 → content 还没开始输出就被截断(返回空)。thinking 再 ×2 放宽。
-const CHAT_MAXTOKENS: Record<Exclude<AiIntensity, 'off'>, number> = { light: 128, strong: 600, guide: 384 }
+const CHAT_MAXTOKENS: Record<Exclude<AiIntensity, 'off'>, number> = { light: 128, strong: 600, guide: 512 }
 
 const THINKING_SUFFIX
   = '\n\nTHINKING MODE ON: reason step by step internally about the algorithm and edge cases before producing the final answer. Do NOT output your reasoning, output ONLY the final answer in the format above.'
@@ -124,6 +124,7 @@ export function streamInlineCompletion(lang: string, prefix: string, suffix: str
   const port = browser.runtime.connect({ name: 'guly-ai-stream' })
   curPort = port
   let acc = ''
+  let reasoningAcc = ''   // 推理模型兜底:content 空时用 reasoning 的最后几句
   console.warn('[guly-ai] stream start', { mode: payload.mode })
   return new Promise<string>((resolve) => {
     port.onMessage.addListener((m: any) => {
@@ -133,10 +134,15 @@ export function streamInlineCompletion(lang: string, prefix: string, suffix: str
         acc += m.chunk
         onChunk(acc)
       }
+      else if (m.reasoning) {
+        reasoningAcc += m.reasoning
+      }
       else if (m.done) {
-        console.warn('[guly-ai] stream done', JSON.stringify(acc).slice(0, 120))
+        // 推理模型可能 content 为空、全在 reasoning:取 reasoning 末尾一两句兜底
+        const final = acc || reasoningAcc.trim().split('\n').filter(Boolean).slice(-2).join(' ')
+        console.warn('[guly-ai] stream done', JSON.stringify(final).slice(0, 120), reasoningAcc ? '(from reasoning)' : '')
         cleanup()
-        resolve(stripFences(acc))
+        resolve(stripFences(final))
       }
       else if (m.error) {
         console.warn('[guly-ai] stream error', m.error)

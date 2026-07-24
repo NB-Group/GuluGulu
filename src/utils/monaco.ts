@@ -299,8 +299,12 @@ function registerInlineAiProvider(monaco: any) {
             return { items: [] }
 
           const posKey = `${position.lineNumber}:${position.column}`
-          // 同位置活跃流(含已完成)→ 直接返回累积文本(progress / 缓存的最终结果)
-          if (stream && stream.posKey === posKey && stream.preLen === pre.length && stream.partial) {
+          // 同位置已有活跃流(不管 partial 是否已到)→ 不重启!否则首字到达前反复 trigger
+          // 会掉进「开新流」分支、abortAiStream 把流掐了 → 永远跑不完、空返回。
+          // partial 有内容就返回(逐字刷新);还在路上就先返回空,等 chunk 触发重显。
+          if (stream && stream.posKey === posKey && stream.preLen === pre.length) {
+            if (!stream.partial)
+              return { items: [] }
             return {
               items: [{
                 insertText: stream.partial,
@@ -309,7 +313,7 @@ function registerInlineAiProvider(monaco: any) {
             }
           }
 
-          // 启动新流:取消旧的
+          // 新位置 → 取消旧流,开新流
           const { abortAiStream, streamInlineCompletion } = await import('./aiCompletion')
           abortAiStream()
           const id = ++nextStreamId

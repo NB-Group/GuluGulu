@@ -110,8 +110,14 @@ export function handleAiStreamPort(port: any) {
             const chunk: string = isFim
               ? (ch?.text || '')
               : (ch?.delta?.content || ch?.text || '')
+            // 推理模型(deepseek-reasoner 等)把内容放 reasoning_content、content 可能为空;
+            // 一并推回,内容侧作兜底。
+            const reasoning: string = !isFim ? (ch?.delta?.reasoning_content || '') : ''
             if (chunk) {
               try { port.postMessage({ chunk }) } catch { return }
+            }
+            if (reasoning) {
+              try { port.postMessage({ reasoning }) } catch { return }
             }
           }
           catch { /* keep-alive / 非 JSON 行,忽略 */ }
