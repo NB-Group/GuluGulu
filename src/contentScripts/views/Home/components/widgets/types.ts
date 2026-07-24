@@ -1,10 +1,6 @@
 import type { Component } from 'vue'
 
-/** 网格单元尺寸(列×行,grid-layout-plus 的 w/h) */
-export interface WidgetSize {
-  w: number
-  h: number
-}
+export type WidgetSize = 'sm' | 'md' | 'lg'
 
 /**
  * 「开始」tab 的 widget 注册表项。加新卡片只需:
@@ -18,19 +14,14 @@ export interface WidgetDef {
   name: string
   /** mingcute 图标名 */
   icon: string
-  /** 默认网格尺寸(列×行) */
-  defaultLayout: WidgetSize
-  /** 允许的缩放档(用户在编辑模式可循环切换) */
-  sizes: WidgetSize[]
+  /** 默认尺寸档(sm=4列 / md=6列 / lg=12列整行) */
+  defaultSize: WidgetSize
   /** 异步组件加载器(defineAsyncComponent 用) */
   component: () => Promise<{ default: Component }>
 }
 
-/** startLayout 里的单项 */
+/** startLayout 里的单项:顺序即显示顺序,size 是占位档 */
 export interface WidgetLayoutItem {
   i: string
-  x: number
-  y: number
-  w: number
-  h: number
+  size: WidgetSize
 }

@@ -5,6 +5,8 @@
  * 实际网络请求走 background SW(参见 background/messageListeners/api/ai.ts)绕 CORS。
  */
 
+import browser from 'webextension-polyfill'
+
 export type AiIntensity = 'off' | 'light' | 'strong' | 'guide'
 
 interface AiState {
@@ -13,9 +15,10 @@ interface AiState {
   baseURL: string
   apiKey: string
   model: string
+  thinking: boolean
 }
 
-let state: AiState = { enabled: false, intensity: 'off', baseURL: '', apiKey: '', model: '' }
+let state: AiState = { enabled: false, intensity: 'off', baseURL: '', apiKey: '', model: '', thinking: false }
 export function setAiState(s: Partial<AiState>) {
   state = { ...state, ...s }
 }
@@ -27,6 +30,12 @@ const INTENSITY_PROMPT: Record<Exclude<AiIntensity, 'off'>, string> = {
 }
 const INTENSITY_MAXTOKENS: Record<Exclude<AiIntensity, 'off'>, number> = { light: 64, strong: 600, guide: 80 }
 
+// 思考模式:对 strong/guide 注入「先内部推理再输出最终结果」指令,并放宽 token 上限。
+// (light 只补当前结构,思考无意义,保持原样。)OpenAI 兼容端点无统一 reasoning 开关,
+// 故以 system prompt 指令实现 —— 模型若支持思维链效果更好,不支持也只是多花点 token。
+const THINKING_SUFFIX
+  = '\n\nTHINKING MODE ON: reason step by step internally about the algorithm and edge cases before producing the final answer. Do NOT output your reasoning, output ONLY the final answer in the format above.'
+
 function stripFences(s: string): string {
   // 去掉 ```lang ... ``` 包裹,去掉行首多余缩进的前导空行
   return s.replace(/^\s*```[\w-]*\n?/, '').replace(/\n?```\s*$/, '').trimEnd()
@@ -34,11 +43,14 @@ function stripFences(s: string): string {
 
 /** 由 monaco inline provider 调用;返回应追加的文本(空串=不补) */
 export async function requestInlineCompletion(lang: string, prefix: string): Promise<string> {
+  // 关键门控:强度=off 或缺端点 → 不补。enabled 作为设置里的总闸,由编辑器选强度时自动置 true。
   if (!state.enabled || state.intensity === 'off' || !state.baseURL || !state.model)
     return ''
   const intensity = state.intensity as Exclude<AiIntensity, 'off'>
+  const thinking = state.thinking && intensity !== 'light'
+  const sys = INTENSITY_PROMPT[intensity] + (thinking ? THINKING_SUFFIX : '')
   const messages = [
-    { role: 'system', content: `${INTENSITY_PROMPT[intensity]}\nProgramming language: ${lang}.` },
+    { role: 'system', content: `${sys}\nProgramming language: ${lang}.` },
     { role: 'user', content: prefix },
   ]
   try {
@@ -48,7 +60,7 @@ export async function requestInlineCompletion(lang: string, prefix: string): Pro
       apiKey: state.apiKey,
       model: state.model,
       messages,
-      maxTokens: INTENSITY_MAXTOKENS[intensity],
+      maxTokens: thinking ? Math.round(INTENSITY_MAXTOKENS[intensity] * 1.6) : INTENSITY_MAXTOKENS[intensity],
       temperature: intensity === 'strong' ? 0.3 : 0.15,
     })
     if (!r?.ok)

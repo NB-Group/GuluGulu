@@ -46,6 +46,10 @@ async function testConnection() {
       <SettingsItem title="补全强度" desc="轻=补当前结构(如 for 头);强=按注释生成整段(如 //bfs);思路指引=只给中文一句话">
         <Select v-model="settings.aiIntensity" :options="intensityOptions" w="full" />
       </SettingsItem>
+
+      <SettingsItem title="思考模式" desc="对「强 / 思路指引」生效:让模型先内部推理再输出结果(更稳但更慢,仅指令实现,依赖端点模型能力)">
+        <Radio v-model="settings.aiThinking" />
+      </SettingsItem>
     </SettingsItemGroup>
 
     <SettingsItemGroup title="端点配置">

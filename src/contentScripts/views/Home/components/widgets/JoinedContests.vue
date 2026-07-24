@@ -3,7 +3,7 @@ import { AppPage } from '~/enums/appEnums'
 import { useGuluApp } from '~/composables/useAppProvider'
 import { renderIcon } from '~/utils/icons'
 
-const props = defineProps<{ w?: number, h?: number }>()
+const props = defineProps<{ size?: 'sm' | 'md' | 'lg' }>()
 const { navigateTo } = useGuluApp()
 
 interface C { id: number; name: string; startTime: number; endTime: number; status: number }
@@ -39,7 +39,7 @@ function sLabel(s: number) { return s === 1 ? '进行中' : s === 2 ? '已结束
 function sColor(s: number) { return s === 1 ? 'var(--bew-success-color)' : s === 2 ? 'var(--bew-text-4)' : 'var(--bew-theme-color)' }
 function fmt(ts: number) { const d = new Date(ts * 1000); return `${d.getMonth() + 1}/${d.getDate()} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}` }
 function open(id: number) { navigateTo(AppPage.ContestDetail, `${location.origin}/contest/${id}`) }
-const limit = computed(() => Math.max(2, (props.h || 3) * 2))
+const limit = computed(() => props.size === 'lg' ? 6 : props.size === 'sm' ? 2 : 4)
 onMounted(fetchList)
 defineExpose({ initData: fetchList })
 </script>

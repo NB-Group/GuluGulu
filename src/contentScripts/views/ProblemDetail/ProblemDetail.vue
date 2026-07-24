@@ -158,7 +158,17 @@ const aiIntensityOptions = [
 ]
 const aiIntensityProxy = computed({
   get: () => settings.value.aiIntensity,
-  set: (v: any) => { settings.value.aiIntensity = v },
+  set: (v: any) => {
+    settings.value.aiIntensity = v
+    // 在编辑器里把强度调到非「关」即视为打开补全(否则用户只调强度、总闸仍关 → 打字没反应)
+    if (v !== 'off')
+      settings.value.aiCompletionEnabled = true
+  },
+})
+// 思考模式开关(对 strong/guide 生效)
+const aiThinkingProxy = computed({
+  get: () => settings.value.aiThinking,
+  set: (v: boolean) => { settings.value.aiThinking = v },
 })
 watchEffect(() => {
   setAiState({
@@ -167,6 +177,7 @@ watchEffect(() => {
     baseURL: settings.value.aiBaseURL,
     apiKey: settings.value.aiApiKey,
     model: settings.value.aiModelName,
+    thinking: settings.value.aiThinking,
   })
 })
 
@@ -836,6 +847,15 @@ onUnmounted(() => {
                   :options="aiIntensityOptions"
                   style="width:104px;flex-shrink:0"
                 />
+                <button
+                  :title="aiThinkingProxy ? '思考模式:开(对 强/思路 生效)' : '思考模式:关'"
+                  style="display:flex;align-items:center;gap:3px;background:none;border:1px solid var(--bew-border-color);border-radius:var(--bew-radius-half);padding:3px 8px;cursor:pointer;font-size:1em;white-space:nowrap;transition:all var(--bew-dur-fast) ease"
+                  :style="{ color: aiThinkingProxy ? 'var(--bew-theme-color)' : 'var(--bew-text-2)', borderColor: aiThinkingProxy ? 'var(--bew-theme-color-40)' : 'var(--bew-border-color)' }"
+                  @click="aiThinkingProxy = !aiThinkingProxy"
+                >
+                  <span style="display:contents" v-html="renderIcon('mingcute:brain-line', 14)" />
+                  {{ aiThinkingProxy ? '思考' : '直答' }}
+                </button>
                 <button style="display:flex;align-items:center;gap:4px;background:none;border:1px solid var(--bew-border-color);border-radius:var(--bew-radius-half);padding:4px 10px;cursor:pointer;color:var(--bew-text-2);font-size:1em;white-space:nowrap;margin-left:auto" @click="copyMarkdown">
                   <span style="display:contents" v-html="renderIcon(copiedMarkdown ? 'mingcute:check-circle-fill' : 'mingcute:copy-line', 14)" />
                   {{ copiedMarkdown ? '已复制' : '复制MD' }}

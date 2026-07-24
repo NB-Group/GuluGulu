@@ -3,66 +3,85 @@ import { AppPage } from '~/enums/appEnums'
 import { useGuluApp } from '~/composables/useAppProvider'
 import { renderIcon } from '~/utils/icons'
 
-const props = defineProps<{ w?: number, h?: number }>()
+defineProps<{ size?: 'sm' | 'md' | 'lg' }>()
 const { navigateTo } = useGuluApp()
 
-interface T { id: number; name: string; solved: number; total: number }
-const list = ref<T[]>([])
+// 练习进度:`/user/mine/practice` 不存在(mine 不带 practice 子路由),
+// 先用 `/user/mine` 解析当前登录 uid,再请求 `/user/{uid}/practice`。
+const passed = ref(0)
+const submitted = ref(0)
+const total = ref(0)
 const loading = ref(true)
+
+async function resolveUid(): Promise<number | null> {
+  try {
+    const res = await fetch(`${location.origin}/user/mine?_contentOnly=1`, { credentials: 'same-origin' })
+    if (!res.ok)
+      return null
+    const j = await res.json()
+    return Number(j?.currentUser?.uid) || Number(j?.user?.uid) || null
+  }
+  catch { return null }
+}
 
 async function fetchList() {
   loading.value = true
   try {
-    const res = await fetch(`${location.origin}/user/mine/practice`, { credentials: 'same-origin' })
+    const uid = await resolveUid()
+    if (!uid) { loading.value = false; return }
+    const res = await fetch(`${location.origin}/user/${uid}/practice`, { credentials: 'same-origin' })
     const html = await res.text()
-    const m = html.match(/<script\s+id="lentille-context"\s+type="application\/json"[^>]*>([^<]*)<\/script>/)
+    const m = html.match(/<script\s+id="lentille-context"[^>]*>([^<]+)<\/script>/)
     if (m?.[1]) {
       const ctx = JSON.parse(m[1])
-      const raw = ctx?.data?.trainings || []
-      const arr: any[] = Array.isArray(raw) ? raw : (raw.result || [])
-      list.value = arr.map((t: any) => ({
-        id: t.id,
-        name: t.name || t.title || '',
-        solved: t.solvedCount ?? t.acceptedCount ?? 0,
-        total: t.problemCount || 0,
-      })).filter(t => t.total > 0)
+      const count = (v: any) => {
+        if (!v)
+          return 0
+        if (typeof v === 'number')
+          return v
+        return Array.isArray(v) ? v.length : (v.result?.length || v.count || 0)
+      }
+      passed.value = count(ctx?.data?.passedCount ?? ctx?.data?.passed)
+      submitted.value = count(ctx?.data?.submittedCount ?? ctx?.data?.submitted)
+      // 通过率分母:提交过的题目数(没有就退回 passed)
+      total.value = submitted.value || passed.value
     }
   }
   catch (e) { console.warn('[GuluGulu]', e) }
   loading.value = false
 }
 
-function pct(s: number, t: number) { return t > 0 ? Math.round((s / t) * 100) : 0 }
-function open(id: number) { navigateTo(AppPage.Training, `${location.origin}/training/${id}`) }
-const limit = computed(() => Math.max(2, (props.h || 3) * 2))
+function pct(p: number, t: number) { return t > 0 ? Math.min(100, Math.round((p / t) * 100)) : 0 }
+function openPractice() {
+  // 跳到「我的题目」作为练习入口(无独立练习列表页)
+  navigateTo(AppPage.MyProblems, `${location.origin}/user/mine/problem`)
+}
 onMounted(fetchList)
 defineExpose({ initData: fetchList })
 </script>
 
 <template>
   <Loading v-if="loading" />
-  <div v-else flex="~ col gap-2">
-    <button
-      v-for="t in list.slice(0, limit)" :key="t.id"
-      class="start-row" flex="~ items-center gap-2" bg="$bew-fill-1" rounded="8px" p="x-3 y-2"
-      border="1 solid transparent" cursor-pointer text-left @click="open(t.id)"
-    >
-      <span flex-1 min-w-0 style="font-size:.85em;color:var(--bew-text-1);font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ t.name }}</span>
-      <span style="font-size:.75em;color:var(--bew-text-3);flex-shrink:0;white-space:nowrap">{{ t.solved }}/{{ t.total }}</span>
-      <span style="width:36px;height:5px;background:var(--bew-fill-3);border-radius:999px;overflow:hidden;flex-shrink:0">
-        <span :style="{ display:'block', height:'100%', width: pct(t.solved,t.total)+'%', background: 'var(--bew-theme-color)' }" />
-      </span>
-    </button>
-    <div v-if="list.length === 0" flex="~ col items-center gap-1" py-6>
-      <span style="display:contents" v-html="renderIcon('mingcute:book-4-line', 22)" />
-      <span style="color:var(--bew-text-4);font-size:.85em">还没有在刷的题单</span>
+  <div v-else flex="~ col gap-3" h-full justify-center>
+    <div flex="~ items-baseline gap-2">
+      <span style="font-size:1.8em;font-weight:800;color:var(--bew-theme-color);line-height:1">{{ passed }}</span>
+      <span style="font-size:.8em;color:var(--bew-text-3)">已通过</span>
+      <span flex-1 />
+      <span style="font-size:.78em;color:var(--bew-text-3)">{{ submitted }} 题提交过</span>
     </div>
+    <div style="height:8px;background:var(--bew-fill-3);border-radius:999px;overflow:hidden">
+      <div :style="{ height:'100%', width: pct(passed, total)+'%', background:'var(--bew-theme-color)', transition:'width .5s ease' }" />
+    </div>
+    <button class="start-row" flex="~ items-center justify-center gap-1" bg="$bew-fill-1" rounded="8px" p="y-2" border="1 solid transparent" cursor-pointer @click="openPractice">
+      <span style="display:contents" v-html="renderIcon('mingcute:edit-line', 14)" />
+      <span style="font-size:.82em;color:var(--bew-text-2);font-weight:600">继续练习</span>
+    </button>
   </div>
 </template>
 
 <style scoped lang="scss">
 .start-row {
-  transition: border-color var(--bew-dur-fast) ease, background var(--bew-dur-fast) ease, transform var(--bew-dur-fast) ease;
-  &:hover { border-color: var(--bew-theme-color-40); transform: translateX(2px); }
+  transition: border-color var(--bew-dur-fast) ease, background var(--bew-dur-fast) ease;
+  &:hover { border-color: var(--bew-theme-color-40); background: var(--bew-fill-2); }
 }
 </style>

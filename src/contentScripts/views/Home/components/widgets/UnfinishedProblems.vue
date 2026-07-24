@@ -2,7 +2,7 @@
 import { AppPage } from '~/enums/appEnums'
 import { useGuluApp } from '~/composables/useAppProvider'
 
-const props = defineProps<{ w?: number, h?: number }>()
+const props = defineProps<{ size?: 'sm' | 'md' | 'lg' }>()
 const { navigateTo } = useGuluApp()
 
 interface Draft { pid: string; ts: number; preview: string }
@@ -47,7 +47,7 @@ function rel(ts: number): string {
 }
 
 function open(pid: string) { navigateTo(AppPage.ProblemDetail, `${location.origin}/problem/${pid}`) }
-const limit = computed(() => Math.max(2, (props.h || 3) * 2))
+const limit = computed(() => props.size === 'lg' ? 6 : props.size === 'sm' ? 2 : 4)
 onMounted(fetchDrafts)
 defineExpose({ initData: fetchDrafts })
 </script>

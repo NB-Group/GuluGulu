@@ -3,7 +3,7 @@ import { AppPage } from '~/enums/appEnums'
 import { useGuluApp } from '~/composables/useAppProvider'
 import { renderIcon } from '~/utils/icons'
 
-const props = defineProps<{ w?: number, h?: number }>()
+const props = defineProps<{ size?: 'sm' | 'md' | 'lg' }>()
 const { navigateTo } = useGuluApp()
 
 interface T { id: number; name: string; markCount: number }
@@ -28,7 +28,7 @@ async function fetchList() {
 }
 
 function open(id: number) { navigateTo(AppPage.Training, `${location.origin}/training/${id}`) }
-const limit = computed(() => Math.max(2, (props.h || 3) * 2))
+const limit = computed(() => props.size === 'lg' ? 6 : props.size === 'sm' ? 2 : 4)
 onMounted(fetchList)
 defineExpose({ initData: fetchList })
 </script>

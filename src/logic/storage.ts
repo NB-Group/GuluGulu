@@ -54,8 +54,8 @@ export interface Settings {
   // Dock items configuration
   dockItemsConfig: { page: AppPage, visible: boolean, openInNewTab: boolean, useOriginalLuoguPage: boolean }[]
 
-  // 主页「开始」tab 的可定制 widget 布局(Apple 小组件式网格):{i:widgetId, x,y,w,h}(网格单元)
-  startLayout: { i: string, x: number, y: number, w: number, h: number }[]
+  // 主页「开始」tab 的可定制 widget 布局(Apple 小组件式网格):数组顺序=显示顺序,size=占位档
+  startLayout: { i: string, size: WidgetGridSize }[]
 
   // AI 自动补全(OpenAI 兼容端点)
   aiCompletionEnabled: boolean
@@ -63,7 +63,11 @@ export interface Settings {
   aiApiKey: string
   aiModelName: string
   aiIntensity: 'off' | 'light' | 'strong' | 'guide'
+  aiThinking: boolean // 思考模式:开启后给 strong/guide 注入「先推理再输出」的指令、并放宽 token
 }
+
+/** 「开始」看板 widget 的尺寸档:小=4 列 / 中=6 列 / 大=12 列(整行) */
+export type WidgetGridSize = 'sm' | 'md' | 'lg'
 
 export const originalSettings: Settings = {
   themeMode: 'auto',
@@ -127,6 +131,7 @@ export const originalSettings: Settings = {
   aiApiKey: '',
   aiModelName: '',
   aiIntensity: 'off',
+  aiThinking: false,
 }
 
 export const settings = useStorageLocal('settings', ref<Settings>(originalSettings), { mergeDefaults: true })
