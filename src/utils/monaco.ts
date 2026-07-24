@@ -334,14 +334,11 @@ function refreshGhost() {
     const model = getModel()
     if (!model)
       return
-    // 强制 miss 一拍,然后触发 explicit 重算 → source 重抓 → provider 返回最新 partial
+    // 强制 miss 一拍 + noDelay 重算(不用 explicit,避免 _inAcceptFlow 副作用把 ghost 清掉)
+    // → source 重抓 → provider 返回最新 partial
     forceMiss = true
-    try {
-      if (typeof model.triggerExplicitly === 'function')
-        model.triggerExplicitly()
-      else
-        model.trigger?.(undefined, { explicit: true })
-    }
+    console.warn('[guly-ai] refresh', stream?.partial?.length)
+    try { model.trigger?.(undefined, { noDelay: true }) }
     catch { /* ignore */ }
     // satisfies 检查在 trigger 同步段内完成,随后复位
     setTimeout(() => { forceMiss = false }, 0)
@@ -380,6 +377,7 @@ function registerInlineAiProvider(monaco: any) {
 
           // hook 就绪 + 同位置活跃流 → 直接返回当前累积文本(流式逐字刷新靠这个)
           if (streamingHookReady && stream && stream.posKey === posKey && stream.preLen === pre.length) {
+            console.warn('[guly-ai] progressive', stream.partial.length)
             if (!stream.partial)
               return { items: [] }
             return { items: [{ insertText: stream.partial, range: mkRange() }] }
