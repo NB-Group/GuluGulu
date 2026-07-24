@@ -171,6 +171,15 @@ const aiThinkingProxy = computed({
   set: (v: boolean) => { settings.value.aiThinking = v },
 })
 watchEffect(() => {
+  // 思路指引模式需要题目上下文:把题目各段 markdown 拼成原始文本注入 AI state
+  const p = problem.value
+  const parts = [
+    p?.background,
+    p?.description,
+    p?.inputFormat && `输入格式:${p.inputFormat}`,
+    p?.outputFormat && `输出格式:${p.outputFormat}`,
+    p?.hint && `提示:${p.hint}`,
+  ].filter(Boolean)
   setAiState({
     enabled: settings.value.aiCompletionEnabled,
     intensity: settings.value.aiIntensity,
@@ -179,6 +188,7 @@ watchEffect(() => {
     model: settings.value.aiModelName,
     thinking: settings.value.aiThinking,
     fim: settings.value.aiFim,
+    problemMarkdown: parts.join('\n\n'),
   })
 })
 

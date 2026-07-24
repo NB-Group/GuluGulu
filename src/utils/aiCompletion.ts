@@ -19,9 +19,10 @@ interface AiState {
   model: string
   thinking: boolean
   fim: boolean
+  problemMarkdown: string
 }
 
-let state: AiState = { enabled: false, intensity: 'off', baseURL: '', apiKey: '', model: '', thinking: false, fim: true }
+let state: AiState = { enabled: false, intensity: 'off', baseURL: '', apiKey: '', model: '', thinking: false, fim: true, problemMarkdown: '' }
 export function setAiState(s: Partial<AiState>) {
   state = { ...state, ...s }
 }
@@ -47,6 +48,23 @@ const THINKING_SUFFIX
 
 function stripFences(s: string): string {
   return s.replace(/^\s*```[\w-]*\n?/, '').replace(/\n?```\s*$/, '').trimEnd()
+}
+
+/** 组 chat 模式的 messages。guide(思路指引)时带上题目 markdown,让指引贴合本题。 */
+function buildChatMessages(intensity: Exclude<AiIntensity, 'off'>, lang: string, prefix: string) {
+  const sys = INTENSITY_PROMPT[intensity] + (state.thinking && intensity !== 'light' ? THINKING_SUFFIX : '') + `\nProgramming language: ${lang}.`
+  // guide 模式:把题目描述塞进上下文(裁到 ~2400 字符省 token);其它强度只看代码前缀。
+  if (intensity === 'guide' && state.problemMarkdown.trim()) {
+    const prob = state.problemMarkdown.length > 2400 ? `${state.problemMarkdown.slice(0, 2400)}…` : state.problemMarkdown
+    return [
+      { role: 'system', content: sys },
+      { role: 'user', content: `【题目描述】\n${prob}\n\n【我的代码/草稿(光标前)】\n${prefix}\n\n请针对光标处给一句简短的算法思路。` },
+    ]
+  }
+  return [
+    { role: 'system', content: sys },
+    { role: 'user', content: prefix },
+  ]
 }
 
 /**
@@ -87,10 +105,7 @@ export async function requestInlineCompletion(lang: string, prefix: string, suff
           baseURL: base,
           apiKey: state.apiKey,
           model: state.model,
-          messages: [
-            { role: 'system', content: INTENSITY_PROMPT[intensity] + (state.thinking && intensity !== 'light' ? THINKING_SUFFIX : '') + `\nProgramming language: ${lang}.` },
-            { role: 'user', content: prefix },
-          ],
+          messages: buildChatMessages(intensity, lang, prefix),
           maxTokens: state.thinking && intensity !== 'light' ? Math.round(INTENSITY_MAXTOKENS[intensity] * 1.6) : INTENSITY_MAXTOKENS[intensity],
           temperature,
         })
