@@ -97,6 +97,14 @@
   }
 }
 
+// 给带 backdrop-filter(glass)的卡片用:只做 translateY 滑入,不动 opacity。
+// 元素 opacity<1 时 backdrop-filter 会采样到空的隔离背景 → 入场瞬间发亮闪烁。
+// 用法:在该元素上同时覆盖 animation-name + opacity:1。
+@keyframes stagger-slide-in {
+  from { transform: translateY(10px); }
+  to { transform: translateY(0); }
+}
+
 // Staggered card animation for grid layouts
 .stagger-card {
   opacity: 0;

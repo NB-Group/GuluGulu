@@ -71,4 +71,9 @@ onMounted(fetchProblems)
 <style scoped lang="scss">
 .problem-card { backdrop-filter: var(--bew-filter-glass-1); transition: box-shadow var(--bew-dur-fast) ease, transform var(--bew-dur-fast) ease; }
 .problem-card:hover { box-shadow: var(--bew-shadow-2) !important; transform: translateY(-2px); }
+// glass 卡片入场只滑入、不淡入:opacity<1 会让 backdrop-filter 采样到空背景 → 闪亮。
+.problem-card.stagger-row {
+  animation-name: stagger-slide-in;
+  opacity: 1;
+}
 </style>
