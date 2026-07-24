@@ -21,6 +21,24 @@ type MonacoNS = typeof import('monaco-editor')
 let monacoInstance: MonacoNS | null = null
 let loadingPromise: Promise<MonacoNS | null> | null = null
 
+// Monaco 内部频繁 cancel 上一条 inline 请求,在它自己的 observable/autorun 链上 reject
+// 一个 name==='Canceled' 的错误,够不到、没法从调用侧 catch,会刷 "Uncaught (in promise)
+// Canceled"。装个全局 unhandledrejection 守卫吞掉它(Canceled 永远是良性的)。
+let canceledGuardInstalled = false
+function installCanceledGuard() {
+  if (canceledGuardInstalled)
+    return
+  canceledGuardInstalled = true
+  try {
+    (self as any).addEventListener?.('unhandledrejection', (e: any) => {
+      const r = e?.reason
+      if (r && (r?.name === 'Canceled' || r === 'Canceled' || r?.message === 'Canceled'))
+        e.preventDefault()
+    })
+  }
+  catch { /* ignore */ }
+}
+
 function editorWorkerUrl(): string {
   // ESM worker (module worker). Monaco 0.56's classic min worker is AMD-only
   // and unusable under MV3 CSP; the ESM worker loads as `{ type: 'module' }`
@@ -36,6 +54,7 @@ export async function ensureMonaco(): Promise<MonacoNS | null> {
 
   loadingPromise = (async () => {
     try {
+      installCanceledGuard()
       // Set up the worker factory first. Returning the editor.worker for every
       // label is fine for our languages (cpp/python/java use the generic
       // editor.worker); JS/TS would want a ts.worker but degrade gracefully.
@@ -283,7 +302,7 @@ function scheduleGhostRefresh() {
         p.catch(() => {})
     }
     catch { /* ignore */ }
-  }, 45)
+  }, 60)
 }
 
 function registerInlineAiProvider(monaco: any) {
