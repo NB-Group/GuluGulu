@@ -1,12 +1,13 @@
 /**
- * AI inline 补全:支持两种模式
+ * AI inline 补全。两种模式:
  *  - FIM(Fill In the Middle,默认):POST {base}/completions,prompt=光标前 + suffix=光标后,
- *    模型补中间。真正的代码补全(DeepSeek 等)。返回 choices[0].text。
- *  - Chat(仅「思路指引」或关闭 FIM 时):POST {base}/chat/completions,messages,返回 message.content。
- * 与 Monaco 解耦:由 utils/monaco.ts 的 inline provider 调 requestInlineCompletion,
- * 由编辑器组件经 setAiState 注入当前设置。网络请求走 background SW 绕 CORS。
+ *    补中间(DeepSeek 等)。轻/强 走 FIM。
+ *  - Chat(思路指引 或 关 FIM):POST {base}/chat/completions,messages(思路指引带题目 markdown)。
+ *
+ * 网络走 background SW 绕 CORS;**流式**:用 runtime.connect port 边到 token 边回调,
+ * 让 Monaco 的 ghost 逐字更新(见 streamInlineCompletion)。与 Monaco 解耦:由 utils/monaco.ts
+ * 的 inline provider 调用,由编辑器组件经 setAiState 注入当前设置。
  */
-
 import browser from 'webextension-polyfill'
 
 export type AiIntensity = 'off' | 'light' | 'strong' | 'guide'
@@ -32,17 +33,17 @@ const INTENSITY_PROMPT: Record<Exclude<AiIntensity, 'off'>, string> = {
   strong: 'Based on the preceding comment or context, generate a complete runnable implementation in the same language. Example: prefix "//bfs" -> the full BFS code. Output ONLY code (no markdown fences, no prose).',
   guide: 'Give ONE short Chinese sentence of algorithmic guidance (max ~40 chars), NOT code. Example: "此处应状态转移 dp[i]=min(dp[i-1]+1,…)". Output ONLY that sentence.',
 }
-const INTENSITY_MAXTOKENS: Record<Exclude<AiIntensity, 'off'>, number> = { light: 64, strong: 600, guide: 80 }
 
-// FIM 模式下的力度档(无 system prompt,FIM 只能靠 max_tokens + stop 控长度):
-//  - light:只补当前结构/行 → 少 token + stop 在换行,避免一口气补整段
-//  - strong:按注释/上下文补整段 → 放开 token、不限 stop
+// FIM 力度档(无 system prompt,靠 max_tokens + stop 控长度)
 const FIM_CONFIG: Record<'light' | 'strong', { maxTokens: number, stop: string[] }> = {
   light: { maxTokens: 64, stop: ['\n'] },
   strong: { maxTokens: 512, stop: [] },
 }
 
-// 思考模式:对 chat 模式的 strong/guide 注入「先内部推理再输出」指令并放宽 token。
+// chat 力度档 token。guide 给到 384:思考模式开启时,推理模型会把 token 花在内部 reasoning,
+// 预算太小 → content 还没开始输出就被截断(返回空)。thinking 再 ×2 放宽。
+const CHAT_MAXTOKENS: Record<Exclude<AiIntensity, 'off'>, number> = { light: 128, strong: 600, guide: 384 }
+
 const THINKING_SUFFIX
   = '\n\nTHINKING MODE ON: reason step by step internally about the algorithm and edge cases before producing the final answer. Do NOT output your reasoning, output ONLY the final answer in the format above.'
 
@@ -53,7 +54,6 @@ function stripFences(s: string): string {
 /** 组 chat 模式的 messages。guide(思路指引)时带上题目 markdown,让指引贴合本题。 */
 function buildChatMessages(intensity: Exclude<AiIntensity, 'off'>, lang: string, prefix: string) {
   const sys = INTENSITY_PROMPT[intensity] + (state.thinking && intensity !== 'light' ? THINKING_SUFFIX : '') + `\nProgramming language: ${lang}.`
-  // guide 模式:把题目描述塞进上下文(裁到 ~2400 字符省 token);其它强度只看代码前缀。
   if (intensity === 'guide' && state.problemMarkdown.trim()) {
     const prob = state.problemMarkdown.length > 2400 ? `${state.problemMarkdown.slice(0, 2400)}…` : state.problemMarkdown
     return [
@@ -67,55 +67,97 @@ function buildChatMessages(intensity: Exclude<AiIntensity, 'off'>, lang: string,
   ]
 }
 
-/**
- * 由 monaco inline provider 调用。
- * @param lang  monaco 语言 id
- * @param prefix 光标前文本
- * @param suffix 光标后文本(FIM 用)
- * @returns 应在光标处插入的文本(空串=不补)
- */
-export async function requestInlineCompletion(lang: string, prefix: string, suffix = ''): Promise<string> {
-  if (!state.enabled || state.intensity === 'off' || !state.baseURL || !state.model) {
-    console.warn('[guly-ai] gated off', { enabled: state.enabled, intensity: state.intensity, hasBase: !!state.baseURL, hasModel: !!state.model })
-    return ''
-  }
-  const intensity = state.intensity as Exclude<AiIntensity, 'off'>
-  // FIM 适用于 light/strong(代码补全);guide 是自然语言,只能走 chat。
-  const useFim = state.fim && intensity !== 'guide'
-  const temperature = intensity === 'strong' ? 0.3 : 0.15
+export function aiGated(): boolean {
+  return !state.enabled || state.intensity === 'off' || !state.baseURL || !state.model
+}
 
-  try {
-    const base = state.baseURL.replace(/\/+$/, '')
-    const r: any = useFim
-      ? await browser.runtime.sendMessage({
-          contentScriptQuery: 'AIComplete',
-          mode: 'fim',
-          baseURL: base,
-          apiKey: state.apiKey,
-          model: state.model,
-          prompt: prefix,
-          suffix,
-          maxTokens: FIM_CONFIG[intensity as 'light' | 'strong'].maxTokens,
-          stop: FIM_CONFIG[intensity as 'light' | 'strong'].stop,
-          temperature,
-        })
-      : await browser.runtime.sendMessage({
-          contentScriptQuery: 'AIComplete',
-          mode: 'chat',
-          baseURL: base,
-          apiKey: state.apiKey,
-          model: state.model,
-          messages: buildChatMessages(intensity, lang, prefix),
-          maxTokens: state.thinking && intensity !== 'light' ? Math.round(INTENSITY_MAXTOKENS[intensity] * 1.6) : INTENSITY_MAXTOKENS[intensity],
-          temperature,
-        })
-    console.warn('[guly-ai] relay ->', { mode: useFim ? 'fim' : 'chat', ok: r?.ok, body: (r?.error || r?.content || '').slice?.(0, 120) })
-    if (!r?.ok)
-      return ''
-    return stripFences(r.content || '')
+/** 当前强度是否走 FIM */
+export function aiUseFim(): boolean {
+  return state.fim && state.intensity !== 'guide' && state.intensity !== 'off'
+}
+
+// ---- 流式 ----
+let curPort: any = null
+export function abortAiStream() {
+  try { curPort?.disconnect() }
+  catch { /* ignore */ }
+  curPort = null
+}
+
+/**
+ * 流式补全。每到一个 chunk 调 onChunk(累积全文);resolve 最终全文(空串=没拿到)。
+ * 由 monaco inline provider 调用,provider 在 onChunk 里触发 Monaco 重显实现逐字 ghost。
+ */
+export function streamInlineCompletion(lang: string, prefix: string, suffix: string, onChunk: (acc: string) => void): Promise<string> {
+  if (aiGated()) {
+    console.warn('[guly-ai] stream gated off', { enabled: state.enabled, intensity: state.intensity, hasBase: !!state.baseURL, hasModel: !!state.model })
+    return Promise.resolve('')
   }
-  catch (e: any) {
-    console.warn('[guly-ai] request threw', e?.message)
-    return ''
+  abortAiStream()
+  const intensity = state.intensity as Exclude<AiIntensity, 'off'>
+  const useFim = aiUseFim()
+  const temperature = intensity === 'strong' ? 0.3 : 0.15
+  const base = state.baseURL.replace(/\/+$/, '')
+
+  const payload: any = useFim
+    ? {
+        mode: 'fim',
+        baseURL: base,
+        apiKey: state.apiKey,
+        model: state.model,
+        prompt: prefix,
+        suffix,
+        maxTokens: FIM_CONFIG[intensity as 'light' | 'strong'].maxTokens,
+        stop: FIM_CONFIG[intensity as 'light' | 'strong'].stop,
+        temperature,
+      }
+    : {
+        mode: 'chat',
+        baseURL: base,
+        apiKey: state.apiKey,
+        model: state.model,
+        messages: buildChatMessages(intensity, lang, prefix),
+        maxTokens: state.thinking ? CHAT_MAXTOKENS[intensity] * 2 : CHAT_MAXTOKENS[intensity],
+        temperature,
+      }
+
+  const port = browser.runtime.connect({ name: 'guly-ai-stream' })
+  curPort = port
+  let acc = ''
+  console.warn('[guly-ai] stream start', { mode: payload.mode })
+  return new Promise<string>((resolve) => {
+    port.onMessage.addListener((m: any) => {
+      if (!m)
+        return
+      if (m.chunk) {
+        acc += m.chunk
+        onChunk(acc)
+      }
+      else if (m.done) {
+        console.warn('[guly-ai] stream done', JSON.stringify(acc).slice(0, 120))
+        cleanup()
+        resolve(stripFences(acc))
+      }
+      else if (m.error) {
+        console.warn('[guly-ai] stream error', m.error)
+        cleanup()
+        resolve('')
+      }
+    })
+    port.onDisconnect.addListener(() => {
+      // 中断(新位置主动 abort)→ resolve 当前累积;正常 done 已先 resolve
+      if (curPort === port) {
+        cleanup()
+        resolve(acc)
+      }
+    })
+    port.postMessage(payload)
+  })
+
+  function cleanup() {
+    try { port.disconnect() }
+    catch { /* ignore */ }
+    if (curPort === port)
+      curPort = null
   }
 }

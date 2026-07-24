@@ -1,7 +1,7 @@
 import browser from 'webextension-polyfill'
 
 import { apiListenerFactory } from '../../utils'
-import API_AI from './ai'
+import API_AI, { handleAiStreamPort } from './ai'
 import API_CONTEST from './contest'
 import API_HOME from './home'
 import API_PROBLEM from './problem'
@@ -30,7 +30,13 @@ export function setupApiMsgLstnrs() {
   browser.runtime.onConnect.addListener(handleConnect)
 }
 
-function handleConnect() {
+function handleConnect(port: any) {
+  // AI 流式补全专用通道:逐 chunk 推 ghost
+  if (port.name === 'guly-ai-stream') {
+    handleAiStreamPort(port)
+    return
+  }
   browser.runtime.onMessage.removeListener(handleMessage)
   browser.runtime.onMessage.addListener(handleMessage)
 }
+

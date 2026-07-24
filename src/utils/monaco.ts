@@ -251,19 +251,40 @@ export function registerGuluProviders(monaco: any) {
   registerInlineAiProvider(monaco)
 }
 
-// ---- AI inline 补全(ghost-text)----
-// 用「最新请求序号」防过期:快速打字时多个 provider 调用并发,只采用最新一次的结果,
-// 过期结果丢弃(返回空)。不再用 in-flight 互斥——那样会在并发时返回空、把刚显示的
-// ghost 清掉。
+// ---- AI inline 补全(ghost-text,流式逐字更新)----
+// 思路:Monaco 的 inline provider 是一次性的,不原生支持流式。我们用「累积文本 + 重触发」
+// 模拟:首次调用启动一条流式请求(走 background port),返回空;每到一个 chunk 更新当前
+// 累积文本,并 throttle 触发 editor.action.inlineSuggest.trigger,Monaco 重查 provider,
+// 此时同位置活跃流 → 直接返回累积文本,ghost 逐字刷新。用户打字(位置/前缀变)→ 取消旧流、
+// 开新流。
 const AI_LANGS = ['cpp', 'c', 'java', 'javascript', 'typescript', 'pascal', 'python', 'go', 'rust', 'php', 'csharp']
-let aiSeq = 0
+
+let activeEditor: any = null
+export function setActiveEditor(e: any) {
+  activeEditor = e
+}
+
+// 当前活跃流
+let stream: { id: number, posKey: string, preLen: number, partial: string, done: boolean } | null = null
+let nextStreamId = 0
+let triggerQueued = false
+
+function scheduleGhostRefresh() {
+  if (triggerQueued)
+    return
+  triggerQueued = true
+  setTimeout(() => {
+    triggerQueued = false
+    try { activeEditor?.getAction('editor.action.inlineSuggest.trigger')?.run() }
+    catch { /* ignore */ }
+  }, 45)
+}
+
 function registerInlineAiProvider(monaco: any) {
   for (const lang of AI_LANGS) {
     try {
       monaco.languages.registerInlineCompletionsProvider(lang, {
         async provideInlineCompletions(model: any, position: any) {
-          const my = ++aiSeq
-          // 前缀 = 光标前全部;后缀 = 光标后全部(FIM 填中间)。各截 ~1500 字符省 token。
           const prefix = model.getValueInRange({
             startLineNumber: 1, startColumn: 1,
             endLineNumber: position.lineNumber, endColumn: position.column,
@@ -276,25 +297,42 @@ function registerInlineAiProvider(monaco: any) {
           const suf = suffix.length > 1500 ? suffix.slice(0, 1500) : suffix
           if (pre.trim().length < 3)
             return { items: [] }
-          // 动态 import 避免与 aiCompletion 循环/初始化顺序问题
-          const { requestInlineCompletion } = await import('./aiCompletion')
-          const text = await requestInlineCompletion(lang, pre, suf)
-          // 过期(用户已继续打字,有更新的请求)→ 丢弃,不覆盖更新的 ghost
-          if (my !== aiSeq)
-            return { items: [] }
-          console.warn('[guly-ai] provider result', JSON.stringify(text).slice(0, 160))
-          if (!text)
-            return { items: [] }
-          // 折叠范围:在光标处纯插入(FIM 文本进前后缀之间,不覆盖任何已有字符)
-          return {
-            items: [{
-              insertText: text,
-              range: new monaco.Range(position.lineNumber, position.column, position.lineNumber, position.column),
-            }],
+
+          const posKey = `${position.lineNumber}:${position.column}`
+          // 同位置活跃流(含已完成)→ 直接返回累积文本(progress / 缓存的最终结果)
+          if (stream && stream.posKey === posKey && stream.preLen === pre.length && stream.partial) {
+            return {
+              items: [{
+                insertText: stream.partial,
+                range: new monaco.Range(position.lineNumber, position.column, position.lineNumber, position.column),
+              }],
+            }
           }
+
+          // 启动新流:取消旧的
+          const { abortAiStream, streamInlineCompletion } = await import('./aiCompletion')
+          abortAiStream()
+          const id = ++nextStreamId
+          stream = { id, posKey, preLen: pre.length, partial: '', done: false }
+
+          streamInlineCompletion(lang, pre, suf, (acc) => {
+            // 过期(用户已打字,流被取代)→ 忽略
+            if (!stream || stream.id !== id)
+              return
+            stream.partial = acc
+            scheduleGhostRefresh()
+          }).then((final) => {
+            if (!stream || stream.id !== id)
+              return
+            stream.partial = final || stream.partial
+            stream.done = true
+            console.warn('[guly-ai] ghost final', JSON.stringify(stream.partial).slice(0, 160))
+            scheduleGhostRefresh()
+          })
+
+          return { items: [] }
         },
-        // Monaco 这个版本在 dispose 时会调 disposeInlineCompletions / freeInlineCompletions,
-        // provider 必须提供(否则抛 "disposeInlineCompletions is not a function"),给 no-op。
+        // Monaco dispose 时会调这些,provider 必须提供,给 no-op
         freeInlineCompletions() {},
         disposeInlineCompletions() {},
         handleItemDidShow() {},
