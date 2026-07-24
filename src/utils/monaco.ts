@@ -270,137 +270,22 @@ export function registerGuluProviders(monaco: any) {
   registerInlineAiProvider(monaco)
 }
 
-// ---- AI inline 补全(自定义 ghost 覆盖层,流式逐字更新)----
-// 为什么不用 Monaco 自带的 inline suggestion 显示:它按「位置+model版本」缓存,同一位置
-// 没有内容变更时反复 trigger 不会重新调 provider、不会替换已显示的 ghost → 流式只能停在
-// 第一段。所以我们让 provider 只返回 {items:[]}(Monaco 不显示任何东西),自己画一个覆盖层
-// 随 chunk 实时刷新;Tab 由我们自己接、executeEdits 插入。
+// ---- AI inline 补全(Monaco 原生 ghost:有语法高亮、Tab 原生处理)----
+// 注意:Monaco 的 inline suggestion 按「位置+model版本」缓存,同一位置无内容变更时不会
+// 重新调 provider/不会替换 ghost → 原生 ghost 无法逐字流式刷新(VSCode Copilot 也是生成完
+// 再整段显示)。所以这里 provider 等整段结果回来后用原生 ghost 一次性显示;网络仍走流式拉
+// (TTFB 低),结果齐了交给 Monaco 渲染(带高亮)。用户继续打字(新位置)→ 取消旧流、重算。
 const AI_LANGS = ['cpp', 'c', 'java', 'javascript', 'typescript', 'pascal', 'python', 'go', 'rust', 'php', 'csharp']
 
-let activeEditor: any = null
-let activeMonaco: any = null
-
-// 当前活跃流(用于判断 provider 是否该重启流)
-let stream: { id: number, posKey: string, preLen: number } | null = null
-let nextStreamId = 0
-
-// ---- ghost 覆盖层 ----
-let ghostEl: HTMLElement | null = null
-let ghost: { line: number, col: number, text: string } | null = null
-let listenersAttached = false
-
-function ensureGhostEl() {
-  if (ghostEl)
-    return
-  const dom = activeEditor?.getDomNode?.() as HTMLElement | undefined
-  if (!dom)
-    return
-  const el = document.createElement('div')
-  el.className = 'gulu-ai-ghost'
-  el.style.cssText = 'position:absolute;top:0;left:0;white-space:pre-wrap;pointer-events:none;z-index:5;display:none;opacity:.55;'
-  // 字体跟随编辑器
-  try {
-    const o = activeEditor.getRawOptions?.() || {}
-    el.style.fontFamily = o.fontFamily || 'monospace'
-    el.style.fontSize = `${o.fontSize || 15}px`
-    el.style.lineHeight = `${o.lineHeight || Math.round((o.fontSize || 15) * 1.7)}px`
-  }
-  catch { /* ignore */ }
-  el.style.color = 'var(--bew-text-2)'
-  dom.appendChild(el)
-  ghostEl = el
-}
-function renderGhost() {
-  if (!ghostEl || !activeEditor)
-    return
-  if (!ghost || !ghost.text) {
-    ghostEl.style.display = 'none'
-    return
-  }
-  const vp = activeEditor.getScrolledVisiblePosition?.({ lineNumber: ghost.line, column: ghost.col })
-  if (!vp) {
-    // 光标滚出视口,先藏
-    ghostEl.style.display = 'none'
-    return
-  }
-  ghostEl.style.display = 'block'
-  ghostEl.style.transform = `translate(${vp.left}px, ${vp.top}px)`
-  // 限制宽度避免横飞出编辑器
-  const width = activeEditor.getLayoutInfo?.().contentLeft + activeEditor.getLayoutInfo?.().contentWidth - vp.left
-  if (Number.isFinite(width) && width > 0)
-    ghostEl.style.maxWidth = `${width}px`
-  ghostEl.textContent = ghost.text
-}
-export function showAiGhost(line: number, col: number, text: string) {
-  ensureGhostEl()
-  ghost = { line, col, text }
-  renderGhost()
-}
-export function hideAiGhost() {
-  ghost = null
-  if (ghostEl)
-    ghostEl.style.display = 'none'
-}
-function acceptGhost() {
-  if (!ghost || !activeEditor || !activeMonaco)
-    return
-  const { line, col, text } = ghost
-  hideAiGhost()
-  try {
-    activeEditor.executeEdits('gulu-ai', [{
-      range: new activeMonaco.Range(line, col, line, col),
-      text,
-      forceMoveMarkers: true,
-    }])
-  }
-  catch (e) { console.warn('[guly-ai] accept failed', e) }
-}
-function onGhostKey(e: KeyboardEvent) {
-  if (!ghost || !ghost.text)
-    return
-  if (e.key === 'Tab') {
-    e.preventDefault()
-    e.stopPropagation()
-    acceptGhost()
-  }
-  else if (e.key === 'Escape') {
-    e.preventDefault()
-    hideAiGhost()
-  }
-}
-
-export function setActiveEditor(e: any, monaco?: any) {
-  activeEditor = e
-  if (monaco)
-    activeMonaco = monaco
-  // 编辑器销毁(e=null)→ 重置,下次创建新编辑器时重新挂监听 + 建 ghost 层
-  if (!e) {
-    listenersAttached = false
-    ghostEl = null
-    ghost = null
-    return
-  }
-  if (!listenersAttached) {
-    listenersAttached = true
-    // 光标离开 ghost 起点 → 藏;滚动 → 重定位
-    e.onDidChangeCursorPosition?.(() => {
-      if (ghost && (ghost.line !== e.getPosition?.()?.lineNumber || ghost.col !== e.getPosition?.()?.column))
-        hideAiGhost()
-    })
-    e.onDidScrollChange?.(() => { if (ghost) renderGhost() })
-    e.onDidChangeModelContent?.(() => {
-      // 内容变(用户打字)→ 藏旧 ghost,新的流会重画
-      hideAiGhost()
-    })
-    e.getDomNode?.().addEventListener('keydown', onGhostKey, true)
-  }
-}
+// 最新请求序号:用户打字产生新请求时,旧请求结果过期丢弃(返回空,不覆盖更新的 ghost)
+let aiSeq = 0
 
 function registerInlineAiProvider(monaco: any) {
   for (const lang of AI_LANGS) {
     try {
       monaco.languages.registerInlineCompletionsProvider(lang, {
         async provideInlineCompletions(model: any, position: any) {
+          const my = ++aiSeq
           const prefix = model.getValueInRange({
             startLineNumber: 1, startColumn: 1,
             endLineNumber: position.lineNumber, endColumn: position.column,
@@ -414,34 +299,23 @@ function registerInlineAiProvider(monaco: any) {
           if (pre.trim().length < 3)
             return { items: [] }
 
-          const posKey = `${position.lineNumber}:${position.column}`
-          // 同位置已有活跃流 → 不重启(Monaco 打字时反复调用 provider,避免掐断正在路上的流)
-          if (stream && stream.posKey === posKey && stream.preLen === pre.length)
-            return { items: [] }
-
-          // 新位置 → 取消旧流、藏旧 ghost、开新流
+          // 取消上一条还在路上的流(省带宽);await 整段结果回来
           const { abortAiStream, streamInlineCompletion } = await import('./aiCompletion')
           abortAiStream()
-          hideAiGhost()
-          const id = ++nextStreamId
-          const line = position.lineNumber
-          const col = position.column
-          stream = { id, posKey, preLen: pre.length }
-
-          streamInlineCompletion(lang, pre, suf, (acc) => {
-            if (!stream || stream.id !== id)
-              return
-            if (acc)
-              showAiGhost(line, col, acc)
-          }).then((final) => {
-            if (!stream || stream.id !== id)
-              return
-            console.warn('[guly-ai] ghost final', JSON.stringify(final).slice(0, 160))
-            if (final)
-              showAiGhost(line, col, final)
-          })
-
-          return { items: [] }
+          const final = await streamInlineCompletion(lang, pre, suf, () => {})
+          // 过期(用户已打字,有更新的请求)→ 丢弃,不覆盖更新的 ghost
+          if (my !== aiSeq)
+            return { items: [] }
+          console.warn('[guly-ai] ghost show', JSON.stringify(final).slice(0, 160))
+          if (!final)
+            return { items: [] }
+          // 折叠范围:在光标处纯插入(FIM 文本进前后缀之间)
+          return {
+            items: [{
+              insertText: final,
+              range: new monaco.Range(position.lineNumber, position.column, position.lineNumber, position.column),
+            }],
+          }
         },
         // Monaco dispose 时会调这些,provider 必须提供,给 no-op
         freeInlineCompletions() {},

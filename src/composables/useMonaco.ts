@@ -2,7 +2,7 @@ import type { Ref } from 'vue'
 import { onUnmounted, ref, watch } from 'vue'
 import browser from 'webextension-polyfill'
 
-import { bracketDiagnostics, checkGuluSyntax, ensureMonaco, prettyFormat, setActiveEditor } from '~/utils/monaco'
+import { bracketDiagnostics, checkGuluSyntax, ensureMonaco, prettyFormat } from '~/utils/monaco'
 import { lintCpp } from '~/utils/treeSitterLint'
 
 /**
@@ -243,8 +243,6 @@ export function useMonaco(opts: {
       fixedOverflowWidgets: true,
     })
     decorations = editor.createDecorationsCollection([])
-    // AI 流式 ghost 需要 editor + monaco 引用(覆盖层定位 / Tab 插入用 Range)
-    setActiveEditor(editor, monacoNS)
 
     const root = el.getRootNode()
     if (root instanceof ShadowRoot) {
@@ -311,7 +309,6 @@ export function useMonaco(opts: {
     if (resizeObs) { resizeObs.disconnect(); resizeObs = null }
     if (darkObs) { darkObs.disconnect(); darkObs = null }
     if (decorations) { decorations.clear(); decorations = null }
-    setActiveEditor(null)
     if (editor) { editor.dispose(); editor = null }
     if (model) { model.dispose(); model = null }
   }
