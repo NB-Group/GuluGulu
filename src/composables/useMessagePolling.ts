@@ -27,7 +27,7 @@ async function poll() {
   localStorage.setItem(lastPollKey, String(now))
 
   try {
-    const res = await fetch('https://www.luogu.com.cn/chat?_contentOnly=1', { credentials: 'same-origin' })
+    const res = await fetch(location.origin + '/chat?_contentOnly=1', { credentials: 'same-origin' })
     const json = await res.json()
     const raw = json?.data?.unreadMessageCount || json?.currentData?.unreadMessageCount
     const currentUnread: Record<number, number> = {}
@@ -49,7 +49,7 @@ async function poll() {
               body: msg.content?.slice(0, 100) || '',
               icon: `https://cdn.luogu.com.cn/upload/usericon/${nuid}.png`,
               tag: `gulugulu-msg-${nuid}`,
-            }).onclick = () => { window.location.href = 'https://www.luogu.com.cn/chat' }
+            }).onclick = () => { window.location.href = location.origin + '/chat' }
           } catch {}
         }
       }

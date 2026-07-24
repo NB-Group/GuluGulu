@@ -283,7 +283,7 @@ async function onDOMLoaded() {
         // 文章页等 lentille 顶层 user 为 null,多探几个常见位置
         lentilleUser = lc?.user || lc?.currentUser || lc?.data?.user || lc?.data?.currentUser
         if (!lentilleUser?.uid)
-          console.debug('[guly-auth] lentille top keys:', Object.keys(lc), '| user:', lc?.user)
+          console.warn('[guly-auth] lentille top keys:', Object.keys(lc), '| user:', lc?.user)
       }
     }
     catch (e) { console.warn('[GuluGulu]', e) }
@@ -294,11 +294,10 @@ async function onDOMLoaded() {
     }
 
     // 兜底1:cookie 里的 uid(最可靠:无 WAF、无 CORS,任何页都有)
-    if (!userIdCookie) {
-      const uidFromCookie = (document.cookie.match(/(?:^|;\s)uid=(\d+)/) || [])[1]
-      if (uidFromCookie)
-        userIdCookie = uidFromCookie
-    }
+    const uidFromCookie = (document.cookie.match(/(?:^|;\s)uid=(\d+)/) || [])[1]
+    if (!userIdCookie && uidFromCookie)
+      userIdCookie = uidFromCookie
+    console.warn('[guly-auth] resolved:', { lentilleUid: lentilleUser?.uid, cookieUid: uidFromCookie, cookieKeys: document.cookie.replace(/=[^;]*/g, '=*'), finalUid: userIdCookie, origin: location.origin })
 
     // 兜底2:退回 record/list 接口(同源,可能被 WAF 返回 HTML)
     if (!userIdCookie) {

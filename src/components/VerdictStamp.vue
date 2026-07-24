@@ -13,7 +13,7 @@ const { mainAppRef, navigateTo } = useGuluApp()
 // 查看记录:in-SPA 跳转到 Record 页(而非 target=_blank 开新标签,后者体验割裂)
 function viewRecord() {
   if (props.result?.rid != null) {
-    navigateTo(AppPage.Record, `https://www.luogu.com.cn/record/${props.result.rid}`)
+    navigateTo(AppPage.Record, `${location.origin}/record/${props.result.rid}`)
     emit('dismiss')
   }
 }

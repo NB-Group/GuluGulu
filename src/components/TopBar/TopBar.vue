@@ -16,7 +16,7 @@ import { searchKeyword } from '~/utils/luogu-api'
 const { activatedPage, scrollbarRef, reachTop, navigateTo } = useGuluApp()
 
 function goToLogin() {
-  location.href = 'https://www.luogu.com.cn/auth/login'
+  location.href = location.origin + '/auth/login'
 }
 
 async function logoutAndSwitch() {
@@ -25,7 +25,7 @@ async function logoutAndSwitch() {
     await browser.runtime.sendMessage({ contentScriptQuery: 'HOME.logout' })
   }
   catch (e) { console.warn('[GuluGulu]', e) }
-  location.href = 'https://www.luogu.com.cn/'
+  location.href = location.origin + '/'
 }
 
 function handleSearch(keyword: string) {
@@ -62,7 +62,7 @@ onMounted(async () => {
   }
   // Fallback: fetch directly from frontend
   try {
-    const res = await fetch('https://www.luogu.com.cn/record/list?_contentOnly=1', { credentials: 'same-origin' })
+    const res = await fetch(location.origin + '/record/list?_contentOnly=1', { credentials: 'same-origin' })
     const json = await res.json()
     const user = json?.user || json?.currentUser
     if (user?.uid) {
@@ -80,7 +80,7 @@ onMounted(async () => {
 const { unreadMsgCount } = useMessagePolling()
 
 function goToMessages() {
-  navigateTo(AppPage.Messages, 'https://www.luogu.com.cn/chat')
+  navigateTo(AppPage.Messages, location.origin + '/chat')
 }
 
 const scrollTop = ref<number>(0)
@@ -268,7 +268,7 @@ defineExpose({
         <div shrink-0 flex="inline xl:1 justify-start items-center gap-2" pos="relative" z-1>
           <!-- Logo -->
           <a
-            href="https://www.luogu.com.cn"
+            :href="location.origin"
             target="_top"
             class="logo"
             style="font-size: var(--bew-base-font-size); font-weight: 700; color: var(--bew-theme-color); text-decoration: none;"
@@ -351,15 +351,15 @@ defineExpose({
                     </div>
                   </div>
                   <div class="user-panel-divider" />
-                  <a :href="`https://www.luogu.com.cn/user/${userUid}`" target="_blank" class="user-panel-item">
+                  <a :href="`${location.origin}/user/${userUid}`" target="_blank" class="user-panel-item">
                     <span style="display:contents" v-html="renderIcon('mingcute:user-4-line', 16)" />
                     个人主页
                   </a>
-                  <a href="https://www.luogu.com.cn/chat" target="_blank" class="user-panel-item">
+                  <a :href="location.origin + '/chat'" target="_blank" class="user-panel-item">
                     <span style="display:contents" v-html="renderIcon('mingcute:notification-line', 16)" />
                     通知
                   </a>
-                  <a href="https://www.luogu.com.cn/record/list" target="_blank" class="user-panel-item">
+                  <a :href="location.origin + '/record/list'" target="_blank" class="user-panel-item">
                     <span style="display:contents" v-html="renderIcon('mingcute:clipboard-line', 16)" />
                     评测记录
                   </a>

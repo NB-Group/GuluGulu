@@ -63,7 +63,7 @@ const typeLabel = computed(() => {
 function handleClick() {
   if (props.contest) {
     emit('click', props.contest)
-    window.open(`https://www.luogu.com.cn/contest/${props.contest.id}`, '_blank')
+    window.open(`${location.origin}/contest/${props.contest.id}`, '_blank')
   }
 }
 </script>

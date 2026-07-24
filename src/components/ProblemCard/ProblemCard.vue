@@ -67,7 +67,7 @@ const passRateColor = computed(() => {
 function handleClick() {
   if (props.problem) {
     emit('click', props.problem)
-    window.open(`https://www.luogu.com.cn/problem/${props.problem.pid}`, '_blank')
+    window.open(`${location.origin}/problem/${props.problem.pid}`, '_blank')
   }
 }
 </script>

@@ -28,7 +28,7 @@ export const useMainStore = defineStore('main', () => {
         page: AppPage.Home,
         openInNewTab: false,
         useOriginalLuoguPage: false,
-        url: 'https://www.luogu.com.cn/',
+        url: location.origin + '/',
         hasGuluPage: true,
       },
       {
@@ -38,7 +38,7 @@ export const useMainStore = defineStore('main', () => {
         page: AppPage.ProblemList,
         openInNewTab: false,
         useOriginalLuoguPage: false,
-        url: 'https://www.luogu.com.cn/problem/list',
+        url: location.origin + '/problem/list',
         hasGuluPage: true,
       },
       {
@@ -48,7 +48,7 @@ export const useMainStore = defineStore('main', () => {
         page: AppPage.ContestList,
         openInNewTab: false,
         useOriginalLuoguPage: false,
-        url: 'https://www.luogu.com.cn/contest/list',
+        url: location.origin + '/contest/list',
         hasGuluPage: true,
       },
       {
@@ -58,7 +58,7 @@ export const useMainStore = defineStore('main', () => {
         page: AppPage.Ranking,
         openInNewTab: false,
         useOriginalLuoguPage: false,
-        url: 'https://www.luogu.com.cn/ranking',
+        url: location.origin + '/ranking',
         hasGuluPage: true,
       },
       {
@@ -68,7 +68,7 @@ export const useMainStore = defineStore('main', () => {
         page: AppPage.Blog,
         openInNewTab: false,
         useOriginalLuoguPage: false,
-        url: 'https://www.luogu.com.cn/discuss',
+        url: location.origin + '/discuss',
         hasGuluPage: true,
       },
       {
@@ -78,7 +78,7 @@ export const useMainStore = defineStore('main', () => {
         page: AppPage.Training,
         openInNewTab: false,
         useOriginalLuoguPage: false,
-        url: 'https://www.luogu.com.cn/training/list',
+        url: location.origin + '/training/list',
         hasGuluPage: true,
       },
       {
@@ -88,7 +88,7 @@ export const useMainStore = defineStore('main', () => {
         page: AppPage.Record,
         openInNewTab: false,
         useOriginalLuoguPage: false,
-        url: 'https://www.luogu.com.cn/record/list',
+        url: location.origin + '/record/list',
         hasGuluPage: true,
       },
       {
@@ -98,7 +98,7 @@ export const useMainStore = defineStore('main', () => {
         page: AppPage.Messages,
         openInNewTab: false,
         useOriginalLuoguPage: false,
-        url: 'https://www.luogu.com.cn/chat',
+        url: location.origin + '/chat',
         hasGuluPage: true,
       },
       {
@@ -108,7 +108,7 @@ export const useMainStore = defineStore('main', () => {
         page: AppPage.Article,
         openInNewTab: false,
         useOriginalLuoguPage: false,
-        url: 'https://www.luogu.com.cn/article',
+        url: location.origin + '/article',
         hasGuluPage: true,
       },
     ]
