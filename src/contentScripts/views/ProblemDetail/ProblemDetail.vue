@@ -2,7 +2,9 @@
 import { useGuluApp } from '~/composables/useAppProvider'
 import { useMonaco } from '~/composables/useMonaco'
 import { AppPage } from '~/enums/appEnums'
+import { settings } from '~/logic'
 import { renderIcon } from '~/utils/icons'
+import { setAiState } from '~/utils/aiCompletion'
 import type { LuoguLanguage } from '~/utils/luogu-api'
 import { isLoggedIn as checkLuoguLogin, LUOGU_LANGUAGES, parseErrorLines } from '~/utils/luogu-api'
 import { injectKatexCSS } from '~/utils/markdown'
@@ -145,6 +147,27 @@ function onLangIdChange(id: string | number | null) {
   if (lang)
     onLangChange(lang)
 }
+
+// AI 补全:强度下拉 + 把设置注入 monaco 的 inline provider(读 settings,响应式)
+const aiIntensityOptions = [
+  { label: 'AI: 关', value: 'off' },
+  { label: 'AI: 轻', value: 'light' },
+  { label: 'AI: 强', value: 'strong' },
+  { label: 'AI: 思路', value: 'guide' },
+]
+const aiIntensityProxy = computed({
+  get: () => settings.value.aiIntensity,
+  set: (v: any) => { settings.value.aiIntensity = v },
+})
+watchEffect(() => {
+  setAiState({
+    enabled: settings.value.aiCompletionEnabled,
+    intensity: settings.value.aiIntensity,
+    baseURL: settings.value.aiBaseURL,
+    apiKey: settings.value.aiApiKey,
+    model: settings.value.aiModelName,
+  })
+})
 
 // ============================================================
 // Computed
@@ -807,6 +830,11 @@ onUnmounted(() => {
                 <label v-if="selectedLang.canO2" style="display:flex;align-items:center;gap:3px;color:var(--bew-text-2);cursor:pointer;white-space:nowrap;font-size:1.05em">
                   <input v-model="enableO2" type="checkbox" style="width:13px;height:13px;cursor:pointer"> O2
                 </label>
+                <Select
+                  v-model="aiIntensityProxy"
+                  :options="aiIntensityOptions"
+                  style="width:104px;flex-shrink:0"
+                />
                 <button style="display:flex;align-items:center;gap:4px;background:none;border:1px solid var(--bew-border-color);border-radius:var(--bew-radius-half);padding:4px 10px;cursor:pointer;color:var(--bew-text-2);font-size:1em;white-space:nowrap;margin-left:auto" @click="copyMarkdown">
                   <span style="display:contents" v-html="renderIcon(copiedMarkdown ? 'mingcute:check-circle-fill' : 'mingcute:copy-line', 14)" />
                   {{ copiedMarkdown ? '已复制' : '复制MD' }}
@@ -818,6 +846,10 @@ onUnmounted(() => {
                 <button style="display:flex;align-items:center;gap:4px;background:none;border:1px solid var(--bew-border-color);border-radius:var(--bew-radius-half);padding:4px 10px;cursor:pointer;color:var(--bew-text-2);font-size:1em;white-space:nowrap" title="格式化代码(基于括号深度对齐缩进)" @click="cm.formatDocument()">
                   <span style="display:contents" v-html="renderIcon('mingcute:code-line', 14)" />
                   格式化
+                </button>
+                <button style="display:flex;align-items:center;gap:4px;background:none;border:1px solid var(--bew-border-color);border-radius:var(--bew-radius-half);padding:4px 10px;cursor:pointer;color:var(--bew-text-2);font-size:1em;white-space:nowrap" title="设置(AI 自动补全)" @click="navigateTo(AppPage.UserSetting, location.origin + '/user/setting')">
+                  <span style="display:contents" v-html="renderIcon('mingcute:settings-3-line', 14)" />
+                  设置
                 </button>
                 <button style="display:flex;align-items:center;gap:4px;background:none;border:1px solid var(--bew-border-color);border-radius:var(--bew-radius-half);padding:4px 10px;cursor:pointer;color:var(--bew-text-2);font-size:1em;white-space:nowrap" @click="ideMode = false">
                   <span style="display:contents" v-html="renderIcon('mingcute:exit-line', 14)" />

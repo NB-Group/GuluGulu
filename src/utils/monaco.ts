@@ -241,4 +241,54 @@ export function registerGuluProviders(monaco: any) {
     }
     catch { /* language not registered — ignore */ }
   }
+  registerInlineAiProvider(monaco)
+}
+
+// ---- AI inline 补全(ghost-text)----
+// 一次只允许一个 in-flight 请求,避免狂打字刷接口;只在行末触发,prefix 太短不触发。
+const AI_LANGS = ['cpp', 'c', 'java', 'javascript', 'typescript', 'pascal', 'python', 'go', 'rust', 'php', 'csharp']
+let aiInFlight = false
+function registerInlineAiProvider(monaco: any) {
+  for (const lang of AI_LANGS) {
+    try {
+      monaco.languages.registerInlineCompletionsProvider(lang, {
+        async provideInlineCompletions(model: any, position: any) {
+          const lineEndCol = model.getLineMaxColumn(position.lineNumber)
+          // 只在行末补(光标在行中间不打扰)
+          if (position.column !== lineEndCol)
+            return { items: [] }
+          const prefix = model.getValueInRange({
+            startLineNumber: 1, startColumn: 1,
+            endLineNumber: position.lineNumber, endColumn: position.column,
+          })
+          // 只取最后 ~1500 字符作上下文,省 token
+          const ctx = prefix.length > 1500 ? prefix.slice(-1500) : prefix
+          if (ctx.trim().length < 3)
+            return { items: [] }
+          if (aiInFlight)
+            return { items: [] }
+          aiInFlight = true
+          try {
+            // 动态 import 避免与 aiCompletion 循环/初始化顺序问题
+            const { requestInlineCompletion } = await import('./aiCompletion')
+            const text = await requestInlineCompletion(lang, ctx)
+            if (!text)
+              return { items: [] }
+            return {
+              items: [{
+                insertText: text,
+                range: new monaco.Range(position.lineNumber, position.column, position.lineNumber, lineEndCol),
+              }],
+            }
+          }
+          finally {
+            aiInFlight = false
+          }
+        },
+        freeInlineCompletions() {},
+        handleItemDidShow() {},
+      })
+    }
+    catch { /* language not registered */ }
+  }
 }

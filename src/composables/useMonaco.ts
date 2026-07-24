@@ -198,6 +198,7 @@ export function useMonaco(opts: {
       bracketPairColorization: { enabled: true },
       guides: { bracketPairs: true, indentation: true },
       minimap: { enabled: false },
+      inlineSuggest: { enabled: true }, // AI ghost-text 补全
       scrollBeyondLastLine: false,
       smoothScrolling: true,
       cursorSmoothCaretAnimation: 'on',
