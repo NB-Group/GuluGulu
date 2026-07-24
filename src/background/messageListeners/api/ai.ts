@@ -23,7 +23,12 @@ const API_AI = {
     } = message
     const base = baseURL.replace(/\/+$/, '')
     const isFim = mode === 'fim'
-    const url = `${base}${isFim ? '/completions' : '/chat/completions'}`
+    // DeepSeek 的 FIM 必须走 /beta base(报 "completions api is only available when
+    // using beta api")。用户填普通 host 或 /v1 时,FIM 自动补 /beta;chat 不动。
+    let fimBase = base
+    if (isFim && /deepseek\.com/i.test(base) && !/\/beta$/i.test(base))
+      fimBase = base.replace(/\/v1$/i, '') + '/beta'
+    const url = `${isFim ? fimBase : base}${isFim ? '/completions' : '/chat/completions'}`
     try {
       const body = isFim
         ? { model, prompt, suffix, max_tokens: maxTokens, temperature, stream: false }
@@ -38,12 +43,12 @@ const API_AI = {
       })
       const text = await res.text()
       if (!res.ok)
-        return { ok: false, status: res.status, error: text.slice(0, 240) || `HTTP ${res.status}` }
+        return { ok: false, status: res.status, url, error: text.slice(0, 240) || `HTTP ${res.status}` }
       const json = JSON.parse(text)
       const content: string = isFim
         ? (json?.choices?.[0]?.text || '')
         : (json?.choices?.[0]?.message?.content || '')
-      return { ok: true, content }
+      return { ok: true, url, content }
     }
     catch (e: any) {
       return { ok: false, error: e?.message || 'network error' }
