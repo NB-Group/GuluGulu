@@ -18,7 +18,7 @@ const loading = ref(true)
 async function fetchPosts() {
   loading.value = true
   try {
-    const res = await fetch('https://www.luogu.com.cn/discuss', { credentials: 'same-origin' })
+    const res = await fetch(location.origin + '/discuss', { credentials: 'same-origin' })
     const html = await res.text()
     const m = html.match(/<script\s+id="lentille-context"\s+type="application\/json"[^>]*>([^<]*)<\/script>/)
     if (m?.[1]) {
@@ -34,7 +34,7 @@ async function fetchPosts() {
   } catch (e) { console.warn('[GuluGulu]', e) }
   loading.value = false
 }
-function openPost(id: number) { navigateTo(AppPage.Blog, `https://www.luogu.com.cn/discuss/${id}`) }
+function openPost(id: number) { navigateTo(AppPage.Blog, `${location.origin}/discuss/${id}`) }
 
 onMounted(fetchPosts)
 </script>

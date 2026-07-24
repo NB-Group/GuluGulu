@@ -45,7 +45,7 @@ export function useProblemSubmit(opts: {
     myRecordsLoading.value = true
     try {
       const uid = (window as any).__gulu_user?.uid
-      const res = await fetch(`https://www.luogu.com.cn/record/list?pid=${problemId.value}&user=${uid}&_contentOnly=1`, { credentials: 'same-origin' })
+      const res = await fetch(`${location.origin}/record/list?pid=${problemId.value}&user=${uid}&_contentOnly=1`, { credentials: 'same-origin' })
       const j = await res.json()
       myRecords.value = j?.data?.records?.result || j?.currentData?.records?.result || []
     }
@@ -55,7 +55,7 @@ export function useProblemSubmit(opts: {
 
   function loadCaptcha() {
     captchaCode.value = ''
-    captchaSrc.value = `https://www.luogu.com.cn/api/verify/captcha?_t=${Date.now()}`
+    captchaSrc.value = `${location.origin}/api/verify/captcha?_t=${Date.now()}`
   }
 
   async function handleSubmit() {
@@ -85,7 +85,7 @@ export function useProblemSubmit(opts: {
       if (submitHistory.value.length > 5)
         submitHistory.value.pop()
       // Jump to the record page; the AC-stamp plays there once judging finishes.
-      navigateTo(AppPage.Record, `https://www.luogu.com.cn/record/${result.rid}?from=submit`)
+      navigateTo(AppPage.Record, `${location.origin}/record/${result.rid}?from=submit`)
       return
     }
 

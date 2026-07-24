@@ -31,7 +31,7 @@ async function fetchPosts(append = false) {
     if (currentPage.value > 1) params.set('page', String(currentPage.value))
     if (selectedForum.value) params.set('forum', selectedForum.value)
     const qs = params.toString() ? '?' + params.toString() : ''
-    const res = await fetch(`https://www.luogu.com.cn/discuss${qs}`, { credentials: 'same-origin' })
+    const res = await fetch(`${location.origin}/discuss${qs}`, { credentials: 'same-origin' })
     const html = await res.text()
     const m = html.match(/<script\s+id="lentille-context"\s+type="application\/json"[^>]*>([^<]*)<\/script>/)
     if (m?.[1]) {
@@ -72,14 +72,14 @@ const captchaCode = ref('')
 function loadReplyCaptcha() {
   captchaCode.value = ''
   // _t 带随机小数,同原生(Date.now()+Math.random()),仅 cache-buster
-  captchaSrc.value = `https://www.luogu.com.cn/lg4/captcha?_t=${Date.now() + Math.random()}`
+  captchaSrc.value = `${location.origin}/lg4/captcha?_t=${Date.now() + Math.random()}`
 }
 
 async function fetchDetail(id: number) {
   detailLoading.value = true
   try {
     // _contentOnly=1 doesn't work for discuss — fetch full page & parse lentille-context
-    const res = await fetch(`https://www.luogu.com.cn/discuss/${id}`, { credentials: 'same-origin' })
+    const res = await fetch(`${location.origin}/discuss/${id}`, { credentials: 'same-origin' })
     const html = await res.text()
     const m = html.match(/<script\s+id="lentille-context"\s+type="application\/json"[^>]*>([^<]+)<\/script>/)
     if (m?.[1]) {
@@ -121,7 +121,7 @@ async function postReply() {
     const body: Record<string, string> = { content: text }
     if (captchaCode.value)
       body.captcha = captchaCode.value
-    const res = await fetch(`https://www.luogu.com.cn/discuss/${discussId.value}/reply`, {
+    const res = await fetch(`${location.origin}/discuss/${discussId.value}/reply`, {
       method: 'POST',
       credentials: 'same-origin',
       headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrf, 'X-Requested-With': 'XMLHttpRequest' },
@@ -155,8 +155,8 @@ async function postReply() {
   replySending.value = false
 }
 
-function openPost(id: number) { navigateTo(AppPage.Blog, `https://www.luogu.com.cn/discuss/${id}`) }
-function goToDiscussList() { navigateTo(AppPage.Blog, 'https://www.luogu.com.cn/discuss') }
+function openPost(id: number) { navigateTo(AppPage.Blog, `${location.origin}/discuss/${id}`) }
+function goToDiscussList() { navigateTo(AppPage.Blog, location.origin + '/discuss') }
 // Load appropriate content based on URL (list vs detail)
 function loadContent() {
   if (discussId.value) {
@@ -203,7 +203,7 @@ onUnmounted(() => obs?.disconnect())
       <p mt-1 text="sm $bew-text-2">
         讨论浏览与回复需要登录状态
       </p>
-      <a href="https://www.luogu.com.cn/auth/login" target="_blank" mt-4 inline-block p="x-4 y-2" rounded="$bew-radius-half" text-white style="background:var(--bew-theme-color);text-decoration:none">前往登录</a>
+      <a :href="location.origin + '/auth/login'" target="_blank" mt-4 inline-block p="x-4 y-2" rounded="$bew-radius-half" text-white style="background:var(--bew-theme-color);text-decoration:none">前往登录</a>
     </div>
 
     <!-- Detail View -->

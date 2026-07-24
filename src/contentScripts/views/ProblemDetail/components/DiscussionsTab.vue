@@ -37,7 +37,7 @@ const { navigateTo } = useGuluApp()
         :style="{ '--row-index': idx }"
         p="x-4 y-3" flex="~ items-center gap-4"
         border="b-1 $bew-border-color" cursor="pointer" duration-200
-        @click="navigateTo(AppPage.Blog, `https://www.luogu.com.cn/discuss/${d.id}`)"
+        @click="navigateTo(AppPage.Blog, `${location.origin}/discuss/${d.id}`)"
       >
         <div flex="~ items-center gap-2" shrink-0>
           <img :src="d.author?.avatar" style="width:24px;height:24px;border-radius:50%;object-fit:cover" @error="(e:any) => { e.target.style.display = 'none' }">

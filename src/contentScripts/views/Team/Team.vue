@@ -18,7 +18,7 @@ const errorMsg = ref('')
 async function fetchTeamList() {
   loading.value = true; errorMsg.value = ''
   try {
-    const res = await fetch('https://www.luogu.com.cn/user/mine/team', { credentials: 'same-origin' })
+    const res = await fetch(location.origin + '/user/mine/team', { credentials: 'same-origin' })
     const html = await res.text()
     const m = html.match(/<script\s+id="lentille-context"\s+type="application\/json"[^>]*>([^<]+)<\/script>/)
     if (m?.[1]) {
@@ -65,7 +65,7 @@ const subPageSize = 20
 async function fetchTeamDetail(id: number) {
   detailLoading.value = true
   try {
-    const res = await fetch(`https://www.luogu.com.cn/team/${id}`, { credentials: 'same-origin' })
+    const res = await fetch(`${location.origin}/team/${id}`, { credentials: 'same-origin' })
     const html = await res.text()
     const m = html.match(/<script\s+id="lentille-context"\s+type="application\/json"[^>]*>([^<]+)<\/script>/)
     if (m?.[1]) {
@@ -98,7 +98,7 @@ async function fetchTeamDetail(id: number) {
 // so the count must be read per sub-page — usages.training is only a combined quota.
 async function fetchTeamSubCount(id: number, path: string): Promise<number | null> {
   try {
-    const res = await fetch(`https://www.luogu.com.cn/team/${id}/${path}`, { credentials: 'same-origin' })
+    const res = await fetch(`${location.origin}/team/${id}/${path}`, { credentials: 'same-origin' })
     const html = await res.text()
     const m = html.match(/<script\s+id="lentille-context"\s+type="application\/json"[^>]*>([^<]+)<\/script>/)
     if (m?.[1]) {
@@ -145,8 +145,8 @@ async function fetchTeamSubPage(id: number, path: string, page = 1) {
   subPageError.value = ''
   try {
     const url = page > 1
-      ? `https://www.luogu.com.cn/team/${id}/${path}?page=${page}`
-      : `https://www.luogu.com.cn/team/${id}/${path}`
+      ? `${location.origin}/team/${id}/${path}?page=${page}`
+      : `${location.origin}/team/${id}/${path}`
     const res = await fetch(url, { credentials: 'same-origin' })
     const html = await res.text()
     const m = html.match(/<script\s+id="lentille-context"\s+type="application\/json"[^>]*>([^<]+)<\/script>/)
@@ -182,12 +182,12 @@ function prevSubPage() {
     fetchTeamSubPage(teamId.value!, subPath.value, subPageCurrent.value - 1)
 }
 
-function openTeam(id: number) { navigateTo(AppPage.Team, `https://www.luogu.com.cn/team/${id}`) }
-function backToTeams() { navigateTo(AppPage.Team, 'https://www.luogu.com.cn/user/mine/team') }
-function backToTeamHome() { navigateTo(AppPage.Team, `https://www.luogu.com.cn/team/${teamId.value}`) }
-function openUser(uid: number) { window.open(`https://www.luogu.com.cn/user/${uid}`, '_blank') }
-function openPost(id: number) { window.open(`https://www.luogu.com.cn/discuss/${id}`, '_blank') }
-function openTeamPage(section: string) { navigateTo(AppPage.Team, `https://www.luogu.com.cn/team/${teamId.value}/${section}`) }
+function openTeam(id: number) { navigateTo(AppPage.Team, `${location.origin}/team/${id}`) }
+function backToTeams() { navigateTo(AppPage.Team, location.origin + '/user/mine/team') }
+function backToTeamHome() { navigateTo(AppPage.Team, `${location.origin}/team/${teamId.value}`) }
+function openUser(uid: number) { window.open(`${location.origin}/user/${uid}`, '_blank') }
+function openPost(id: number) { window.open(`${location.origin}/discuss/${id}`, '_blank') }
+function openTeamPage(section: string) { navigateTo(AppPage.Team, `${location.origin}/team/${teamId.value}/${section}`) }
 // Team file download (verified against real Luogu 2026-07): the download
 // endpoint is /team/_/file/{fid}/download — it 302-redirects to a presigned
 // aliyun OSS URL with Content-Disposition: attachment, so the browser saves it.
@@ -197,7 +197,7 @@ function downloadFile(item: any) {
   if (!fid)
     return
   const a = document.createElement('a')
-  a.href = `https://www.luogu.com.cn/team/_/file/${fid}/download`
+  a.href = `${location.origin}/team/_/file/${fid}/download`
   a.download = item.filename || ''
   a.target = '_blank'
   a.rel = 'noopener'
@@ -205,9 +205,9 @@ function downloadFile(item: any) {
   a.click()
   a.remove()
 }
-function openProblemInExt(pid: string) { navigateTo(AppPage.ProblemDetail, `https://www.luogu.com.cn/problem/${pid}`) }
-function openTrainingInExt(id: number) { navigateTo(AppPage.Training, `https://www.luogu.com.cn/training/${id}`) }
-function openContestInExt(id: number) { navigateTo(AppPage.ContestDetail, `https://www.luogu.com.cn/contest/${id}`) }
+function openProblemInExt(pid: string) { navigateTo(AppPage.ProblemDetail, `${location.origin}/problem/${pid}`) }
+function openTrainingInExt(id: number) { navigateTo(AppPage.Training, `${location.origin}/training/${id}`) }
+function openContestInExt(id: number) { navigateTo(AppPage.ContestDetail, `${location.origin}/contest/${id}`) }
 function formatDate(ts: number): string { return ts ? new Date(ts * 1000).toLocaleDateString('zh-CN') : '' }
 function formatDateTime(ts: number): string {
   if (!ts)

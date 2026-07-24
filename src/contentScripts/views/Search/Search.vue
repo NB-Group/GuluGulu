@@ -60,7 +60,7 @@ async function handleSearch(keyword: string) {
 
   try {
     // Real Luogu problem search — same endpoint as ProblemList.vue / PROBLEM.getList
-    const url = `https://www.luogu.com.cn/problem/list?keyword=${encodeURIComponent(kw)}`
+    const url = `${location.origin}/problem/list?keyword=${encodeURIComponent(kw)}`
     const ctx = await fetchLentilleContext(url)
 
     if (!ctx) {
@@ -98,20 +98,20 @@ async function handleSearch(keyword: string) {
 
 function openResult(item: SearchResultItem) {
   const urls: Record<string, string> = {
-    problem: `https://www.luogu.com.cn/problem/${item.id}`,
-    contest: `https://www.luogu.com.cn/contest/${item.id}`,
-    blog: `https://www.luogu.com.cn/discuss/${item.id}`,
-    user: `https://www.luogu.com.cn/user/${item.id}`,
+    problem: `${location.origin}/problem/${item.id}`,
+    contest: `${location.origin}/contest/${item.id}`,
+    blog: `${location.origin}/discuss/${item.id}`,
+    user: `${location.origin}/user/${item.id}`,
   }
-  window.open(urls[item.type] || 'https://www.luogu.com.cn/', '_blank')
+  window.open(urls[item.type] || location.origin + '/', '_blank')
 }
 
 function openLuoguSearch() {
-  window.open(`https://www.luogu.com.cn/problem/list?keyword=${encodeURIComponent(searchQuery.value)}`, '_blank')
+  window.open(`${location.origin}/problem/list?keyword=${encodeURIComponent(searchQuery.value)}`, '_blank')
 }
 
 function openLogin() {
-  window.open('https://www.luogu.com.cn/auth/login', '_blank')
+  window.open(location.origin + '/auth/login', '_blank')
 }
 </script>
 

@@ -23,7 +23,7 @@ async function load() {
   loading.value = true
   errorMsg.value = ''
   try {
-    const res = await fetch('https://www.luogu.com.cn/user/mine/discuss', { credentials: 'same-origin' })
+    const res = await fetch(location.origin + '/user/mine/discuss', { credentials: 'same-origin' })
     const html = await res.text()
     const m = html.match(/<script\s+id="lentille-context"[^>]*>([^<]+)<\/script>/)
     if (m?.[1]) {
@@ -38,7 +38,7 @@ async function load() {
 }
 
 function open(id: number) {
-  navigateTo(AppPage.Blog, `https://www.luogu.com.cn/discuss/${id}`)
+  navigateTo(AppPage.Blog, `${location.origin}/discuss/${id}`)
 }
 
 onMounted(load)

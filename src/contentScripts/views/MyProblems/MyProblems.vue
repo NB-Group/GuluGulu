@@ -17,7 +17,7 @@ const totalCount = ref(0)
 
 onMounted(async () => {
   try {
-    const res = await fetch('https://www.luogu.com.cn/user/mine/problem', { credentials: 'same-origin' })
+    const res = await fetch(location.origin + '/user/mine/problem', { credentials: 'same-origin' })
     const html = await res.text()
     const m = html.match(/<script\s+id="lentille-context"\s+type="application\/json"[^>]*>([^<]+)<\/script>/)
     if (m?.[1]) {
@@ -32,7 +32,7 @@ onMounted(async () => {
 
 const diffColors: Record<number,string> = {0:'#909399',1:'#bfbfbf',2:'#52c41a',3:'#3498db',4:'#f39c12',5:'#e74c3c',6:'#9b59b6',7:'#262626'}
 const diffLabels: Record<number,string> = {0:'暂无评定',1:'入门',2:'普及−',3:'普及/提高−',4:'普及+/提高',5:'提高+/省选−',6:'省选/NOI−',7:'NOI/NOI+/CTSC'}
-function openProblem(pid: string) { navigateTo(AppPage.ProblemDetail, 'https://www.luogu.com.cn/problem/'+pid) }
+function openProblem(pid: string) { navigateTo(AppPage.ProblemDetail, location.origin + '/problem/'+pid) }
 </script>
 
 <template>

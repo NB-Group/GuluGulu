@@ -77,7 +77,7 @@ export function useProblemData(opts: {
     if (!tagMapPromise) {
       tagMapPromise = (async () => {
         try {
-          const res = await fetch('https://www.luogu.com.cn/_lfe/tags', { credentials: 'same-origin' })
+          const res = await fetch(location.origin + '/_lfe/tags', { credentials: 'same-origin' })
           const j = await res.json()
           for (const t of j?.tags || [])
             if (typeof t?.id === 'number' && typeof t.name === 'string')

@@ -33,8 +33,8 @@ async function load() {
   try {
     // author: 某人写的专栏(/user/{uid}/article);fav: 我收藏的专栏(/user/mine/articleFav)
     const url = props.mode === 'fav'
-      ? 'https://www.luogu.com.cn/user/mine/articleFav'
-      : `https://www.luogu.com.cn/user/${props.uid}/article`
+      ? location.origin + '/user/mine/articleFav'
+      : `${location.origin}/user/${props.uid}/article`
     const res = await fetch(url, { credentials: 'same-origin' })
     const html = await res.text()
     const m = html.match(/<script\s+id="lentille-context"[^>]*>([^<]+)<\/script>/)
@@ -50,7 +50,7 @@ async function load() {
 }
 
 function open(lid: string) {
-  navigateTo(AppPage.Article, `https://www.luogu.com.cn/article/${lid}`)
+  navigateTo(AppPage.Article, `${location.origin}/article/${lid}`)
 }
 
 function plain(text?: string) {

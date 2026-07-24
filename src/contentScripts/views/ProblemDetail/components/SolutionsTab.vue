@@ -57,7 +57,7 @@ const { navigateTo } = useGuluApp()
         :style="{ '--row-index': idx }"
         p="x-4 y-3" flex="~ items-center gap-4"
         border="b-1 $bew-border-color" cursor="pointer" duration-200
-        @click="navigateTo(AppPage.Solution, `https://www.luogu.com.cn/problem/solution/${problemId}?sid=${s.id}`)"
+        @click="navigateTo(AppPage.Solution, `${location.origin}/problem/solution/${problemId}?sid=${s.id}`)"
       >
         <div flex="1" min-w-0>
           <div style="font-size:var(--bew-base-font-size);color:var(--bew-text-1);font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">

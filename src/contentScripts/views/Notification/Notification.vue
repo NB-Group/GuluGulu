@@ -73,7 +73,7 @@ async function fetchList(append = false) {
     if (currentPage.value > 1)
       params.set('page', String(currentPage.value))
     const qs = params.toString() ? `?${params.toString()}` : ''
-    const res = await fetch(`https://www.luogu.com.cn/user/notification${qs}`, { credentials: 'same-origin' })
+    const res = await fetch(`${location.origin}/user/notification${qs}`, { credentials: 'same-origin' })
     const html = await res.text()
     const m = html.match(/<script\s+id="lentille-context"[^>]*>([^<]+)<\/script>/)
     if (m?.[1]) {
@@ -122,7 +122,7 @@ function switchTab(key: number) {
   currentPage.value = 1
   items.value = []
   const qs = key ? `?type=${key}` : ''
-  navigateTo(AppPage.Notification, `https://www.luogu.com.cn/user/notification${qs}`)
+  navigateTo(AppPage.Notification, `${location.origin}/user/notification${qs}`)
 }
 
 // ============================================================
@@ -148,7 +148,7 @@ function handleContentClick(e: MouseEvent) {
   }
   // 提取路径部分,带 query
   let path = href
-  if (href.startsWith('https://www.luogu.com.cn')) {
+  if (href.startsWith(location.origin + '')) {
     try { path = new URL(href).pathname + new URL(href).search }
     catch { path = href.replace(/^https?:\/\/[^/]+/i, '') }
   }
@@ -157,7 +157,7 @@ function handleContentClick(e: MouseEvent) {
       e.preventDefault()
       e.stopPropagation()
       // 映射 path → AppPage(借助 App.vue 的 getPageFromUrl 等价逻辑)
-      navigateTo(AppPage.Notification, `https://www.luogu.com.cn${path}`)
+      navigateTo(AppPage.Notification, `${location.origin}${path}`)
       // navigateTo 会根据 url 切换 AppPage,即使当前页传 Notification 也无妨——
       // 它内部用 getPageFromUrl 解析,所以会正确落到 ProblemDetail/Blog 等。
       return

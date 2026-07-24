@@ -19,7 +19,7 @@ async function fetchProblems() {
   loading.value = true
   try {
     // /problem/list?_contentOnly=1 对列表页返回的是 HTML(非 JSON),要 fetch 页面 + 正则抽 lentille-context
-    const res = await fetch('https://www.luogu.com.cn/problem/list', { credentials: 'same-origin' })
+    const res = await fetch(location.origin + '/problem/list', { credentials: 'same-origin' })
     const html = await res.text()
     const m = html.match(/<script\s+id="lentille-context"\s+type="application\/json"[^>]*>([^<]+)<\/script>/)
     const ctx = m?.[1] ? JSON.parse(m[1]) : null
@@ -33,7 +33,7 @@ async function fetchProblems() {
 }
 
 function passRate(a: number, s: number) { return s > 0 ? Math.round((a / s) * 100) : 0 }
-function openProblem(pid: string) { navigateTo(AppPage.ProblemDetail, `https://www.luogu.com.cn/problem/${pid}`) }
+function openProblem(pid: string) { navigateTo(AppPage.ProblemDetail, `${location.origin}/problem/${pid}`) }
 
 onMounted(fetchProblems)
 </script>

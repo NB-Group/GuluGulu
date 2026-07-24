@@ -78,7 +78,7 @@ function getOppositeUser(msg: Message): ChatUser {
 async function fetchConversations() {
   loading.value = true; errorMsg.value = ''
   try {
-    const res = await fetch('https://www.luogu.com.cn/chat?_contentOnly=1', { credentials: 'same-origin' })
+    const res = await fetch(location.origin + '/chat?_contentOnly=1', { credentials: 'same-origin' })
     const json = await res.json()
     const msgs: Message[] = json?.data?.latestMessages?.result || json?.currentData?.latestMessages?.result || []
     const rawUnread = json?.data?.unreadMessageCount || json?.currentData?.unreadMessageCount
@@ -115,7 +115,7 @@ async function openChat(uid: number, user?: ChatUser) {
 
   try {
     // First request: get the latest (default → last page) to learn total/pagination
-    const res = await fetch(`https://www.luogu.com.cn/api/chat/record?user=${uid}`, {
+    const res = await fetch(`${location.origin}/api/chat/record?user=${uid}`, {
       credentials: 'same-origin',
       headers: { 'X-Requested-With': 'XMLHttpRequest' },
     })
@@ -140,7 +140,7 @@ async function openChat(uid: number, user?: ChatUser) {
     if (preloadPages.length > 0) {
       const results = await Promise.all(
         preloadPages.map(p =>
-          fetch(`https://www.luogu.com.cn/api/chat/record?user=${uid}&page=${p}`, {
+          fetch(`${location.origin}/api/chat/record?user=${uid}&page=${p}`, {
             credentials: 'same-origin',
             headers: { 'X-Requested-With': 'XMLHttpRequest' },
           }).then(r => r.json())
@@ -163,7 +163,7 @@ async function openChat(uid: number, user?: ChatUser) {
     // Clear unread
     try {
       const csrf = getCsrfToken()
-      fetch('https://www.luogu.com.cn/api/chat/clearUnread', {
+      fetch(location.origin + '/api/chat/clearUnread', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrf, 'X-Requested-With': 'XMLHttpRequest' },
         credentials: 'same-origin',
@@ -197,7 +197,7 @@ async function loadOlderMessages() {
   const prevScrollHeight = listEl?.scrollHeight || 0
 
   try {
-    const res = await fetch(`https://www.luogu.com.cn/api/chat/record?user=${activeChatUid.value}&page=${prevPage}`, {
+    const res = await fetch(`${location.origin}/api/chat/record?user=${activeChatUid.value}&page=${prevPage}`, {
       credentials: 'same-origin',
       headers: { 'X-Requested-With': 'XMLHttpRequest' },
     })
@@ -224,7 +224,7 @@ async function sendMessage() {
   sending.value = true
   try {
     const csrf = getCsrfToken()
-    const res = await fetch('https://www.luogu.com.cn/api/chat/new', {
+    const res = await fetch(location.origin + '/api/chat/new', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrf, 'X-Requested-With': 'XMLHttpRequest' },
       credentials: 'same-origin',
@@ -297,7 +297,7 @@ function formatTime(ts: number): string {
   if (isToday) return d.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })
   return `${d.getMonth() + 1}/${d.getDate()} ${d.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })}`
 }
-function openUser(uid: number) { window.open(`https://www.luogu.com.cn/user/${uid}`, '_blank') }
+function openUser(uid: number) { window.open(`${location.origin}/user/${uid}`, '_blank') }
 function handleKeydown(e: KeyboardEvent) {
   if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage() }
 }

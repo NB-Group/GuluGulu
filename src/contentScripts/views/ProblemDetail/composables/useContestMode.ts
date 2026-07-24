@@ -16,7 +16,7 @@ export function useContestMode(contestId: Ref<string> | ComputedRef<string>) {
     if (!contestId.value)
       return
     try {
-      const res = await fetch(`https://www.luogu.com.cn/contest/${contestId.value}`, { credentials: 'same-origin' })
+      const res = await fetch(`${location.origin}/contest/${contestId.value}`, { credentials: 'same-origin' })
       const html = await res.text()
       const m = html.match(/<script\s+id="lentille-context"\s+type="application\/json"[^>]*>([^<]+)<\/script>/)
       if (m?.[1]) {
@@ -36,7 +36,7 @@ export function useContestMode(contestId: Ref<string> | ComputedRef<string>) {
 
   function switchToProblem(pid: string) {
     if (pid)
-      navigateTo(AppPage.ProblemDetail, `https://www.luogu.com.cn/problem/${pid}?contestId=${contestId.value}`)
+      navigateTo(AppPage.ProblemDetail, `${location.origin}/problem/${pid}?contestId=${contestId.value}`)
   }
 
   if (contestId.value)

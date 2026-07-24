@@ -137,7 +137,7 @@ async function toggleFollow() {
     return
   followSending.value = true
   try {
-    await fetch(`https://www.luogu.com.cn/fe/api/user/follow/${user.value.uid}`, {
+    await fetch(`${location.origin}/fe/api/user/follow/${user.value.uid}`, {
       method: 'POST',
       headers: { 'X-CSRF-TOKEN': getCsrfToken(), 'X-Requested-With': 'XMLHttpRequest' },
       credentials: 'same-origin',
@@ -205,7 +205,7 @@ async function fetchUser() {
   loading.value = true
   errorMsg.value = ''
   try {
-    const res = await fetch(`https://www.luogu.com.cn/user/${uid.value}`, { credentials: 'same-origin' })
+    const res = await fetch(`${location.origin}/user/${uid.value}`, { credentials: 'same-origin' })
     const html = await res.text()
     const m = html.match(/<script\s+id="lentille-context"\s+type="application\/json"[^>]*>([^<]*)<\/script>/)
     if (m?.[1]) {
@@ -247,7 +247,7 @@ async function fetchFollowList(type: 'following' | 'followers') {
   followLoading.value = true
   try {
     const urlType = type === 'followers' ? 'follower' : 'following'
-    const res = await fetch(`https://www.luogu.com.cn/user/${uid.value}/${urlType}`, { credentials: 'same-origin' })
+    const res = await fetch(`${location.origin}/user/${uid.value}/${urlType}`, { credentials: 'same-origin' })
     const html = await res.text()
     const m = html.match(/<script\s+id="lentille-context"\s+type="application\/json"[^>]*>([^<]+)<\/script>/)
     if (m?.[1]) {
@@ -262,7 +262,7 @@ async function fetchFollowList(type: 'following' | 'followers') {
 }
 
 function openFollowUser(uid2: number) {
-  navigateTo(AppPage.UserProfile, `https://www.luogu.com.cn/user/${uid2}`)
+  navigateTo(AppPage.UserProfile, `${location.origin}/user/${uid2}`)
 }
 
 function formatDate(ts: number): string {
@@ -456,7 +456,7 @@ watch(uid, () => {
             </p>
 
             <!-- 自己:编辑资料; 他人:关注/取关 -->
-            <button v-if="isOwnProfile" class="gh-follow-btn" @click="navigateTo(AppPage.UserSetting, 'https://www.luogu.com.cn/user/setting')">
+            <button v-if="isOwnProfile" class="gh-follow-btn" @click="navigateTo(AppPage.UserSetting, location.origin + '/user/setting')">
               编辑资料
             </button>
             <button

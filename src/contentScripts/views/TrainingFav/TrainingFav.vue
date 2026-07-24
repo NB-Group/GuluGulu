@@ -12,7 +12,7 @@ const loading = ref(true); const errorMsg = ref('')
 
 onMounted(async () => {
   try {
-    const res = await fetch('https://www.luogu.com.cn/user/mine/trainingFav', { credentials: 'same-origin' })
+    const res = await fetch(location.origin + '/user/mine/trainingFav', { credentials: 'same-origin' })
     const html = await res.text()
     const m = html.match(/<script\s+id="lentille-context"\s+type="application\/json"[^>]*>([^<]+)<\/script>/)
     if (m?.[1]) {
@@ -23,7 +23,7 @@ onMounted(async () => {
   loading.value = false
 })
 
-function openTraining(id: number) { navigateTo(AppPage.Training, 'https://www.luogu.com.cn/training/'+id) }
+function openTraining(id: number) { navigateTo(AppPage.Training, location.origin + '/training/'+id) }
 </script>
 
 <template>

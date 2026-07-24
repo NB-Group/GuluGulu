@@ -4,13 +4,13 @@ import ProblemJumper from './ProblemJumper.vue'
 import { renderIcon } from '~/utils/icons'
 
 const announcements = [
-  { title: '洛谷新用户必读', url: 'https://www.luogu.com.cn/discuss/241461' },
-  { title: '洛谷主题库题目规范', url: 'https://www.luogu.com.cn/discuss/174811' },
-  { title: '公开比赛与官方比赛规范', url: 'https://www.luogu.com.cn/discuss/174936' },
-  { title: '题解审核及反馈要求', url: 'https://www.luogu.com.cn/discuss/174934' },
-  { title: '洛谷讨论区规范', url: 'https://www.luogu.com.cn/discuss/152590' },
-  { title: '管理员名单', url: 'https://www.luogu.com.cn/discuss/327478' },
-  { title: '评测机语言环境信息', url: 'https://www.luogu.com.cn/discuss/86673' },
+  { title: '洛谷新用户必读', url: location.origin + '/discuss/241461' },
+  { title: '洛谷主题库题目规范', url: location.origin + '/discuss/174811' },
+  { title: '公开比赛与官方比赛规范', url: location.origin + '/discuss/174936' },
+  { title: '题解审核及反馈要求', url: location.origin + '/discuss/174934' },
+  { title: '洛谷讨论区规范', url: location.origin + '/discuss/152590' },
+  { title: '管理员名单', url: location.origin + '/discuss/327478' },
+  { title: '评测机语言环境信息', url: location.origin + '/discuss/86673' },
 ]
 
 const links = {
@@ -20,11 +20,11 @@ const links = {
     { name: 'HydroOJ', url: 'https://hydro.ac/' },
   ],
   openSource: [
-    { name: 'CYaRon 测试数据生成器', url: 'https://www.luogu.com.cn/discuss/11410' },
+    { name: 'CYaRon 测试数据生成器', url: location.origin + '/discuss/11410' },
     { name: 'Markdown Palettes', url: 'https://github.com/luogu-dev/markdown-palettes' },
   ],
   services: [
-    { name: '《深入浅出程序设计竞赛》', url: 'https://www.luogu.com.cn/discuss/273220' },
+    { name: '《深入浅出程序设计竞赛》', url: location.origin + '/discuss/273220' },
     { name: '洛谷网校', url: 'https://class.luogu.com.cn' },
   ],
 }

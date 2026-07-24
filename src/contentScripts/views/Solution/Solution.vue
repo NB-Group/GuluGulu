@@ -40,8 +40,8 @@ async function fetchSolutions(page = 1) {
 
   try {
     const url = page > 1
-      ? `https://www.luogu.com.cn/problem/solution/${pid.value}?page=${page}`
-      : `https://www.luogu.com.cn/problem/solution/${pid.value}`
+      ? `${location.origin}/problem/solution/${pid.value}?page=${page}`
+      : `${location.origin}/problem/solution/${pid.value}`
     const ctx = await fetchLentilleContext(url)
     if (!ctx || ctx.__needLogin) {
       errorMsg.value = '请先登录洛谷后查看题解'
@@ -82,10 +82,10 @@ function toggleExpand(lid: string) {
   expandedLid.value = expandedLid.value === lid ? null : lid
 }
 function openProblem() {
-  navigateTo(AppPage.ProblemDetail, `https://www.luogu.com.cn/problem/${pid.value}`)
+  navigateTo(AppPage.ProblemDetail, `${location.origin}/problem/${pid.value}`)
 }
 function openUser(uid: number) {
-  window.open(`https://www.luogu.com.cn/user/${uid}`, '_blank')
+  window.open(`${location.origin}/user/${uid}`, '_blank')
 }
 
 onMounted(fetchSolutions)

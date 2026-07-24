@@ -13,8 +13,8 @@ async function load() {
   loading.value = true; errorMsg.value = ''
   try {
     const url = props.mode === 'created'
-      ? 'https://www.luogu.com.cn/user/mine/contest'
-      : 'https://www.luogu.com.cn/user/mine/contestJoined'
+      ? location.origin + '/user/mine/contest'
+      : location.origin + '/user/mine/contestJoined'
     const res = await fetch(url, { credentials: 'same-origin' })
     const html = await res.text()
     const m = html.match(/<script\s+id="lentille-context"\s+type="application\/json"[^>]*>([^<]+)<\/script>/)
@@ -32,7 +32,7 @@ async function load() {
 onMounted(load)
 watch(() => props.mode, load)
 
-function openContest(id: number) { navigateTo(AppPage.ContestDetail, `https://www.luogu.com.cn/contest/${id}`) }
+function openContest(id: number) { navigateTo(AppPage.ContestDetail, `${location.origin}/contest/${id}`) }
 function timeStr(ts: number) { return new Date(ts * 1000).toLocaleDateString('zh-CN') }
 </script>
 

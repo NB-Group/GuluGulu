@@ -78,7 +78,7 @@ async function fetchFortuneFromHome() {
   const cached = (window as any).__gulu_punch?.html
   if (cached && cached.includes('运势'))
     return parsePunchHtml(cached)
-  const res = await fetch('https://www.luogu.com.cn/', { credentials: 'same-origin' })
+  const res = await fetch(location.origin + '/', { credentials: 'same-origin' })
   const html = await res.text()
   const punchMatch = html.match(/lg-punch[^>]*>([\s\S]*?)<\/div>\s*<\/div>\s*<\/div>/)
   if (punchMatch && punchMatch[1].includes('运势'))
@@ -108,7 +108,7 @@ async function handleCheckIn() {
   checkInMsg.value = '打卡中...'
   try {
     const csrf = (window as any).__gulu_user?.csrfToken || ''
-    const res = await fetch('https://www.luogu.com.cn/index/ajax_punch', {
+    const res = await fetch(location.origin + '/index/ajax_punch', {
       method: 'POST',
       headers: { 'X-CSRF-TOKEN': csrf, 'X-Requested-With': 'XMLHttpRequest' },
       credentials: 'same-origin',

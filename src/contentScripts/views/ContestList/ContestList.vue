@@ -33,7 +33,7 @@ async function fetchContests() {
   finally { loading.value = false }
 }
 
-function openContest(id: number) { navigateTo(AppPage.ContestDetail, `https://www.luogu.com.cn/contest/${id}`) }
+function openContest(id: number) { navigateTo(AppPage.ContestDetail, `${location.origin}/contest/${id}`) }
 function getContestStatus(c: any): { label: string; color: string } {
   const now = Math.floor(Date.now() / 1000)
   if (c.startTime && now < c.startTime) return { label: '即将开始', color: 'var(--bew-success-color)' }

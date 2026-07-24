@@ -6,7 +6,7 @@ const isLoggedIn = computed(() => !!uid.value && uid.value !== '0')
 
 function doLogin() {
   // Redirect to Luogu's real login page — Cloudflare Turnstile, WebAuthn, etc. handled natively
-  window.location.href = 'https://www.luogu.com.cn/auth/login'
+  window.location.href = location.origin + '/auth/login'
 }
 
 function refreshPage() {

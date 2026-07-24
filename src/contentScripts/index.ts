@@ -292,7 +292,7 @@ async function onDOMLoaded() {
     else {
       // 兜底:当前页 lentille 没带 user(极少数页面),退回 record/list 接口
       try {
-        const res = await fetch('https://www.luogu.com.cn/record/list?_contentOnly=1', { credentials: 'same-origin' })
+        const res = await fetch(location.origin + '/record/list?_contentOnly=1', { credentials: 'same-origin' })
         const json = await res.json()
         const user = json?.user || json?.currentUser
         if (user?.uid) {
@@ -333,14 +333,6 @@ async function onDOMLoaded() {
     }
 
     // Store user data for the Vue app
-    // 临时诊断:文章页直接访问为何读不到登录态
-    console.log('[guly-auth]', {
-      url: location.pathname,
-      lentilleTopKeys: (window as any).__gulu_lentille ? Object.keys((window as any).__gulu_lentille) : 'no-lentille',
-      lentilleUser: (window as any).__gulu_lentille?.user ?? null,
-      resolvedUid: userIdCookie,
-      resolvedName: userName,
-    })
     ;(window as any).__gulu_user = {
       uid: userIdCookie,
       name: userName,

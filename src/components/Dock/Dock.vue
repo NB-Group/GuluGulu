@@ -292,7 +292,7 @@ const dockTransformStyle = computed((): { transform: string, transformOrigin: st
           pointer-events-auto
           @click="emit('settingsVisibilityChange')"
         >
-          <span v-html="renderIcon('mingcute:settings-3-line', 22)" style="display:contents" />
+          <span class="settings-icon" v-html="renderIcon('mingcute:settings-3-line', 22)" />
         </button>
       </div>
 

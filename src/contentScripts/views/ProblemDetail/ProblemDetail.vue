@@ -220,11 +220,11 @@ async function copyMarkdown() {
 }
 function openLuoguIDE() {
   // Open Luogu's own IDE for code submission (handles Cloudflare/captcha natively)
-  window.open(`https://www.luogu.com.cn/problem/${problemId.value}#submit`, '_blank')
+  window.open(`${location.origin}/problem/${problemId.value}#submit`, '_blank')
 }
 
 function _openOriginalPage() {
-  window.open(`https://www.luogu.com.cn/problem/${problemId.value}`, '_blank')
+  window.open(`${location.origin}/problem/${problemId.value}`, '_blank')
 }
 
 // 外站题目(CF/AT/NC/SP/UVA)→ 原站跳转;洛谷自建题(P/B/T/…)返回 null
@@ -262,10 +262,10 @@ function openOriginalSite() {
 }
 
 function openSolutionsPage() {
-  navigateTo(AppPage.Solution, `https://www.luogu.com.cn/problem/solution/${problemId.value}`)
+  navigateTo(AppPage.Solution, `${location.origin}/problem/solution/${problemId.value}`)
 }
 function openProviderProfile(uid: number) {
-  window.open(`https://www.luogu.com.cn/user/${uid}`, '_blank')
+  window.open(`${location.origin}/user/${uid}`, '_blank')
 }
 
 function handleTabChange(tab: string) {
@@ -591,7 +591,7 @@ onUnmounted(() => {
                   未检测到洛谷登录状态
                 </p>
                 <p text="sm $bew-text-2">
-                  请先在 <a href="https://www.luogu.com.cn" target="_blank" style="color: var(--bew-theme-color); text-decoration: none;" hover="underline">洛谷官网</a> 登录后再提交代码
+                  请先在 <a :href="location.origin" target="_blank" style="color: var(--bew-theme-color); text-decoration: none;" hover="underline">洛谷官网</a> 登录后再提交代码
                 </p>
               </div>
             </div>
@@ -699,7 +699,7 @@ onUnmounted(() => {
                   <div v-for="h in submitHistory" :key="h.rid" flex="~ items-center gap-2" text="xs">
                     <span
                       cursor="pointer"
-                      @click="navigateTo(AppPage.Record, `https://www.luogu.com.cn/record/${h.rid}`)"
+                      @click="navigateTo(AppPage.Record, `${location.origin}/record/${h.rid}`)"
                       style="color:var(--bew-theme-color);font-family:monospace"
                     >
                       #{{ h.rid }}
@@ -909,7 +909,7 @@ onUnmounted(() => {
           v-for="r in myRecords" :key="r.id"
           flex="~ items-center justify-between" py-2 cursor="pointer"
           style="border-bottom:1px solid var(--bew-border-color)"
-          @click="navigateTo(AppPage.Record, `https://www.luogu.com.cn/record/${r.id}`)"
+          @click="navigateTo(AppPage.Record, `${location.origin}/record/${r.id}`)"
         >
           <span flex="~ items-center gap-2">
             <span fw-bold :style="{ color: recStatus(r.status).color, minWidth: '36px' }">{{ recStatus(r.status).label }}</span>

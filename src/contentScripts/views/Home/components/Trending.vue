@@ -32,7 +32,7 @@ async function fetchData() {
   const list: Item[] = []
   try {
     // Contests — frontend fetch
-    const cr = await fetch('https://www.luogu.com.cn/contest/list', { credentials: 'same-origin' })
+    const cr = await fetch(location.origin + '/contest/list', { credentials: 'same-origin' })
     const ch = await cr.text()
     const cm = ch.match(/<script\s+id="lentille-context"\s+type="application\/json"[^>]*>([^<]*)<\/script>/)
     if (cm?.[1]) {
@@ -41,7 +41,7 @@ async function fetchData() {
       const nowSec = Math.floor(Date.now() / 1000)
       for (const c of contests.slice(0, 5)) {
         const isEnded = c.endTime && nowSec >= c.endTime
-        list.push({ id: `c-${c.id}`, type: 'contest', title: c.name || c.title || '', time: c.startTime || 0, detail: (c.rated && c.rated > 0 ? 'Rated' : '') + (isEnded ? ' 已结束' : ''), url: `https://www.luogu.com.cn/contest/${c.id}` })
+        list.push({ id: `c-${c.id}`, type: 'contest', title: c.name || c.title || '', time: c.startTime || 0, detail: (c.rated && c.rated > 0 ? 'Rated' : '') + (isEnded ? ' 已结束' : ''), url: `${location.origin}/contest/${c.id}` })
       }
       upcoming.value = contests
         .filter((c: any) => c.endTime && nowSec < c.endTime)
@@ -52,7 +52,7 @@ async function fetchData() {
   } catch (e) { console.warn('[GuluGulu]', e) }
   try {
     // Discussions — frontend fetch
-    const dr = await fetch('https://www.luogu.com.cn/discuss', { credentials: 'same-origin' })
+    const dr = await fetch(location.origin + '/discuss', { credentials: 'same-origin' })
     const dh = await dr.text()
     const dm = dh.match(/<script\s+id="lentille-context"\s+type="application\/json"[^>]*>([^<]*)<\/script>/)
     if (dm?.[1]) {
@@ -60,7 +60,7 @@ async function fetchData() {
       const posts: any[] = ctx?.data?.posts?.result || []
       for (const p of posts.slice(0, 8)) {
         if (!p.topped) {
-          list.push({ id: `d-${p.id}`, type: 'discuss', title: p.title || '', time: p.time || 0, detail: `${p.replyCount || 0} 回复`, url: `https://www.luogu.com.cn/discuss/${p.id}` })
+          list.push({ id: `d-${p.id}`, type: 'discuss', title: p.title || '', time: p.time || 0, detail: `${p.replyCount || 0} 回复`, url: `${location.origin}/discuss/${p.id}` })
         }
       }
     }
@@ -89,7 +89,7 @@ async function fetchNewest() {
   newestLoading.value = true
   try {
     // /problem/list?_contentOnly=1 对列表页返回的是 HTML(非 JSON),要 fetch 页面 + 正则抽 lentille-context
-    const res = await fetch('https://www.luogu.com.cn/problem/list', { credentials: 'same-origin' })
+    const res = await fetch(location.origin + '/problem/list', { credentials: 'same-origin' })
     const html = await res.text()
     const m = html.match(/<script\s+id="lentille-context"\s+type="application\/json"[^>]*>([^<]+)<\/script>/)
     const ctx = m?.[1] ? JSON.parse(m[1]) : null
@@ -119,7 +119,7 @@ function countdownStyle(c: UpcomingContest): Record<string, string> {
     ? { color: 'var(--bew-theme-color)', background: 'var(--bew-theme-color-20)' }
     : { color: '#52c41a', background: 'rgba(82,196,26,0.15)' }
 }
-function openProblem(pid: string) { navigateTo(AppPage.ProblemDetail, `https://www.luogu.com.cn/problem/${pid}`) }
+function openProblem(pid: string) { navigateTo(AppPage.ProblemDetail, `${location.origin}/problem/${pid}`) }
 
 onMounted(() => {
   fetchData()
@@ -166,7 +166,7 @@ onMounted(() => {
       </div>
       <Transition name="content-reveal">
         <div v-if="upcoming.length" flex="~ col" gap-2>
-          <div v-for="(c, idx) in upcoming" :key="c.id" class="stagger-row trend-row" :style="{'--row-index': idx}" flex="~ items-center justify-between gap-3 wrap" p-3 rounded="8px" cursor-pointer duration-200 @click="openItem(`https://www.luogu.com.cn/contest/${c.id}`)">
+          <div v-for="(c, idx) in upcoming" :key="c.id" class="stagger-row trend-row" :style="{'--row-index': idx}" flex="~ items-center justify-between gap-3 wrap" p-3 rounded="8px" cursor-pointer duration-200 @click="openItem(`${location.origin}/contest/${c.id}`)">
             <div flex="1" min-w-0>
               <div flex="~ items-center gap-2" mb-1>
                 <span v-if="c.rated" style="font-size:.7em;font-weight:600;padding:1px 6px;border-radius:9999px;background:var(--bew-warning-color-20);color:var(--bew-warning-color)">Rated</span>

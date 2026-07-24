@@ -127,7 +127,7 @@ async function resolvePendingStatuses(items: RecordItem[]) {
       try {
         // /record/{rid} 的 HTML 不含 lentille(实测 hasLentille=false,是 SPA 壳),
         // 详情数据在 ?_contentOnly=1 的 JSON 里(实测 isJson=true,含 detail.compileResult)。
-        const rr = await fetch(`https://www.luogu.com.cn/record/${it.rid}?_contentOnly=1`, { credentials: 'same-origin' })
+        const rr = await fetch(`${location.origin}/record/${it.rid}?_contentOnly=1`, { credentials: 'same-origin' })
         const tt = await rr.text()
         let j: any = null
         try { j = JSON.parse(tt) }
@@ -155,7 +155,7 @@ async function fetchRecords(append = false) {
     loadingMore.value = true; else loading.value = true
   errorMsg.value = ''
   try {
-    const res = await fetch(`https://www.luogu.com.cn/record/list?_contentOnly=1&page=${listPage.value}`, { credentials: 'same-origin' })
+    const res = await fetch(`${location.origin}/record/list?_contentOnly=1&page=${listPage.value}`, { credentials: 'same-origin' })
     const text = await res.text()
     // _contentOnly 对记录列表可能返回 HTML(非 JSON,实测),要兼容:先试 JSON,失败则正则抽 lentille-context
     let json: any = null
@@ -223,10 +223,10 @@ async function fetchDetail(id: number) {
   try {
     // 优先 lentille(HTML 页,live,含 detail.compileResult/judgeResult —— pollRecordVerdict 同源已验证);
     // 取不到则回退 ?_contentOnly=1(至少有 status,避免详情空白)。
-    const ctx = await fetchLentilleContext(`https://www.luogu.com.cn/record/${id}`)
+    const ctx = await fetchLentilleContext(`${location.origin}/record/${id}`)
     let rec = ctx?.data?.record || ctx?.currentData?.record || null
     if (!rec) {
-      const res = await fetch(`https://www.luogu.com.cn/record/${id}?_contentOnly=1`, { credentials: 'same-origin' })
+      const res = await fetch(`${location.origin}/record/${id}?_contentOnly=1`, { credentials: 'same-origin' })
       const json = await res.json()
       rec = json?.data?.record || json?.currentData?.record || null
     }
@@ -318,9 +318,9 @@ function cancelTcHide() {
   if (tcHideTimer) { clearTimeout(tcHideTimer); tcHideTimer = null }
 }
 
-function openRecord(rid: number) { navigateTo(AppPage.Record, `https://www.luogu.com.cn/record/${rid}`) }
-function backToList() { navigateTo(AppPage.Record, 'https://www.luogu.com.cn/record/list') }
-function openProblem(pid: string) { navigateTo(AppPage.ProblemDetail, `https://www.luogu.com.cn/problem/${pid}`) }
+function openRecord(rid: number) { navigateTo(AppPage.Record, `${location.origin}/record/${rid}`) }
+function backToList() { navigateTo(AppPage.Record, location.origin + '/record/list') }
+function openProblem(pid: string) { navigateTo(AppPage.ProblemDetail, `${location.origin}/problem/${pid}`) }
 function langName(id: number | string): string {
   const lang = LUOGU_LANGUAGES.find(l => l.id === Number(id))
   return lang?.name || String(id)
@@ -422,7 +422,7 @@ onUnmounted(() => {
             v-else-if="effectiveStatus === 10" bg="$bew-warning-color-20" rounded="$bew-radius" p-4 mb-6
             style="font-size:var(--bew-base-font-size);color:var(--bew-warning-color)"
           >
-            评测返回 CE 但未带回编译器输出,请到 <a :href="`https://www.luogu.com.cn/record/${recordId}`" target="_blank" style="color:var(--bew-theme-color);text-decoration:underline">洛谷原站</a> 查看。
+            评测返回 CE 但未带回编译器输出,请到 <a :href="`${location.origin}/record/${recordId}`" target="_blank" style="color:var(--bew-theme-color);text-decoration:underline">洛谷原站</a> 查看。
           </div>
 
           <!-- Test case blocks — Luogu-style colored squares -->

@@ -60,7 +60,7 @@ function loadMore() {
   fetchRanking(true)
 }
 
-function openUser(uid: number) { window.open(`https://www.luogu.com.cn/user/${uid}`, '_blank') }
+function openUser(uid: number) { window.open(`${location.origin}/user/${uid}`, '_blank') }
 
 onMounted(() => fetchRanking())
 

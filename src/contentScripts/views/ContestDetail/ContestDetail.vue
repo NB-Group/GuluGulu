@@ -80,7 +80,7 @@ async function fetchContestData() {
   if (!contestId.value) { errorMsg.value = '无效的比赛ID'; loading.value = false; return }
   loading.value = true; errorMsg.value = ''
   try {
-    const res = await fetch(`https://www.luogu.com.cn/contest/${contestId.value}`, { credentials: 'same-origin' })
+    const res = await fetch(`${location.origin}/contest/${contestId.value}`, { credentials: 'same-origin' })
     const html = await res.text()
     const m = html.match(/<script\s+id="lentille-context"\s+type="application\/json"[^>]*>([^<]+)<\/script>/)
     if (m?.[1]) {
@@ -117,7 +117,7 @@ async function handleRegister() {
   regLoading.value = true; regMsg.value = ''
   try {
     const csrf = getCsrfToken()
-    const res = await fetch(`https://www.luogu.com.cn/fe/api/contest/join/${contestId.value}`, {
+    const res = await fetch(`${location.origin}/fe/api/contest/join/${contestId.value}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrf, 'X-Requested-With': 'XMLHttpRequest' },
       credentials: 'same-origin',
@@ -151,7 +151,7 @@ async function loadProblem(pid: string) {
   submitResult.value = null; submitError.value = ''
   problemStatement.value = null
   try {
-    const res = await fetch(`https://www.luogu.com.cn/problem/${pid}?contestId=${contestId.value}`, { credentials: 'same-origin' })
+    const res = await fetch(`${location.origin}/problem/${pid}?contestId=${contestId.value}`, { credentials: 'same-origin' })
     const html = await res.text()
     const m = html.match(/<script\s+id="lentille-context"\s+type="application\/json"[^>]*>([^<]+)<\/script>/)
     if (m?.[1]) {
@@ -167,7 +167,7 @@ async function loadProblem(pid: string) {
 // ============================================================
 function loadCaptcha() {
   captchaCode.value = ''
-  captchaSrc.value = 'https://www.luogu.com.cn/api/verify/captcha?_t=' + Date.now()
+  captchaSrc.value = location.origin + '/api/verify/captcha?_t=' + Date.now()
 }
 
 async function handleSubmit() {
@@ -257,7 +257,7 @@ async function runSelfTest() {
   activeWsTimeout = setTimeout(() => { if (!resolved) { resolved = true; cleanupWs(); testRunning.value = false; testVerdict.value = '超时'; testActualOutput.value = '评测超时，请重试' } }, 25000)
   ws.onopen = () => {
     const xhr = new XMLHttpRequest()
-    xhr.open('POST', 'https://www.luogu.com.cn/api/ide_submit')
+    xhr.open('POST', location.origin + '/api/ide_submit')
     xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded')
     xhr.setRequestHeader('X-CSRF-TOKEN', csrf)
     xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest')
@@ -316,7 +316,7 @@ watch([code, lang], scheduleContestSave)
 async function fetchScoreboard(page = 1) {
   rankingLoading.value = true
   try {
-    const res = await fetch(`https://www.luogu.com.cn/fe/api/contest/scoreboard/${contestId.value}?page=${page}`, { credentials: 'same-origin' })
+    const res = await fetch(`${location.origin}/fe/api/contest/scoreboard/${contestId.value}?page=${page}`, { credentials: 'same-origin' })
     const json = await res.json()
     const data = json?.data || json?.currentData || json
     if (data?.scoreboard?.result) {
@@ -436,9 +436,9 @@ function scoreBlockStyle(sc: number | null, max: number): Record<string, string>
   return { background: `rgba(245, 158, 11, ${(0.12 + r * 0.30).toFixed(3)})`, color: 'var(--bew-warning-color)' }
 }
 
-function openUser(uid: number) { window.open(`https://www.luogu.com.cn/user/${uid}`, '_blank') }
-function openOriginal() { window.open(`https://www.luogu.com.cn/contest/${contestId.value}`, '_blank') }
-function openRecord(rid: number) { navigateTo(AppPage.Record, `https://www.luogu.com.cn/record/${rid}`) }
+function openUser(uid: number) { window.open(`${location.origin}/user/${uid}`, '_blank') }
+function openOriginal() { window.open(`${location.origin}/contest/${contestId.value}`, '_blank') }
+function openRecord(rid: number) { navigateTo(AppPage.Record, `${location.origin}/record/${rid}`) }
 
 // Current user's per-problem scores (from the scoreboard), so the problem list
 // shows real attainment instead of the always-100 max. Null until the
@@ -633,7 +633,7 @@ watch(activeTab, (t) => { if (t === 'ranking' && scoreboard.value.length === 0) 
           <!-- Tab: Problems -->
           <!-- ============================================================ -->
           <div v-if="activeTab === 'problems'" bg="$bew-content" rounded="$bew-radius" mb-6 shadow="[var(--bew-shadow-1),var(--bew-shadow-edge-glow-1)]" border="1 $bew-border-color" style="backdrop-filter:var(--bew-filter-glass-1)" overflow="hidden">
-            <a v-for="(p, idx) in problems" :key="p.pid" :href="`https://www.luogu.com.cn/problem/${p.pid}?contestId=${contestId}#ide`" target="_blank" class="stagger-row hover-row" :style="{ '--row-index': idx, textDecoration: 'none', color: 'inherit' }" flex="~ items-center" px-6 py-4 border="b-1 $bew-border-color" duration-200>
+            <a v-for="(p, idx) in problems" :key="p.pid" :href="`${location.origin}/problem/${p.pid}?contestId=${contestId}#ide`" target="_blank" class="stagger-row hover-row" :style="{ '--row-index': idx, textDecoration: 'none', color: 'inherit' }" flex="~ items-center" px-6 py-4 border="b-1 $bew-border-color" duration-200>
               <span style="width:32px;font-size:var(--bew-base-font-size);color:var(--bew-text-2);font-weight:700;flex-shrink:0">{{ problemLabel(idx) }}</span>
               <div flex="1" min-w-0 mx-3>
                 <div style="font-size:var(--bew-base-font-size);color:var(--bew-text-1);font-weight:600">{{ p.pid }} {{ p.title }}</div>

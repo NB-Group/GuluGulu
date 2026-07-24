@@ -16,7 +16,7 @@ const loading = ref(true)
 async function fetchContests() {
   loading.value = true
   try {
-    const res = await fetch('https://www.luogu.com.cn/contest/list', { credentials: 'same-origin' })
+    const res = await fetch(location.origin + '/contest/list', { credentials: 'same-origin' })
     const html = await res.text()
     const m = html.match(/<script\s+id="lentille-context"\s+type="application\/json"[^>]*>([^<]*)<\/script>/)
     if (m?.[1]) {
@@ -49,7 +49,7 @@ function fmt(ts: number): string {
   const d = new Date(ts * 1000)
   return `${d.getMonth() + 1}/${d.getDate()} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
 }
-function openContest(id: number) { navigateTo(AppPage.ContestDetail, `https://www.luogu.com.cn/contest/${id}`) }
+function openContest(id: number) { navigateTo(AppPage.ContestDetail, `${location.origin}/contest/${id}`) }
 
 onMounted(fetchContests)
 </script>

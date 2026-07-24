@@ -1,4 +1,6 @@
-export const LUOGU = 'https://www.luogu.com.cn'
+// 用当前页 origin 而非硬编码 https://www.luogu.com.cn:洛谷新 columba 前端跑在
+// www.luogu.com,硬编码 .com.cn 会在 .com origin 下触发 CORS,所有 fetch 失败。
+export const LUOGU = location.origin
 
 export function openProblem(pid: string, inNewTab = true) {
   const url = `${LUOGU}/problem/${pid}`

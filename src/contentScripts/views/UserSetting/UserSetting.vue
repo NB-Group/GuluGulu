@@ -42,7 +42,7 @@ function switchTab(key: SettingTab) {
   if (key === activeTab.value)
     return
   activeTab.value = key
-  navigateTo(AppPage.UserSetting, `https://www.luogu.com.cn${TAB_ROUTES[key]}`)
+  navigateTo(AppPage.UserSetting, `${location.origin}${TAB_ROUTES[key]}`)
 }
 
 // 监听 URL 变化(浏览器前进/后退),同步 tab
@@ -103,7 +103,7 @@ async function loadProfile() {
   loading.value = true
   errorMsg.value = ''
   try {
-    const ctx = await fetchLentilleContext('https://www.luogu.com.cn/user/setting')
+    const ctx = await fetchLentilleContext(location.origin + '/user/setting')
     if (!ctx || ctx.__needLogin) {
       errorMsg.value = '请先登录洛谷后再使用设置页'
       loading.value = false
@@ -138,7 +138,7 @@ async function saveProfile() {
   }
   savingProfile.value = true
   try {
-    const res = await fetch(`https://www.luogu.com.cn/api/user/${myUid.value}`, {
+    const res = await fetch(`${location.origin}/api/user/${myUid.value}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -259,7 +259,7 @@ async function loadPrizes() {
   prizeLoading.value = true
   prizeError.value = ''
   try {
-    const ctx = await fetchLentilleContext('https://www.luogu.com.cn/user/setting/prize')
+    const ctx = await fetchLentilleContext(location.origin + '/user/setting/prize')
     if (!ctx || ctx.__needLogin) {
       prizeError.value = '请先登录洛谷'
       prizeLoading.value = false
@@ -303,7 +303,7 @@ async function loadPreferences() {
   prefLoading.value = true
   prefError.value = ''
   try {
-    const ctx = await fetchLentilleContext('https://www.luogu.com.cn/user/setting')
+    const ctx = await fetchLentilleContext(location.origin + '/user/setting')
     if (!ctx || ctx.__needLogin) {
       prefError.value = '请先登录洛谷'
       prefLoading.value = false
@@ -330,7 +330,7 @@ function onPrefToggle() {
 async function savePreferences() {
   savingPrefs.value = true
   try {
-    const res = await fetch(`https://www.luogu.com.cn/user/setting/preferences/update`, {
+    const res = await fetch(`${location.origin}/user/setting/preferences/update`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

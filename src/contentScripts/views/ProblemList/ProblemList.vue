@@ -188,12 +188,12 @@ function handleSearch(keyword: string) {
   searchKeyword.value = keyword
 }
 function openProblem(pid: string) {
-  navigateTo(AppPage.ProblemDetail, `https://www.luogu.com.cn/problem/${pid}`)
+  navigateTo(AppPage.ProblemDetail, `${location.origin}/problem/${pid}`)
 }
 // /problem/random 302 跳到一道随机题,fetch 跟随重定向后取最终 URL
 async function randomProblem() {
   try {
-    const r = await fetch('https://www.luogu.com.cn/problem/random', { credentials: 'same-origin' })
+    const r = await fetch(location.origin + '/problem/random', { credentials: 'same-origin' })
     if (r.url && /\/problem\/[A-Za-z0-9_]+/.test(r.url))
       navigateTo(AppPage.ProblemDetail, r.url)
   }

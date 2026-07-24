@@ -17,7 +17,7 @@ export function useSolutions(problemId: Ref<string>) {
     solutionsLoading.value = true
     solutionsNeedLogin.value = false
     try {
-      const res = await fetch(`https://www.luogu.com.cn/problem/solution/${problemId.value}`, { credentials: 'same-origin' })
+      const res = await fetch(`${location.origin}/problem/solution/${problemId.value}`, { credentials: 'same-origin' })
       if (res.status === 401) {
         solutionsNeedLogin.value = true
       }

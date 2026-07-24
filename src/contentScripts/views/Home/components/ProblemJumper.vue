@@ -18,22 +18,22 @@ function handleGo() {
   const pid = normalizeProblemId(problemId.value)
   if (!pid)
     return
-  navigateTo(AppPage.ProblemDetail, `https://www.luogu.com.cn/problem/${pid}`)
+  navigateTo(AppPage.ProblemDetail, `${location.origin}/problem/${pid}`)
 }
 
 async function handleRandom() {
   // 洛谷 /problem/random 服务端 302 到真实题号;先 fetch 解析最终 URL 再 SPA 跳转,
   // 失败则整页刷新走原生 302(绝对正确,代价是短暂白屏)。
   try {
-    const res = await fetch('https://www.luogu.com.cn/problem/random', { credentials: 'same-origin', redirect: 'follow' })
+    const res = await fetch(location.origin + '/problem/random', { credentials: 'same-origin', redirect: 'follow' })
     const pid = res.url.match(/\/problem\/(\w+)/)?.[1]
     if (pid)
       navigateTo(AppPage.ProblemDetail, res.url)
     else
-      window.location.href = 'https://www.luogu.com.cn/problem/random'
+      window.location.href = location.origin + '/problem/random'
   }
   catch {
-    window.location.href = 'https://www.luogu.com.cn/problem/random'
+    window.location.href = location.origin + '/problem/random'
   }
 }
 

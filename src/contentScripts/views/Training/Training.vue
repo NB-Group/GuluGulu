@@ -10,7 +10,7 @@ const { navigateTo, currentUrl } = useGuluApp()
 function backToList() {
   const ref = document.referrer || ''
   if (/\/team\//.test(ref)) window.history.back()
-  else navigateTo(AppPage.Training, 'https://www.luogu.com.cn/training/list')
+  else navigateTo(AppPage.Training, location.origin + '/training/list')
 }
 
 // ============================================================
@@ -22,7 +22,7 @@ const loading = ref(true); const errorMsg = ref('')
 async function fetchTrainings() {
   loading.value = true; errorMsg.value = ''
   try {
-    const res = await fetch('https://www.luogu.com.cn/training/list', { credentials: 'same-origin' })
+    const res = await fetch(location.origin + '/training/list', { credentials: 'same-origin' })
     const html = await res.text()
     const m = html.match(/<script\s+id="lentille-context"\s+type="application\/json"[^>]*>([^<]+)<\/script>/)
     if (m?.[1]) {
@@ -52,7 +52,7 @@ const detailMeta = ref<any>(null)
 async function fetchDetail(id: number) {
   detailLoading.value = true
   try {
-    const res = await fetch(`https://www.luogu.com.cn/training/${id}`, { credentials: 'same-origin' })
+    const res = await fetch(`${location.origin}/training/${id}`, { credentials: 'same-origin' })
     const html = await res.text()
     const m = html.match(/<script\s+id="lentille-context"\s+type="application\/json"[^>]*>([^<]+)<\/script>/)
     if (m?.[1]) {
@@ -86,8 +86,8 @@ function passRate(ac: number, sub: number): string {
   return Math.round((ac / sub) * 100) + '%'
 }
 
-function openTraining(id: number) { navigateTo(AppPage.Training, `https://www.luogu.com.cn/training/${id}`) }
-function openProblem(pid: string) { navigateTo(AppPage.ProblemDetail, `https://www.luogu.com.cn/problem/${pid}`) }
+function openTraining(id: number) { navigateTo(AppPage.Training, `${location.origin}/training/${id}`) }
+function openProblem(pid: string) { navigateTo(AppPage.ProblemDetail, `${location.origin}/problem/${pid}`) }
 
 function loadTrainingContent() {
   if (trainingId.value) { detailProblems.value = []; fetchDetail(trainingId.value) }

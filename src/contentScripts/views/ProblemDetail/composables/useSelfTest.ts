@@ -46,7 +46,7 @@ export function useSelfTest(opts: {
     activeWsTimeout = setTimeout(() => { if (!resolved) { resolved = true; cleanupWs(); testRunning.value = false; testVerdict.value = '超时'; testActualOutput.value = '评测超时，请重试' } }, 25000)
     ws.onopen = () => {
       const xhr = new XMLHttpRequest()
-      xhr.open('POST', 'https://www.luogu.com.cn/api/ide_submit')
+      xhr.open('POST', location.origin + '/api/ide_submit')
       xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded')
       xhr.setRequestHeader('X-CSRF-TOKEN', csrf)
       xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest')

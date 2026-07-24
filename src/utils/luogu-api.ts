@@ -66,7 +66,7 @@ export function getCsrfToken(): string {
  */
 export async function refreshCsrf(): Promise<string> {
   try {
-    const res = await fetch('https://www.luogu.com.cn/', { credentials: 'same-origin' })
+    const res = await fetch(location.origin + '/', { credentials: 'same-origin' })
     const html = await res.text()
     const m = html.match(/<meta\s+name="csrf-token"\s+content="([^"]+)"/)
     if (m?.[1]) {
@@ -141,7 +141,7 @@ async function submitOnce(payload: SubmitPayload, csrf: string): Promise<SubmitR
   // Luogu uses a SINGLE submit endpoint for both normal and contest submissions.
   // The /fe/api/contest/submit/{cid}/{pid} route does NOT exist (404 "该页面未找到");
   // contestId is passed as a query param instead.
-  const url = new URL(`https://www.luogu.com.cn/fe/api/problem/submit/${payload.pid}`)
+  const url = new URL(`${location.origin}/fe/api/problem/submit/${payload.pid}`)
   if (payload.contestId != null) url.searchParams.set('contestId', String(payload.contestId))
 
   try {
@@ -231,7 +231,7 @@ export async function submitCode(payload: SubmitPayload): Promise<SubmitResult> 
  */
 export async function fetchProblemData(pid: string): Promise<any> {
   try {
-    const res = await fetch(`https://www.luogu.com.cn/problem/${pid}?_contentOnly=1`, {
+    const res = await fetch(`${location.origin}/problem/${pid}?_contentOnly=1`, {
       credentials: 'same-origin',
     })
     const html = await res.text()
@@ -435,7 +435,7 @@ export async function pollRecordVerdict(
   const deadline = Date.now() + maxWait
   let lastCtx: any = null
   while (Date.now() < deadline) {
-    const ctx = await fetchLentilleContext(`https://www.luogu.com.cn/record/${rid}`)
+    const ctx = await fetchLentilleContext(`${location.origin}/record/${rid}`)
     if (ctx && !ctx.__needLogin) {
       lastCtx = ctx
       const record = ctx?.data?.record

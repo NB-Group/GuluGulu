@@ -15,7 +15,7 @@ const handleThrottledBackToTop = useThrottleFn((targetScrollTop: number = 0) => 
 const bannerUrl = ref('')
 onMounted(async () => {
   try {
-    const res = await fetch('https://www.luogu.com.cn/', { credentials: 'same-origin' })
+    const res = await fetch(location.origin + '/', { credentials: 'same-origin' })
     const html = await res.text()
     const m = html.match(/<img[^>]+src="(https:\/\/ipic\.luogu\.com\.cn\/[^"]*(?:banner|Banner|hero)[^"]*)"/)
     if (m) bannerUrl.value = m[1]

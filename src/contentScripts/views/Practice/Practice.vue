@@ -16,12 +16,12 @@ const passed = ref<any[]>([])
 const submitted = ref<any[]>([])
 const loading = ref(true)
 
-function openProblem(pid: string) { navigateTo(AppPage.ProblemDetail, `https://www.luogu.com.cn/problem/${pid}`) }
+function openProblem(pid: string) { navigateTo(AppPage.ProblemDetail, `${location.origin}/problem/${pid}`) }
 
 onMounted(async () => {
   if (!uid.value) { loading.value = false; return }
   try {
-    const res = await fetch(`https://www.luogu.com.cn/user/${uid.value}/practice`, { credentials: 'same-origin' })
+    const res = await fetch(`${location.origin}/user/${uid.value}/practice`, { credentials: 'same-origin' })
     const html = await res.text()
     const m = html.match(/<script\s+id="lentille-context"[^>]*>([^<]+)<\/script>/)
     if (m?.[1]) {

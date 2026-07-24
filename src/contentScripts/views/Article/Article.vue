@@ -93,7 +93,7 @@ const captchaCode = ref('')
 function loadReplyCaptcha() {
   captchaCode.value = ''
   // _t 带随机小数,仅作 cache-buster(同原生 Date.now()+Math.random())
-  captchaSrc.value = `https://www.luogu.com.cn/lg4/captcha?_t=${Date.now() + Math.random()}`
+  captchaSrc.value = `${location.origin}/lg4/captcha?_t=${Date.now() + Math.random()}`
 }
 
 // 抓 lentille-context 的公共解析
@@ -118,7 +118,7 @@ async function fetchArticles(append = false) {
     if (selectedCategory.value !== '')
       params.set('category', String(selectedCategory.value))
     const qs = params.toString() ? `?${params.toString()}` : ''
-    const base = isMine.value ? 'https://www.luogu.com.cn/article/mine' : 'https://www.luogu.com.cn/article'
+    const base = isMine.value ? location.origin + '/article/mine' : location.origin + '/article'
     const res = await fetch(`${base}${qs}`, { credentials: 'same-origin' })
     const html = await res.text()
     const ctx = parseLentille(html)
@@ -170,7 +170,7 @@ async function fetchDetail(lid: string) {
   detail.value = null
   replies.value = []
   try {
-    const res = await fetch(`https://www.luogu.com.cn/article/${lid}`, { credentials: 'same-origin' })
+    const res = await fetch(`${location.origin}/article/${lid}`, { credentials: 'same-origin' })
     const html = await res.text()
     const ctx = parseLentille(html)
     if (ctx?.data?.article) {
@@ -199,7 +199,7 @@ async function fetchDetail(lid: string) {
 async function fetchReplies(lid: string) {
   repliesLoading.value = true
   try {
-    const res = await fetch(`https://www.luogu.com.cn/article/${lid}/replies`, { credentials: 'same-origin' })
+    const res = await fetch(`${location.origin}/article/${lid}/replies`, { credentials: 'same-origin' })
     const json = await res.json().catch(() => null)
     if (json && Array.isArray(json.replySlice)) {
       replies.value = json.replySlice
@@ -228,7 +228,7 @@ async function voteArticle(v: 1 | -1) {
   voteError.value = ''
   try {
     const csrf = getCsrfToken()
-    const res = await fetch(`https://www.luogu.com.cn/article/${lid}/vote?vote=${wantVote}`, {
+    const res = await fetch(`${location.origin}/article/${lid}/vote?vote=${wantVote}`, {
       method: 'POST',
       credentials: 'same-origin',
       headers: {
@@ -267,7 +267,7 @@ async function toggleFavor() {
   favorSending.value = true
   try {
     const csrf = getCsrfToken()
-    const res = await fetch(`https://www.luogu.com.cn/article/${lid}/favor${favored ? '?remove=1' : ''}`, {
+    const res = await fetch(`${location.origin}/article/${lid}/favor${favored ? '?remove=1' : ''}`, {
       method: 'POST',
       credentials: 'same-origin',
       headers: {
@@ -316,7 +316,7 @@ async function postReply() {
     const body: Record<string, string> = { content: text }
     if (captchaCode.value)
       body.captcha = captchaCode.value
-    const res = await fetch(`https://www.luogu.com.cn/article/${lid}/replies`, {
+    const res = await fetch(`${location.origin}/article/${lid}/replies`, {
       method: 'POST',
       credentials: 'same-origin',
       headers: {
@@ -364,12 +364,12 @@ async function postReply() {
 }
 
 function openArticle(lid: string) {
-  navigateTo(AppPage.Article, `https://www.luogu.com.cn/article/${lid}`)
+  navigateTo(AppPage.Article, `${location.origin}/article/${lid}`)
 }
 function goBackToList() {
   if (window.history.length > 1)
     history.back()
-  else navigateTo(AppPage.Article, 'https://www.luogu.com.cn/article')
+  else navigateTo(AppPage.Article, location.origin + '/article')
 }
 
 // URL → 加载内容(列表 vs 详情 vs 我的)
@@ -440,7 +440,7 @@ onUnmounted(() => obs?.disconnect())
         专栏浏览与互动需要登录状态
       </p>
       <a
-        href="https://www.luogu.com.cn/auth/login" target="_blank" mt-4 inline-block p="x-4 y-2"
+        :href="location.origin + '/auth/login'" target="_blank" mt-4 inline-block p="x-4 y-2"
         rounded="$bew-radius-half" text-white style="background:var(--bew-theme-color);text-decoration:none"
       >前往登录</a>
     </div>
