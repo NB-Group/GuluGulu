@@ -342,6 +342,8 @@ function doRefresh() {
 
 // 打字机平滑:服务端 chunk 跨度大(一蹦一蹦),用固定节奏把「已显示长度 shown」逐字推向目标,
 // 让 ghost 匀速打出来。chunk 只更新 partial(目标),ticker 负责 reveal。
+// ⚠️ tick 间隔必须 > Monaco 的 fetch+render 周期,否则新一拍会把上一拍未渲染完的 fetch
+// cancel 掉,只有最后一帧(shown=满)渲染 → 看着「一瞬间全出来」。所以用 ~90ms 而非 30ms。
 let tickTimer: ReturnType<typeof setInterval> | null = null
 function startTicker() {
   if (tickTimer)
@@ -351,15 +353,15 @@ function startTicker() {
     if (!s) { stopTicker(); return }
     const target = s.partial.length
     if (s.shown < target) {
-      // 自适应步长:缓冲小→慢(等服务器),缓冲大→快(尽快追上),始终匀速不卡顿
-      const step = Math.max(2, Math.min(60, Math.ceil((target - s.shown) / 8)))
+      // 步长:缓冲小→少字(等服务器),缓冲大→多字(追上),封顶 25 避免又太快
+      const step = Math.max(2, Math.min(25, Math.ceil((target - s.shown) / 10)))
       s.shown = Math.min(target, s.shown + step)
       doRefresh()
     }
     // 显示到目标 且 流已结束 → 停表;否则继续 tick(等下一个 chunk 或收尾)
     if (s.shown >= target && s.done)
       stopTicker()
-  }, 30)
+  }, 90)
 }
 function stopTicker() {
   if (tickTimer) { clearInterval(tickTimer); tickTimer = null }
