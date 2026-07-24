@@ -304,8 +304,10 @@ function tryPatchSatisfies() {
     return
   try {
     const source = getModel()?._source
-    // 从已缓存的结果里取一个 UpdateRequest 实例拿原型(首次可能还没有,下次再试)
-    const req = source?.inlineCompletions?.get?.()?.request ?? source?._updateOperation?.value?.request
+    // provider 被调时 source._updateOperation.value 已 set(在 fetch 同步段 line 361),
+    // 拿它的 request 实例 → UpdateRequest 原型。退而求其次用已缓存的 inlineCompletions。
+    const op = source?._updateOperation?.value
+    const req = op?.request ?? source?.inlineCompletions?.get?.()?.request
     if (!req)
       return
     const proto = Object.getPrototypeOf(req)
@@ -356,6 +358,9 @@ function registerInlineAiProvider(monaco: any) {
     try {
       monaco.languages.registerInlineCompletionsProvider(lang, {
         async provideInlineCompletions(model: any, position: any) {
+          // 抓 UpdateRequest 原型并 patch(此时 source._updateOperation.value 已就绪);
+          // patch 成功后 streamingHookReady=true,后续走流式分支。
+          tryPatchSatisfies()
           const my = ++aiSeq
           const prefix = model.getValueInRange({
             startLineNumber: 1, startColumn: 1,
