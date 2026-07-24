@@ -280,7 +280,10 @@ async function onDOMLoaded() {
       if (lcEl?.textContent?.trim()) {
         const lc = JSON.parse(lcEl.textContent)
         ;(window as any).__gulu_lentille = lc
-        lentilleUser = lc?.user || lc?.currentUser
+        // 文章页等 lentille 顶层 user 为 null,多探几个常见位置
+        lentilleUser = lc?.user || lc?.currentUser || lc?.data?.user || lc?.data?.currentUser
+        if (!lentilleUser?.uid)
+          console.debug('[guly-auth] lentille top keys:', Object.keys(lc), '| user:', lc?.user)
       }
     }
     catch (e) { console.warn('[GuluGulu]', e) }
@@ -289,8 +292,16 @@ async function onDOMLoaded() {
       userIdCookie = String(lentilleUser.uid)
       userName = lentilleUser.name || ''
     }
-    else {
-      // 兜底:当前页 lentille 没带 user(极少数页面),退回 record/list 接口
+
+    // 兜底1:cookie 里的 uid(最可靠:无 WAF、无 CORS,任何页都有)
+    if (!userIdCookie) {
+      const uidFromCookie = (document.cookie.match(/(?:^|;\s)uid=(\d+)/) || [])[1]
+      if (uidFromCookie)
+        userIdCookie = uidFromCookie
+    }
+
+    // 兜底2:退回 record/list 接口(同源,可能被 WAF 返回 HTML)
+    if (!userIdCookie) {
       try {
         const res = await fetch(location.origin + '/record/list?_contentOnly=1', { credentials: 'same-origin' })
         const json = await res.json()
