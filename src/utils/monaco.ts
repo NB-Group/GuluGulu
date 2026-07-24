@@ -57,6 +57,13 @@ export async function ensureMonaco(): Promise<MonacoNS | null> {
         import(/* @vite-ignore */ `${base}/languages/definitions/javascript/register.js`),
         import(/* @vite-ignore */ `${base}/languages/definitions/pascal/register.js`),
       ]).catch(e => console.warn('[GuluGulu] monaco language register failed:', e))
+      // editor.api.js 不含 contrib!inline 补全(ghost-text)是 Monaco 的一个 contrib
+      // 模块,不显式加载就没有 editor.action.inlineSuggest.trigger action、provider 也不会
+      // 被调用。这里 side-effect import 注册 inlineCompletions 贡献点。
+      try {
+        await import(/* @vite-ignore */ `${base}/editor/contrib/inlineCompletions/browser/inlineCompletions.contribution.js`)
+      }
+      catch (e) { console.warn('[GuluGulu] monaco inlineCompletions contrib load failed:', e) }
       const monaco = {
         editor: mod.editor,
         languages: mod.languages,

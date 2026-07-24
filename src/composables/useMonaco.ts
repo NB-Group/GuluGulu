@@ -61,7 +61,40 @@ const MONO_FONT = `'JetBrains Mono','Fira Code','Cascadia Code','Source Code Pro
 const CUSTOM_CSS = `
 .gulu-errline { background: rgba(228,64,76,0.18) !important; }
 .monaco-editor .overflow-guard { border-radius: inherit; }
-/* 不覆盖背景:让 Monaco 用自带 vs / vs-dark 主题底色(标准代码编辑器观感) */
+
+/* 把 Monaco 的 --vscode-* 主题变量映射到项目 --bew-*,让编辑器配色跟项目一致。
+   !important 是为了盖过 Monaco 自带 vs/vs-dark 主题样式表(同优先级,我们后注入)。 */
+.monaco-editor {
+  --vscode-editor-background: var(--bew-content) !important;
+  --vscode-editor-foreground: var(--bew-text-1) !important;
+  --vscode-editorGutter-background: var(--bew-content) !important;
+  --vscode-editorLineNumber-foreground: var(--bew-text-4) !important;
+  --vscode-editorLineNumber-activeForeground: var(--bew-text-2) !important;
+  --vscode-editorCursor-foreground: var(--bew-theme-color) !important;
+  --vscode-editor-selectionBackground: var(--bew-theme-color-30) !important;
+  --vscode-editor-inactiveSelectionBackground: var(--bew-fill-3) !important;
+  --vscode-editor-lineHighlightBackground: transparent !important;
+  --vscode-editor-lineHighlightBorder: transparent !important;
+  --vscode-editorIndentGuide-background: var(--bew-border-color) !important;
+  --vscode-editorIndentGuide-activeBackground: var(--bew-text-4) !important;
+  --vscode-editorWhitespace-foreground: var(--bew-text-4) !important;
+  --vscode-editorBracketMatch-background: var(--bew-theme-color-20) !important;
+  --vscode-editorBracketMatch-border: var(--bew-theme-color) !important;
+  --vscode-editorGhostText-foreground: var(--bew-text-4) !important;
+  --vscode-editorGhostText-border: transparent !important;
+  --vscode-editorSuggestWidget-background: var(--bew-elevated) !important;
+  --vscode-editorSuggestWidget-border: var(--bew-border-color) !important;
+  --vscode-editorSuggestWidget-foreground: var(--bew-text-1) !important;
+  --vscode-editorSuggestWidget-selectedBackground: var(--bew-theme-color-30) !important;
+  --vscode-list-hoverBackground: var(--bew-fill-2) !important;
+}
+/* 主题切换时 Monaco 的 background-color 直接读上面的变量,但部分子层(.monaco-editor-
+   background / .margin)在主题表里被显式赋值,这里兜底强制跟随。 */
+.monaco-editor, .monaco-editor-background, .monaco-editor .margin,
+.monaco-editor .scroll-decoration {
+  background-color: var(--bew-content) !important;
+}
+
 /* Force monospace on every layer Monaco renders text in (token spans inherit
    the editor's font-family, but some themes reset it — !important guarantees
    a monospace glyph cell). */
