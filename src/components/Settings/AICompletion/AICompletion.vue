@@ -47,6 +47,10 @@ async function testConnection() {
         <Select v-model="settings.aiIntensity" :options="intensityOptions" w="full" />
       </SettingsItem>
 
+      <SettingsItem title="FIM 代码补全" desc="Fill In the Middle:用 /completions 端点,传光标前后文本让模型补中间(真正的代码补全,对 轻/强 生效)。DeepSeek 需把 Base URL 设为 https://api.deepseek.com/beta;端点不支持就关掉回退到 chat">
+        <Radio v-model="settings.aiFim" />
+      </SettingsItem>
+
       <SettingsItem title="思考模式" desc="对「强 / 思路指引」生效:让模型先内部推理再输出结果(更稳但更慢,仅指令实现,依赖端点模型能力)">
         <Radio v-model="settings.aiThinking" />
       </SettingsItem>

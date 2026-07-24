@@ -260,18 +260,19 @@ function registerInlineAiProvider(monaco: any) {
     try {
       monaco.languages.registerInlineCompletionsProvider(lang, {
         async provideInlineCompletions(model: any, position: any) {
-          const lineEndCol = model.getLineMaxColumn(position.lineNumber)
-          console.warn('[guly-ai] provider called', { lang, col: position.column, lineEnd: lineEndCol, atLineEnd: position.column === lineEndCol })
-          // 只在行末补(光标在行中间不打扰)
-          if (position.column !== lineEndCol)
-            return { items: [] }
+          console.warn('[guly-ai] provider called', { lang, line: position.lineNumber, col: position.column })
+          // 前缀 = 光标前全部;后缀 = 光标后全部(FIM 填中间)。各截 ~1500 字符省 token。
           const prefix = model.getValueInRange({
             startLineNumber: 1, startColumn: 1,
             endLineNumber: position.lineNumber, endColumn: position.column,
           })
-          // 只取最后 ~1500 字符作上下文,省 token
-          const ctx = prefix.length > 1500 ? prefix.slice(-1500) : prefix
-          if (ctx.trim().length < 3)
+          const suffix = model.getValueInRange({
+            startLineNumber: position.lineNumber, startColumn: position.column,
+            endLineNumber: model.getLineCount(), endColumn: model.getLineMaxColumn(model.getLineCount()),
+          })
+          const pre = prefix.length > 1500 ? prefix.slice(-1500) : prefix
+          const suf = suffix.length > 1500 ? suffix.slice(0, 1500) : suffix
+          if (pre.trim().length < 3)
             return { items: [] }
           if (aiInFlight)
             return { items: [] }
@@ -279,14 +280,15 @@ function registerInlineAiProvider(monaco: any) {
           try {
             // 动态 import 避免与 aiCompletion 循环/初始化顺序问题
             const { requestInlineCompletion } = await import('./aiCompletion')
-            const text = await requestInlineCompletion(lang, ctx)
-            console.warn('[guly-ai] provider result', JSON.stringify(text).slice(0, 120))
+            const text = await requestInlineCompletion(lang, pre, suf)
+            console.warn('[guly-ai] provider result', JSON.stringify(text).slice(0, 160))
             if (!text)
               return { items: [] }
+            // 折叠范围:在光标处纯插入(FIM 文本进前后缀之间,不覆盖任何已有字符)
             return {
               items: [{
                 insertText: text,
-                range: new monaco.Range(position.lineNumber, position.column, position.lineNumber, lineEndCol),
+                range: new monaco.Range(position.lineNumber, position.column, position.lineNumber, position.column),
               }],
             }
           }
@@ -294,8 +296,12 @@ function registerInlineAiProvider(monaco: any) {
             aiInFlight = false
           }
         },
+        // Monaco 这个版本在 dispose 时会调 disposeInlineCompletions / freeInlineCompletions,
+        // provider 必须提供(否则抛 "disposeInlineCompletions is not a function"),给 no-op。
         freeInlineCompletions() {},
+        disposeInlineCompletions() {},
         handleItemDidShow() {},
+        handleItemDidHide() {},
       })
     }
     catch { /* language not registered */ }

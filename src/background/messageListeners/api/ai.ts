@@ -1,28 +1,48 @@
 /**
- * AI 补全中继:内容脚本(在 luogu origin)直接 fetch OpenAI 兼容端点会触发 CORS,
- * 故由 background SW(chrome-extension origin,不受页面 CORS)代发。需 manifest
- * host_permissions 覆盖目标域(baseURL 用户自定义,任意域 → 通配所有 host)。
+ * AI 补全中继:内容脚本(在 luogu origin)直连 OpenAI 兼容端点会 CORS,故由 background
+ * SW(chrome-extension origin)代发。manifest host_permissions 通配所有 host 覆盖自定义端点。
+ *
+ * 两种模式:
+ *  - mode==='fim':POST {base}/completions,body {model,prompt,suffix,max_tokens,...},
+ *    返回 {ok, content: choices[0].text}(DeepSeek 等 FIM 代码补全,beta base)。
+ *  - 其它(默认 chat):POST {base}/chat/completions,body {model,messages,...},
+ *    返回 {ok, content: choices[0].message.content}。
  */
 const API_AI = {
   AIComplete: async (message: any) => {
-    const { baseURL = '', apiKey = '', model = '', messages = [], maxTokens = 256, temperature = 0.2 } = message
+    const {
+      mode = 'chat',
+      baseURL = '',
+      apiKey = '',
+      model = '',
+      messages = [],
+      prompt = '',
+      suffix = '',
+      maxTokens = 256,
+      temperature = 0.2,
+    } = message
     const base = baseURL.replace(/\/+$/, '')
-    // 用户 baseURL 可能已含 /v1 或不含;统一补 /chat/completions
-    const url = `${base}/chat/completions`
+    const isFim = mode === 'fim'
+    const url = `${base}${isFim ? '/completions' : '/chat/completions'}`
     try {
+      const body = isFim
+        ? { model, prompt, suffix, max_tokens: maxTokens, temperature, stream: false }
+        : { model, messages, max_tokens: maxTokens, temperature, stream: false }
       const res = await fetch(url, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           ...(apiKey ? { Authorization: `Bearer ${apiKey}` } : {}),
         },
-        body: JSON.stringify({ model, messages, max_tokens: maxTokens, temperature, stream: false }),
+        body: JSON.stringify(body),
       })
       const text = await res.text()
       if (!res.ok)
         return { ok: false, status: res.status, error: text.slice(0, 240) || `HTTP ${res.status}` }
       const json = JSON.parse(text)
-      const content: string = json?.choices?.[0]?.message?.content || ''
+      const content: string = isFim
+        ? (json?.choices?.[0]?.text || '')
+        : (json?.choices?.[0]?.message?.content || '')
       return { ok: true, content }
     }
     catch (e: any) {

@@ -64,6 +64,7 @@ export interface Settings {
   aiModelName: string
   aiIntensity: 'off' | 'light' | 'strong' | 'guide'
   aiThinking: boolean // 思考模式:开启后给 strong/guide 注入「先推理再输出」的指令、并放宽 token
+  aiFim: boolean // FIM(Fill In the Middle)代码补全:用 /completions + prompt/suffix,补中间
 }
 
 /** 「开始」看板 widget 的尺寸档:小=4 列 / 中=6 列 / 大=12 列(整行) */
@@ -132,6 +133,7 @@ export const originalSettings: Settings = {
   aiModelName: '',
   aiIntensity: 'off',
   aiThinking: false,
+  aiFim: true,
 }
 
 export const settings = useStorageLocal('settings', ref<Settings>(originalSettings), { mergeDefaults: true })

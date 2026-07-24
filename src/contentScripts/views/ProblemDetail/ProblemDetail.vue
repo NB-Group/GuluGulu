@@ -178,6 +178,7 @@ watchEffect(() => {
     apiKey: settings.value.aiApiKey,
     model: settings.value.aiModelName,
     thinking: settings.value.aiThinking,
+    fim: settings.value.aiFim,
   })
 })
 
