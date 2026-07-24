@@ -20,6 +20,7 @@ const API_AI = {
       suffix = '',
       maxTokens = 256,
       temperature = 0.2,
+      stop = [],
     } = message
     const base = baseURL.replace(/\/+$/, '')
     const isFim = mode === 'fim'
@@ -31,7 +32,7 @@ const API_AI = {
     const url = `${isFim ? fimBase : base}${isFim ? '/completions' : '/chat/completions'}`
     try {
       const body = isFim
-        ? { model, prompt, suffix, max_tokens: maxTokens, temperature, stream: false }
+        ? { model, prompt, suffix, max_tokens: maxTokens, temperature, stop, stream: false }
         : { model, messages, max_tokens: maxTokens, temperature, stream: false }
       const res = await fetch(url, {
         method: 'POST',

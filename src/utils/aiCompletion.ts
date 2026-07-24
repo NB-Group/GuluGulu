@@ -33,6 +33,14 @@ const INTENSITY_PROMPT: Record<Exclude<AiIntensity, 'off'>, string> = {
 }
 const INTENSITY_MAXTOKENS: Record<Exclude<AiIntensity, 'off'>, number> = { light: 64, strong: 600, guide: 80 }
 
+// FIM 模式下的力度档(无 system prompt,FIM 只能靠 max_tokens + stop 控长度):
+//  - light:只补当前结构/行 → 少 token + stop 在换行,避免一口气补整段
+//  - strong:按注释/上下文补整段 → 放开 token、不限 stop
+const FIM_CONFIG: Record<'light' | 'strong', { maxTokens: number, stop: string[] }> = {
+  light: { maxTokens: 64, stop: ['\n'] },
+  strong: { maxTokens: 512, stop: [] },
+}
+
 // 思考模式:对 chat 模式的 strong/guide 注入「先内部推理再输出」指令并放宽 token。
 const THINKING_SUFFIX
   = '\n\nTHINKING MODE ON: reason step by step internally about the algorithm and edge cases before producing the final answer. Do NOT output your reasoning, output ONLY the final answer in the format above.'
@@ -56,7 +64,6 @@ export async function requestInlineCompletion(lang: string, prefix: string, suff
   const intensity = state.intensity as Exclude<AiIntensity, 'off'>
   // FIM 适用于 light/strong(代码补全);guide 是自然语言,只能走 chat。
   const useFim = state.fim && intensity !== 'guide'
-  const maxTokens = intensity === 'light' ? INTENSITY_MAXTOKENS.light : intensity === 'strong' ? INTENSITY_MAXTOKENS.strong : INTENSITY_MAXTOKENS.guide
   const temperature = intensity === 'strong' ? 0.3 : 0.15
 
   try {
@@ -70,7 +77,8 @@ export async function requestInlineCompletion(lang: string, prefix: string, suff
           model: state.model,
           prompt: prefix,
           suffix,
-          maxTokens,
+          maxTokens: FIM_CONFIG[intensity as 'light' | 'strong'].maxTokens,
+          stop: FIM_CONFIG[intensity as 'light' | 'strong'].stop,
           temperature,
         })
       : await browser.runtime.sendMessage({
@@ -83,7 +91,7 @@ export async function requestInlineCompletion(lang: string, prefix: string, suff
             { role: 'system', content: INTENSITY_PROMPT[intensity] + (state.thinking && intensity !== 'light' ? THINKING_SUFFIX : '') + `\nProgramming language: ${lang}.` },
             { role: 'user', content: prefix },
           ],
-          maxTokens: state.thinking && intensity !== 'light' ? Math.round(maxTokens * 1.6) : maxTokens,
+          maxTokens: state.thinking && intensity !== 'light' ? Math.round(INTENSITY_MAXTOKENS[intensity] * 1.6) : INTENSITY_MAXTOKENS[intensity],
           temperature,
         })
     console.warn('[guly-ai] relay ->', { mode: useFim ? 'fim' : 'chat', ok: r?.ok, body: (r?.error || r?.content || '').slice?.(0, 120) })

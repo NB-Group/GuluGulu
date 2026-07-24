@@ -170,7 +170,6 @@ export function useMonaco(opts: {
   // Real syntax diagnostics: C/C++ via tree-sitter (async, debounced); other
   // languages fall back to the lightweight bracket checker in utils/monaco.ts.
   let lintTimer: ReturnType<typeof setTimeout> | null = null
-  let aiTriggerTimer: ReturnType<typeof setTimeout> | null = null
   function runLint(immediate = false) {
     if (lintTimer)
       clearTimeout(lintTimer)
@@ -264,25 +263,15 @@ export function useMonaco(opts: {
     resizeObs = new ResizeObserver(() => editor?.layout())
     resizeObs.observe(el)
 
-    // model → value (anti-echo) + 实时语法检测
+    // model → value (anti-echo) + 实时语法检测。
+    // 注:inline ghost-text 补全不再手动 trigger —— inlineCompletions contrib 加载后,
+    // Monaco 打字时会原生自动调用 provider(见 type→provideInlineCompletions 调用栈)。
+    // 之前的手动 trigger 会和原生触发双重调用、互相清空 ghost,已移除。
     model.onDidChangeContent(() => {
       const v = model.getValue()
       if (v !== opts.value.value)
         opts.value.value = v
       runLint()
-      // 显式触发 inline ghost-text 补全:Monaco 的自动触发对「异步 + 慢」的 provider
-      // 不可靠(我们的 provider 要走 background SW 打网络请求),所以打字后 debounce
-      // 主动 trigger 一次,确保 provider 被调用、结果回来后 ghost 能显示。
-      if (aiTriggerTimer)
-        clearTimeout(aiTriggerTimer)
-      aiTriggerTimer = setTimeout(() => {
-        const act = editor?.getAction('editor.action.inlineSuggest.trigger')
-        console.warn('[gulu-ai] trigger fired', act ? 'has-action' : 'NO-ACTION')
-        try {
-          act?.run()
-        }
-        catch (e) { console.warn('[gulu-ai] trigger failed:', e) }
-      }, 380)
     })
     runLint(true)
 
@@ -313,7 +302,6 @@ export function useMonaco(opts: {
   function dispose() {
     if (fontTimer) { clearInterval(fontTimer); fontTimer = null }
     if (lintTimer) { clearTimeout(lintTimer); lintTimer = null }
-    if (aiTriggerTimer) { clearTimeout(aiTriggerTimer); aiTriggerTimer = null }
     if (resizeObs) { resizeObs.disconnect(); resizeObs = null }
     if (darkObs) { darkObs.disconnect(); darkObs = null }
     if (decorations) { decorations.clear(); decorations = null }

@@ -252,15 +252,17 @@ export function registerGuluProviders(monaco: any) {
 }
 
 // ---- AI inline 补全(ghost-text)----
-// 一次只允许一个 in-flight 请求,避免狂打字刷接口;只在行末触发,prefix 太短不触发。
+// 用「最新请求序号」防过期:快速打字时多个 provider 调用并发,只采用最新一次的结果,
+// 过期结果丢弃(返回空)。不再用 in-flight 互斥——那样会在并发时返回空、把刚显示的
+// ghost 清掉。
 const AI_LANGS = ['cpp', 'c', 'java', 'javascript', 'typescript', 'pascal', 'python', 'go', 'rust', 'php', 'csharp']
-let aiInFlight = false
+let aiSeq = 0
 function registerInlineAiProvider(monaco: any) {
   for (const lang of AI_LANGS) {
     try {
       monaco.languages.registerInlineCompletionsProvider(lang, {
         async provideInlineCompletions(model: any, position: any) {
-          console.warn('[guly-ai] provider called', { lang, line: position.lineNumber, col: position.column })
+          const my = ++aiSeq
           // 前缀 = 光标前全部;后缀 = 光标后全部(FIM 填中间)。各截 ~1500 字符省 token。
           const prefix = model.getValueInRange({
             startLineNumber: 1, startColumn: 1,
@@ -274,26 +276,21 @@ function registerInlineAiProvider(monaco: any) {
           const suf = suffix.length > 1500 ? suffix.slice(0, 1500) : suffix
           if (pre.trim().length < 3)
             return { items: [] }
-          if (aiInFlight)
+          // 动态 import 避免与 aiCompletion 循环/初始化顺序问题
+          const { requestInlineCompletion } = await import('./aiCompletion')
+          const text = await requestInlineCompletion(lang, pre, suf)
+          // 过期(用户已继续打字,有更新的请求)→ 丢弃,不覆盖更新的 ghost
+          if (my !== aiSeq)
             return { items: [] }
-          aiInFlight = true
-          try {
-            // 动态 import 避免与 aiCompletion 循环/初始化顺序问题
-            const { requestInlineCompletion } = await import('./aiCompletion')
-            const text = await requestInlineCompletion(lang, pre, suf)
-            console.warn('[guly-ai] provider result', JSON.stringify(text).slice(0, 160))
-            if (!text)
-              return { items: [] }
-            // 折叠范围:在光标处纯插入(FIM 文本进前后缀之间,不覆盖任何已有字符)
-            return {
-              items: [{
-                insertText: text,
-                range: new monaco.Range(position.lineNumber, position.column, position.lineNumber, position.column),
-              }],
-            }
-          }
-          finally {
-            aiInFlight = false
+          console.warn('[guly-ai] provider result', JSON.stringify(text).slice(0, 160))
+          if (!text)
+            return { items: [] }
+          // 折叠范围:在光标处纯插入(FIM 文本进前后缀之间,不覆盖任何已有字符)
+          return {
+            items: [{
+              insertText: text,
+              range: new monaco.Range(position.lineNumber, position.column, position.lineNumber, position.column),
+            }],
           }
         },
         // Monaco 这个版本在 dispose 时会调 disposeInlineCompletions / freeInlineCompletions,
