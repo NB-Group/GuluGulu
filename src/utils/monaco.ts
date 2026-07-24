@@ -272,6 +272,7 @@ function registerInlineAiProvider(monaco: any) {
             // 动态 import 避免与 aiCompletion 循环/初始化顺序问题
             const { requestInlineCompletion } = await import('./aiCompletion')
             const text = await requestInlineCompletion(lang, ctx)
+            import.meta.env.DEV && console.debug('[guly-ai] provider -> ', JSON.stringify(text).slice(0, 120))
             if (!text)
               return { items: [] }
             return {

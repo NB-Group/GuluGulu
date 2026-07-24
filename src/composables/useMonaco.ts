@@ -61,9 +61,9 @@ const MONO_FONT = `'JetBrains Mono','Fira Code','Cascadia Code','Source Code Pro
 const CUSTOM_CSS = `
 .gulu-errline { background: rgba(228,64,76,0.18) !important; }
 .monaco-editor .overflow-guard { border-radius: inherit; }
-.monaco-editor, .monaco-editor-background, .monaco-editor .margin {
-  background-color: var(--bew-fill-1);
-}
+/* 编辑器底透明,透出 IDE 卡片的玻璃 --bew-content(与项目风格一致,不再实心突兀) */
+.monaco-editor, .monaco-editor-background, .monaco-editor .margin,
+.monaco-editor .scroll-decoration { background-color: transparent !important; }
 /* Force monospace on every layer Monaco renders text in (token spans inherit
    the editor's font-family, but some themes reset it — !important guarantees
    a monospace glyph cell). */
@@ -139,6 +139,7 @@ export function useMonaco(opts: {
   // Real syntax diagnostics: C/C++ via tree-sitter (async, debounced); other
   // languages fall back to the lightweight bracket checker in utils/monaco.ts.
   let lintTimer: ReturnType<typeof setTimeout> | null = null
+  let aiTriggerTimer: ReturnType<typeof setTimeout> | null = null
   function runLint(immediate = false) {
     if (lintTimer)
       clearTimeout(lintTimer)
@@ -238,6 +239,17 @@ export function useMonaco(opts: {
       if (v !== opts.value.value)
         opts.value.value = v
       runLint()
+      // 显式触发 inline ghost-text 补全:Monaco 的自动触发对「异步 + 慢」的 provider
+      // 不可靠(我们的 provider 要走 background SW 打网络请求),所以打字后 debounce
+      // 主动 trigger 一次,确保 provider 被调用、结果回来后 ghost 能显示。
+      if (aiTriggerTimer)
+        clearTimeout(aiTriggerTimer)
+      aiTriggerTimer = setTimeout(() => {
+        try {
+          editor?.getAction('editor.action.inlineSuggest.trigger')?.run()
+        }
+        catch (e) { import.meta.env.DEV && console.debug('[gulu-ai] trigger failed:', e) }
+      }, 380)
     })
     runLint(true)
 
@@ -268,6 +280,7 @@ export function useMonaco(opts: {
   function dispose() {
     if (fontTimer) { clearInterval(fontTimer); fontTimer = null }
     if (lintTimer) { clearTimeout(lintTimer); lintTimer = null }
+    if (aiTriggerTimer) { clearTimeout(aiTriggerTimer); aiTriggerTimer = null }
     if (resizeObs) { resizeObs.disconnect(); resizeObs = null }
     if (darkObs) { darkObs.disconnect(); darkObs = null }
     if (decorations) { decorations.clear(); decorations = null }

@@ -6,11 +6,10 @@ import { renderIcon } from '~/utils/icons'
 defineProps<{ size?: 'sm' | 'md' | 'lg' }>()
 const { navigateTo } = useGuluApp()
 
-// 练习进度:`/user/mine/practice` 不存在(mine 不带 practice 子路由),
-// 先用 `/user/mine` 解析当前登录 uid,再请求 `/user/{uid}/practice`。
+// 洛谷总通过题数:`/user/mine/practice` 不存在(mine 不带 practice 子路由),
+// 先用 /user/mine?_contentOnly=1 解析当前 uid,再读个人主页的 passedProblemCount。
 const passed = ref(0)
 const submitted = ref(0)
-const total = ref(0)
 const loading = ref(true)
 
 async function resolveUid(): Promise<number | null> {
@@ -29,31 +28,20 @@ async function fetchList() {
   try {
     const uid = await resolveUid()
     if (!uid) { loading.value = false; return }
-    const res = await fetch(`${location.origin}/user/${uid}/practice`, { credentials: 'same-origin' })
-    const html = await res.text()
-    const m = html.match(/<script\s+id="lentille-context"[^>]*>([^<]+)<\/script>/)
-    if (m?.[1]) {
-      const ctx = JSON.parse(m[1])
-      const count = (v: any) => {
-        if (!v)
-          return 0
-        if (typeof v === 'number')
-          return v
-        return Array.isArray(v) ? v.length : (v.result?.length || v.count || 0)
-      }
-      passed.value = count(ctx?.data?.passedCount ?? ctx?.data?.passed)
-      submitted.value = count(ctx?.data?.submittedCount ?? ctx?.data?.submitted)
-      // 通过率分母:提交过的题目数(没有就退回 passed)
-      total.value = submitted.value || passed.value
+    // 个人主页 lentille.data.passedProblemCount = 洛谷总通过题数
+    const res = await fetch(`${location.origin}/user/${uid}?_contentOnly=1`, { credentials: 'same-origin' })
+    if (res.ok) {
+      const j = await res.json()
+      const d = j?.data || {}
+      passed.value = Number(d.passedProblemCount) || 0
+      submitted.value = Number(d.submittedProblemCount) || 0
     }
   }
   catch (e) { console.warn('[GuluGulu]', e) }
   loading.value = false
 }
 
-function pct(p: number, t: number) { return t > 0 ? Math.min(100, Math.round((p / t) * 100)) : 0 }
-function openPractice() {
-  // 跳到「我的题目」作为练习入口(无独立练习列表页)
+function openProfile() {
   navigateTo(AppPage.MyProblems, `${location.origin}/user/mine/problem`)
 }
 onMounted(fetchList)
@@ -62,19 +50,18 @@ defineExpose({ initData: fetchList })
 
 <template>
   <Loading v-if="loading" />
-  <div v-else flex="~ col gap-3" h-full justify-center>
+  <div v-else flex="~ col gap-2" h-full justify-center>
     <div flex="~ items-baseline gap-2">
-      <span style="font-size:1.8em;font-weight:800;color:var(--bew-theme-color);line-height:1">{{ passed }}</span>
-      <span style="font-size:.8em;color:var(--bew-text-3)">已通过</span>
-      <span flex-1 />
-      <span style="font-size:.78em;color:var(--bew-text-3)">{{ submitted }} 题提交过</span>
+      <span style="font-size:2.1em;font-weight:800;color:var(--bew-theme-color);line-height:1;letter-spacing:-.02em">{{ passed }}</span>
+      <span style="font-size:.82em;color:var(--bew-text-2);font-weight:600">题已通过</span>
     </div>
-    <div style="height:8px;background:var(--bew-fill-3);border-radius:999px;overflow:hidden">
-      <div :style="{ height:'100%', width: pct(passed, total)+'%', background:'var(--bew-theme-color)', transition:'width .5s ease' }" />
+    <div style="font-size:.76em;color:var(--bew-text-3)">
+      共尝试 <span style="color:var(--bew-text-2);font-weight:600">{{ submitted }}</span> 题
+      <span v-if="submitted > 0">· 通过率 {{ submitted > 0 ? Math.round(passed / submitted * 100) : 0 }}%</span>
     </div>
-    <button class="start-row" flex="~ items-center justify-center gap-1" bg="$bew-fill-1" rounded="8px" p="y-2" border="1 solid transparent" cursor-pointer @click="openPractice">
+    <button class="start-row" mt-1 flex="~ items-center justify-center gap-1" bg="$bew-fill-1" rounded="8px" p="y-2" border="1 solid transparent" cursor-pointer @click="openProfile">
       <span style="display:contents" v-html="renderIcon('mingcute:edit-line', 14)" />
-      <span style="font-size:.82em;color:var(--bew-text-2);font-weight:600">继续练习</span>
+      <span style="font-size:.82em;color:var(--bew-text-2);font-weight:600">继续刷题</span>
     </button>
   </div>
 </template>
