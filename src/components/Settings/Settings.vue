@@ -7,6 +7,8 @@ import { renderIcon } from '~/utils/icons'
 
 const emit = defineEmits(['close'])
 
+const props = defineProps<{ initialMenu?: string }>()
+
 const { t } = useI18n()
 
 enum MenuType {
@@ -88,6 +90,10 @@ const settingsMenuItems = computed((): MenuItem[] => {
 })
 
 function open() {
+  // 支持外部指定初始菜单(如编辑器「设置」按钮直达 AI 自动补全)
+  if (props.initialMenu && (MenuType as any)[props.initialMenu]) {
+    activatedMenuItem.value = (MenuType as any)[props.initialMenu] as MenuType
+  }
   setCurrentTitle()
   requestAnimationFrame(() => {
     visible.value = true

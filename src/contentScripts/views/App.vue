@@ -342,8 +342,19 @@ function handleOsScroll() {
 }
 
 function openSettings() {
+  settingsInitialMenu.value = '' // Dock 入口:重置,不沿用编辑器指定的初始菜单
   toggleSettings()
 }
+
+// 由任意深处(如编辑器工具栏)通过事件总线打开「我们的」设置面板,可指定初始菜单
+const settingsInitialMenu = ref<string>('')
+onMounted(() => {
+  emitter.on('open-settings', (e: any) => {
+    settingsInitialMenu.value = e?.menu || ''
+    if (!showSettings.value)
+      toggleSettings()
+  })
+})
 
 /**
  * Checks if the current viewport has a scrollbar.
@@ -396,7 +407,7 @@ provide<GuluAppProvider>('GULY_APP', {
 
     <!-- Settings -->
     <KeepAlive>
-      <Settings v-if="showSettings" z-10002 @close="showSettings = false" />
+      <Settings v-if="showSettings" z-10002 :initial-menu="settingsInitialMenu" @close="showSettings = false" />
     </KeepAlive>
 
     <!-- Dock -->

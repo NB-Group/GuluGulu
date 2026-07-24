@@ -5,6 +5,7 @@ import { AppPage } from '~/enums/appEnums'
 import { settings } from '~/logic'
 import { renderIcon } from '~/utils/icons'
 import { setAiState } from '~/utils/aiCompletion'
+import emitter from '~/utils/mitt'
 import type { LuoguLanguage } from '~/utils/luogu-api'
 import { isLoggedIn as checkLuoguLogin, LUOGU_LANGUAGES, parseErrorLines } from '~/utils/luogu-api'
 import { injectKatexCSS } from '~/utils/markdown'
@@ -847,7 +848,7 @@ onUnmounted(() => {
                   <span style="display:contents" v-html="renderIcon('mingcute:code-line', 14)" />
                   格式化
                 </button>
-                <button style="display:flex;align-items:center;gap:4px;background:none;border:1px solid var(--bew-border-color);border-radius:var(--bew-radius-half);padding:4px 10px;cursor:pointer;color:var(--bew-text-2);font-size:1em;white-space:nowrap" title="设置(AI 自动补全)" @click="navigateTo(AppPage.UserSetting, location.origin + '/user/setting')">
+                <button style="display:flex;align-items:center;gap:4px;background:none;border:1px solid var(--bew-border-color);border-radius:var(--bew-radius-half);padding:4px 10px;cursor:pointer;color:var(--bew-text-2);font-size:1em;white-space:nowrap" title="设置(AI 自动补全)" @click="emitter.emit('open-settings', { menu: 'AICompletion' })">
                   <span style="display:contents" v-html="renderIcon('mingcute:settings-3-line', 14)" />
                   设置
                 </button>

@@ -56,7 +56,7 @@ onMounted(ensureLayout)
 </script>
 
 <template>
-  <div>
+  <div :class="{ 'start-grid-editing': editing }">
     <!-- 顶栏:编辑开关 + 添加 -->
     <div flex="~ items-center justify-end gap-2" mb-3>
       <button
@@ -86,7 +86,9 @@ onMounted(ensureLayout)
       :is-resizable="editing"
       :use-css-transforms="true"
       :prevent-collision="false"
-      :compact="true"
+      :vertical-compact="true"
+      drag-allow-from=".widget-head"
+      drag-ignore-from=".no-drag"
     >
       <GridItem
         v-for="item in layout" :key="item.i"
@@ -94,11 +96,12 @@ onMounted(ensureLayout)
         :is-draggable="editing" :is-resizable="editing"
       >
         <div class="widget-card" :class="{ editing }">
-          <!-- 卡片头 -->
+          <!-- 卡片头(拖拽手柄)-->
           <div class="widget-head" flex="~ items-center gap-2">
+            <span v-if="editing" class="grip no-drag" style="display:contents;color:var(--bew-text-4)" v-html="renderIcon('mingcute:menu-line', 14)" />
             <span style="display:contents;color:var(--bew-theme-color)" v-html="renderIcon(WIDGET_MAP[item.i]?.icon || 'mingcute:app-window-line', 16)" />
             <span flex-1 style="font-size:.92em;font-weight:700;color:var(--bew-text-1)">{{ WIDGET_MAP[item.i]?.name || item.i }}</span>
-            <button v-if="editing" class="widget-remove" title="移除" @click.stop="removeWidget(item.i)">
+            <button v-if="editing" class="widget-remove no-drag" title="移除" @click.stop="removeWidget(item.i)">
               <span style="display:contents" v-html="renderIcon('mingcute:close-line', 14)" />
             </button>
           </div>
@@ -141,7 +144,24 @@ onMounted(ensureLayout)
 }
 
 // grid-layout-plus 的 item 是 absolute 定位,内部撑满
-:deep(.vgl-item) { border-radius: var(--bew-radius); }
+:deep(.vgl-item) {
+  border-radius: var(--bew-radius);
+  transition: transform var(--bew-dur-cozy) var(--bew-ease-smooth);
+}
+// 编辑模式:整区禁止文本选择,避免拖拽时选中
+.start-grid-editing { user-select: none; -webkit-user-select: none; }
+// 编辑模式:缩放手柄可见
+:deep(.vgl-item__resize-handle) {
+  z-index: 5;
+  width: 14px !important; height: 14px !important;
+  right: 2px !important; bottom: 2px !important;
+}
+.editing :deep(.vgl-item__resize-handle) {
+  visibility: visible;
+}
+:deep(.vgl-item__resize-handle) {
+  visibility: hidden;
+}
 
 .widget-card {
   height: 100%;
@@ -159,11 +179,12 @@ onMounted(ensureLayout)
 .widget-head { margin-bottom: 8px; flex-shrink: 0; }
 .widget-body { flex: 1; min-height: 0; overflow: auto; }
 
-// 编辑模式:抖动 + 删除按钮 + 可拖拽光标
+// 编辑模式:抖动 + 删除按钮 + 头部拖拽光标 + 内容禁用交互(防误点)
 .widget-card.editing {
-  animation: jiggle var(--bew-dur-normal) var(--bew-ease-smooth) infinite;
   cursor: grab;
   &:active { cursor: grabbing; }
+  .widget-body { pointer-events: none; }   // 内容不响应点击,避免误跳转
+  .widget-head { cursor: grab; }
 }
 .widget-remove {
   width: 20px; height: 20px; border-radius: 50%;
@@ -172,9 +193,13 @@ onMounted(ensureLayout)
   box-shadow: 0 2px 6px rgba(0,0,0,.2);
 }
 
+// 抖动:套一层内层 span 上做轻微旋转,避免和 grid 的 transform 冲突
 @keyframes jiggle {
-  0%, 100% { transform: rotate(-0.6deg); }
-  50% { transform: rotate(0.6deg); }
+  0%, 100% { transform: rotate(-0.5deg); }
+  50% { transform: rotate(0.5deg); }
+}
+.widget-card.editing {
+  animation: jiggle 0.6s ease-in-out infinite;
 }
 
 .picker-item {
