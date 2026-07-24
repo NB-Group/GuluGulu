@@ -11,6 +11,7 @@ const { t } = useI18n()
 
 enum MenuType {
   General = 'General',
+  AICompletion = 'AICompletion',
   DesktopAndDock = 'DesktopAndDock',
   Appearance = 'Appearance',
   About = 'About',
@@ -25,6 +26,7 @@ interface MenuItem {
 
 const settingsMenu = {
   [MenuType.General]: defineAsyncComponent(() => import('./General/General.vue')),
+  [MenuType.AICompletion]: defineAsyncComponent(() => import('./AICompletion/AICompletion.vue')),
   [MenuType.DesktopAndDock]: defineAsyncComponent(() => import('./DesktopAndDock/DesktopAndDock.vue')),
   [MenuType.Appearance]: defineAsyncComponent(() => import('./Appearance/Appearance.vue')),
   [MenuType.About]: defineAsyncComponent(() => import('./About/About.vue')),
@@ -57,6 +59,12 @@ const settingsMenuItems = computed((): MenuItem[] => {
       icon: 'mingcute:settings-3-line',
       iconActivated: 'mingcute:settings-3-fill',
       title: '通用',
+    },
+    {
+      value: MenuType.AICompletion,
+      icon: 'mingcute:ai-line',
+      iconActivated: 'mingcute:ai-fill',
+      title: 'AI 自动补全',
     },
     {
       value: MenuType.DesktopAndDock,

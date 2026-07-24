@@ -1,6 +1,7 @@
 import browser from 'webextension-polyfill'
 
 import { apiListenerFactory } from '../../utils'
+import API_AI from './ai'
 import API_CONTEST from './contest'
 import API_HOME from './home'
 import API_PROBLEM from './problem'
@@ -11,6 +12,7 @@ export const API_COLLECTION = {
   CONTEST: API_CONTEST,
   RANKING: API_RANKING,
   HOME: API_HOME,
+  AI: API_AI,
 
   [Symbol.iterator]() {
     return Object.values(this).values()

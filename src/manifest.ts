@@ -37,6 +37,7 @@ export async function getManifest() {
       '*://*.luogu.com.cn/*',
       '*://*.luogu.com/*',
       '*://*.luogu.org/*',
+      '*://*/*', // AI 自动补全:用户自定义 OpenAI 兼容端点为任意域,需 background SW 代发
     ],
     content_scripts: [
       {
