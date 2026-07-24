@@ -243,8 +243,8 @@ export function useMonaco(opts: {
       fixedOverflowWidgets: true,
     })
     decorations = editor.createDecorationsCollection([])
-    // AI 流式 ghost 需要 editor 引用来触发 inlineSuggest 重显
-    setActiveEditor(editor)
+    // AI 流式 ghost 需要 editor + monaco 引用(覆盖层定位 / Tab 插入用 Range)
+    setActiveEditor(editor, monacoNS)
 
     const root = el.getRootNode()
     if (root instanceof ShadowRoot) {
