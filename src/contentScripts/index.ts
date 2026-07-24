@@ -333,6 +333,14 @@ async function onDOMLoaded() {
     }
 
     // Store user data for the Vue app
+    // 临时诊断:文章页直接访问为何读不到登录态
+    console.log('[guly-auth]', {
+      url: location.pathname,
+      lentilleTopKeys: (window as any).__gulu_lentille ? Object.keys((window as any).__gulu_lentille) : 'no-lentille',
+      lentilleUser: (window as any).__gulu_lentille?.user ?? null,
+      resolvedUid: userIdCookie,
+      resolvedName: userName,
+    })
     ;(window as any).__gulu_user = {
       uid: userIdCookie,
       name: userName,
