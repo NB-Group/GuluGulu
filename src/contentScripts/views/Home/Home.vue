@@ -24,6 +24,7 @@ onMounted(async () => {
 
 const activatedPage = ref<HomeSubPage>(HomeSubPage.Trending)
 const pages = {
+  [HomeSubPage.Start]: defineAsyncComponent(() => import('./components/Start.vue')),
   [HomeSubPage.Trending]: defineAsyncComponent(() => import('./components/Trending.vue')),
   [HomeSubPage.RecentContests]: defineAsyncComponent(() => import('./components/RecentContests.vue')),
   [HomeSubPage.HotProblems]: defineAsyncComponent(() => import('./components/HotProblems.vue')),

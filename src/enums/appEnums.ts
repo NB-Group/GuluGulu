@@ -26,6 +26,7 @@ export enum AppPage {
 }
 
 export enum HomeSubPage {
+  Start = 'Start',
   Trending = 'Trending',
   RecentContests = 'RecentContests',
   HotProblems = 'HotProblems',

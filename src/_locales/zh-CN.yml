@@ -16,6 +16,7 @@ nav:
   record: 记录
   article: 专栏
 home:
+  start: 开始
   trending: 动态
   recent_contests: 近期比赛
   hot_problems: 热门题目

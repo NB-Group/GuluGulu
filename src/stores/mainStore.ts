@@ -117,6 +117,10 @@ export const useMainStore = defineStore('main', () => {
   const homeTabs = shallowReadonly<HomeTab[]>(
     [
       {
+        i18nKey: 'home.start',
+        page: HomeSubPage.Start,
+      },
+      {
         i18nKey: 'home.trending',
         page: HomeSubPage.Trending,
       },
