@@ -254,6 +254,7 @@ function registerInlineAiProvider(monaco: any) {
       monaco.languages.registerInlineCompletionsProvider(lang, {
         async provideInlineCompletions(model: any, position: any) {
           const lineEndCol = model.getLineMaxColumn(position.lineNumber)
+          console.warn('[guly-ai] provider called', { lang, col: position.column, lineEnd: lineEndCol, atLineEnd: position.column === lineEndCol })
           // 只在行末补(光标在行中间不打扰)
           if (position.column !== lineEndCol)
             return { items: [] }
@@ -272,7 +273,7 @@ function registerInlineAiProvider(monaco: any) {
             // 动态 import 避免与 aiCompletion 循环/初始化顺序问题
             const { requestInlineCompletion } = await import('./aiCompletion')
             const text = await requestInlineCompletion(lang, ctx)
-            import.meta.env.DEV && console.debug('[guly-ai] provider -> ', JSON.stringify(text).slice(0, 120))
+            console.warn('[guly-ai] provider result', JSON.stringify(text).slice(0, 120))
             if (!text)
               return { items: [] }
             return {

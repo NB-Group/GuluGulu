@@ -61,9 +61,7 @@ const MONO_FONT = `'JetBrains Mono','Fira Code','Cascadia Code','Source Code Pro
 const CUSTOM_CSS = `
 .gulu-errline { background: rgba(228,64,76,0.18) !important; }
 .monaco-editor .overflow-guard { border-radius: inherit; }
-/* 编辑器底透明,透出 IDE 卡片的玻璃 --bew-content(与项目风格一致,不再实心突兀) */
-.monaco-editor, .monaco-editor-background, .monaco-editor .margin,
-.monaco-editor .scroll-decoration { background-color: transparent !important; }
+/* 不覆盖背景:让 Monaco 用自带 vs / vs-dark 主题底色(标准代码编辑器观感) */
 /* Force monospace on every layer Monaco renders text in (token spans inherit
    the editor's font-family, but some themes reset it — !important guarantees
    a monospace glyph cell). */
@@ -245,10 +243,12 @@ export function useMonaco(opts: {
       if (aiTriggerTimer)
         clearTimeout(aiTriggerTimer)
       aiTriggerTimer = setTimeout(() => {
+        const act = editor?.getAction('editor.action.inlineSuggest.trigger')
+        console.warn('[gulu-ai] trigger fired', act ? 'has-action' : 'NO-ACTION')
         try {
-          editor?.getAction('editor.action.inlineSuggest.trigger')?.run()
+          act?.run()
         }
-        catch (e) { import.meta.env.DEV && console.debug('[gulu-ai] trigger failed:', e) }
+        catch (e) { console.warn('[gulu-ai] trigger failed:', e) }
       }, 380)
     })
     runLint(true)

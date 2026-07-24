@@ -45,7 +45,7 @@ function stripFences(s: string): string {
 export async function requestInlineCompletion(lang: string, prefix: string): Promise<string> {
   // 关键门控:强度=off 或缺端点 → 不补。enabled 作为设置里的总闸,由编辑器选强度时自动置 true。
   if (!state.enabled || state.intensity === 'off' || !state.baseURL || !state.model) {
-    import.meta.env.DEV && console.debug('[guly-ai] gated off', { enabled: state.enabled, intensity: state.intensity, hasBase: !!state.baseURL, hasModel: !!state.model })
+    console.warn('[guly-ai] gated off', { enabled: state.enabled, intensity: state.intensity, hasBase: !!state.baseURL, hasModel: !!state.model })
     return ''
   }
   const intensity = state.intensity as Exclude<AiIntensity, 'off'>
@@ -65,7 +65,7 @@ export async function requestInlineCompletion(lang: string, prefix: string): Pro
       maxTokens: thinking ? Math.round(INTENSITY_MAXTOKENS[intensity] * 1.6) : INTENSITY_MAXTOKENS[intensity],
       temperature: intensity === 'strong' ? 0.3 : 0.15,
     })
-    import.meta.env.DEV && console.debug('[guly-ai] relay ->', r?.ok, (r?.error || r?.content || '').slice?.(0, 120))
+    console.warn('[guly-ai] relay ->', r?.ok, (r?.error || r?.content || '').slice?.(0, 120))
     if (!r?.ok)
       return ''
     return stripFences(r.content || '')
