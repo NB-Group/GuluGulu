@@ -17,6 +17,18 @@ import { SVG_ICONS } from '~/utils/svgIcons'
 import { version } from '../../package.json'
 import App from './views/App.vue'
 
+// 洛谷双域名并存(.com / .com.cn / .org),登录 cookie 在 .com.cn。
+// 落在 .com / .org 上时是 0 cookie 的未登录态 → 统一 301 式重定向到 .com.cn,
+// 保证用户始终在自己登录的域上。放在最前,document_start 即跳,后续逻辑不再执行。
+;(() => {
+  const host = location.hostname
+  if (host === 'www.luogu.com' || host === 'luogu.com' || host === 'www.luogu.org' || host === 'luogu.org') {
+    const u = new URL(location.href)
+    u.hostname = 'www.luogu.com.cn'
+    location.replace(u.href)
+  }
+})()
+
 const isFirefox: boolean = /Firefox/i.test(navigator.userAgent)
 
 // Capture-phase: block `/` key from triggering Luogu's search when typing in GuluGulu's code editor
@@ -282,8 +294,6 @@ async function onDOMLoaded() {
         ;(window as any).__gulu_lentille = lc
         // 文章页等 lentille 顶层 user 为 null,多探几个常见位置
         lentilleUser = lc?.user || lc?.currentUser || lc?.data?.user || lc?.data?.currentUser
-        if (!lentilleUser?.uid)
-          console.warn('[guly-auth] lentille top keys:', Object.keys(lc), '| user:', lc?.user)
       }
     }
     catch (e) { console.warn('[GuluGulu]', e) }
@@ -297,7 +307,6 @@ async function onDOMLoaded() {
     const uidFromCookie = (document.cookie.match(/(?:^|;\s)uid=(\d+)/) || [])[1]
     if (!userIdCookie && uidFromCookie)
       userIdCookie = uidFromCookie
-    console.warn('[guly-auth] resolved:', { lentilleUid: lentilleUser?.uid, cookieUid: uidFromCookie, cookieKeys: document.cookie.replace(/=[^;]*/g, '=*'), finalUid: userIdCookie, origin: location.origin })
 
     // 兜底2:退回 record/list 接口(同源,可能被 WAF 返回 HTML)
     if (!userIdCookie) {
