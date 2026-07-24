@@ -281,16 +281,19 @@ const AI_LANGS = ['cpp', 'c', 'java', 'javascript', 'typescript', 'pascal', 'pyt
 let activeEditor: any = null
 export function setActiveEditor(e: any) {
   activeEditor = e
-  if (e)
-    // 编辑器就绪后尽快 patch(模型可能要一拍才创建,refreshGhost 里也会再尝试)
+  if (e) {
+    // 编辑器就绪后尽快 patch(模型可能要一拍才创建,provider 入口也会再尝试)
     setTimeout(tryPatchSatisfies, 0)
+  }
+  else {
+    stopTicker()
+  }
 }
 
 // ---- hook:让 satisfies 在「强制刷新」那一拍 miss ----
 let satisfiesPatched = false
 let streamingHookReady = false
-let forceMiss = false        // 只在我们 refreshGhost 的一拍为 true
-let refreshQueued = false
+let forceMiss = false        // 只在我们 doRefresh 的一拍为 true
 
 function getModel(): any {
   try {
@@ -324,29 +327,46 @@ function tryPatchSatisfies() {
   }
   catch { /* 内部结构不符 → 静默降级 */ }
 }
-function refreshGhost() {
-  if (refreshQueued)
+// 强制刷新原生 ghost:forceMiss 一拍 + noDelay 重算 → source 重抓 → provider 返回当前 shown 文本
+function doRefresh() {
+  tryPatchSatisfies()
+  const model = getModel()
+  if (!model)
     return
-  refreshQueued = true
-  setTimeout(() => {
-    refreshQueued = false
-    tryPatchSatisfies()
-    const model = getModel()
-    if (!model)
-      return
-    // 强制 miss 一拍 + noDelay 重算(不用 explicit,避免 _inAcceptFlow 副作用把 ghost 清掉)
-    // → source 重抓 → provider 返回最新 partial
-    forceMiss = true
-    console.warn('[guly-ai] refresh', stream?.partial?.length)
-    try { model.trigger?.(undefined, { noDelay: true }) }
-    catch { /* ignore */ }
-    // satisfies 检查在 trigger 同步段内完成,随后复位
-    setTimeout(() => { forceMiss = false }, 0)
-  }, 50)
+  forceMiss = true
+  try { model.trigger?.(undefined, { noDelay: true }) }
+  catch { /* ignore */ }
+  // satisfies 检查在 trigger 同步段内完成,随后复位
+  setTimeout(() => { forceMiss = false }, 0)
+}
+
+// 打字机平滑:服务端 chunk 跨度大(一蹦一蹦),用固定节奏把「已显示长度 shown」逐字推向目标,
+// 让 ghost 匀速打出来。chunk 只更新 partial(目标),ticker 负责 reveal。
+let tickTimer: ReturnType<typeof setInterval> | null = null
+function startTicker() {
+  if (tickTimer)
+    return
+  tickTimer = setInterval(() => {
+    const s = stream
+    if (!s) { stopTicker(); return }
+    const target = s.partial.length
+    if (s.shown < target) {
+      // 自适应步长:缓冲小→慢(等服务器),缓冲大→快(尽快追上),始终匀速不卡顿
+      const step = Math.max(2, Math.min(60, Math.ceil((target - s.shown) / 8)))
+      s.shown = Math.min(target, s.shown + step)
+      doRefresh()
+    }
+    // 显示到目标 且 流已结束 → 停表;否则继续 tick(等下一个 chunk 或收尾)
+    if (s.shown >= target && s.done)
+      stopTicker()
+  }, 30)
+}
+function stopTicker() {
+  if (tickTimer) { clearInterval(tickTimer); tickTimer = null }
 }
 
 // 当前活跃流
-let stream: { id: number, posKey: string, preLen: number, partial: string, done: boolean } | null = null
+let stream: { id: number, posKey: string, preLen: number, partial: string, shown: number, done: boolean } | null = null
 let nextStreamId = 0
 let aiSeq = 0
 
@@ -375,34 +395,35 @@ function registerInlineAiProvider(monaco: any) {
           const posKey = `${position.lineNumber}:${position.column}`
           const mkRange = () => new monaco.Range(position.lineNumber, position.column, position.lineNumber, position.column)
 
-          // hook 就绪 + 同位置活跃流 → 直接返回当前累积文本(流式逐字刷新靠这个)
+          // hook 就绪 + 同位置活跃流 → 返回「已 reveal 的文本」(打字机平滑:partial.slice(0, shown))
           if (streamingHookReady && stream && stream.posKey === posKey && stream.preLen === pre.length) {
-            console.warn('[guly-ai] progressive', stream.partial.length)
-            if (!stream.partial)
+            const shown = stream.partial.slice(0, stream.shown)
+            console.warn('[guly-ai] progressive', stream.shown, '/', stream.partial.length)
+            if (!shown)
               return { items: [] }
-            return { items: [{ insertText: stream.partial, range: mkRange() }] }
+            return { items: [{ insertText: shown, range: mkRange() }] }
           }
 
           // 新位置 → 取消旧流、开新流
           const { abortAiStream, streamInlineCompletion } = await import('./aiCompletion')
           abortAiStream()
           const id = ++nextStreamId
-          stream = { id, posKey, preLen: pre.length, partial: '', done: false }
+          stream = { id, posKey, preLen: pre.length, partial: '', shown: 0, done: false }
 
           if (streamingHookReady) {
-            // 流式:每来一段 chunk 更新 partial 并强制刷新原生 ghost
+            // 流式:chunk 只更新目标 partial;打字机 ticker 负责匀速 reveal + 刷新原生 ghost
             streamInlineCompletion(lang, pre, suf, (acc) => {
               if (!stream || stream.id !== id)
                 return
               stream.partial = acc
-              refreshGhost()
+              startTicker()
             }).then((final) => {
               if (!stream || stream.id !== id)
                 return
               stream.partial = final || stream.partial
               stream.done = true
               console.warn('[guly-ai] ghost final', JSON.stringify(stream.partial).slice(0, 160))
-              refreshGhost()
+              startTicker() // 收尾:把剩余 reveal 完
             })
             return { items: [] }
           }
