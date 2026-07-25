@@ -387,9 +387,13 @@ function waitForBodyThenInject() {
   }, 5000)
 }
 
-// body 一出现就接管(不等 DOMContentLoaded)—— 我们走 API,不需要等 DOM 扒内容;
-// 越早清屏越不容易露出原生页。CSRF 在 head(早于 body 解析)、uid 在 cookie,都瞬时可得。
-waitForBodyThenInject()
+// 等 DOMContentLoaded 再接管:HTML 解析完成、body 稳定,清 body + 挂载不会和解析器打架。
+// (曾在 body 刚出现的中途清屏/挂载 → 解析器仍在追加,App 起不来 → 黑屏,已回退。)
+// display:none 在 document_start 已注入挡住原生,这段等待期不会露出原生页。
+if (document.readyState !== 'loading')
+  waitForBodyThenInject()
+else
+  document.addEventListener('DOMContentLoaded', () => waitForBodyThenInject())
 
 // 后退/前进恢复:Chrome 可能不重跑本内容脚本就还原页面(bfcache,或 instant/prerender
 // 等非 bfcache 路径)。只要还原出的页面 #gulu 缺失且 URL 受支持,就重注——不限定
