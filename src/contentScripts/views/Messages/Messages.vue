@@ -329,11 +329,32 @@ onMessagePoll((json: any) => {
 
   // Also update active chat messages if new ones arrived from this person
   if (activeChatUid.value) {
-    const newMsgs = msgs.filter((m: Message) =>
+    const incoming = msgs.filter((m: Message) =>
       Number(m.sender.uid) === activeChatUid.value || Number(m.receiver.uid) === activeChatUid.value
-    ).filter((m: Message) => !messages.value.find(x => x.id === m.id))
-    if (newMsgs.length > 0) {
-      messages.value = [...messages.value, ...newMsgs].sort((a, b) => (a.time || 0) - (b.time || 0))
+    )
+    const list = [...messages.value]
+    let changed = false
+    for (const m of incoming) {
+      // 已有同 id → 跳过
+      if (list.some(x => x.id === m.id))
+        continue
+      // 匹配本地的乐观消息(同发送者 + 同内容 + 时间 ≤5s):用服务器真实消息替换它,
+      // 顺带把临时 id(Date.now())修正为真实 id —— 否则下次轮询按 id 去重匹配不上 → 重复。
+      const optIdx = list.findIndex(x =>
+        Number(x.sender?.uid) === Number(m.sender?.uid)
+        && x.content === m.content
+        && Math.abs((x.time || 0) - (m.time || 0)) <= 5
+      )
+      if (optIdx !== -1) {
+        list[optIdx] = m
+        changed = true
+        continue
+      }
+      list.push(m)
+      changed = true
+    }
+    if (changed) {
+      messages.value = list.sort((a, b) => (a.time || 0) - (b.time || 0))
       scrollToBottom(true)
     }
   }

@@ -49,7 +49,21 @@ function saveCheckInState() {
   checkInState.date = todayStr(); checkInState.done = checkInDone.value; checkInState.fortune = fortuneResult.value
 }
 
-const uid = (window as any).__gulu_user?.uid
+// __gulu_user.uid 由 contentScripts 设置;直链进入主页时可能由 record/list 异步回填,
+// 不能在 setup 一次性取(会取到空 → 误判"请先登录")。实时读 + 等待就绪。
+function getUid() { return (window as any).__gulu_user?.uid }
+function waitForUid(timeoutMs = 3000): Promise<string> {
+  return new Promise((resolve) => {
+    const start = Date.now()
+    const tick = () => {
+      const u = getUid()
+      if ((u && u !== '0') || Date.now() - start >= timeoutMs)
+        return resolve(u || '')
+      setTimeout(tick, 100)
+    }
+    tick()
+  })
+}
 
 function parsePunchHtml(html: string) {
   const r = { level: '', levelColor: 'var(--bew-text-2)', good: [] as string[], bad: [] as string[], days: '' }
@@ -88,6 +102,7 @@ async function fetchFortuneFromHome() {
 
 // On mount: GET Luogu homepage to check today's punch status (server-side, no auto-check-in)
 onMounted(async () => {
+  const uid = await waitForUid()
   if (!uid || uid === '0') { checkInLoading.value = false; return }
   try {
     const fortune = await fetchFortuneFromHome()
@@ -102,6 +117,7 @@ onMounted(async () => {
 })
 
 async function handleCheckIn() {
+  const uid = getUid() // 实时读(直链进入时此时才就绪)
   if (!uid || uid === '0') { checkInMsg.value = '请先登录洛谷'; return }
   if (checkInDone.value)
     return

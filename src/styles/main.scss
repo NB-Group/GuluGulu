@@ -147,16 +147,31 @@ img {
 }
 
 // Hide ALL scrollbar visuals — OverlayScrollbars handles + native scrollbars.
-// Scrolling still works via wheel / trackpad / touch / drag.
+// OverlayScrollbars 自带的滚动条隐藏(它自己管理滚动,我们用滚轮/手势)。
 .os-scrollbar {
   display: none !important;
 }
+// 不再全局去掉原生滚动条(尤其纵向)—— 内部可滚动区域(列表、消息等)默认显示原生纵向
+// 滚动条,方便拖拽定位。需要细条样式的地方用 .bew-scroll opt-in 覆盖(更 specific)。
 * {
-  scrollbar-width: none; // Firefox
+  scrollbar-width: auto; // Firefox:默认显示
 }
 *::-webkit-scrollbar {
-  width: 0;
-  height: 0;
+  width: 10px;
+  height: 10px;
+}
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+*::-webkit-scrollbar-thumb {
+  background: var(--bew-fill-3);
+  border-radius: 999px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+*::-webkit-scrollbar-thumb:hover {
+  background: var(--bew-fill-4);
+  background-clip: padding-box;
 }
 
 // Thin visible scrollbar — opt-in via `.bew-scroll`. Overrides the global hide
