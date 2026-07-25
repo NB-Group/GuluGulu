@@ -19,36 +19,6 @@ const emit = defineEmits<{
   (e: 'click', problem: ProblemInfo): void
 }>()
 
-const difficultyColor = computed(() => {
-  if (!props.problem)
-    return 'var(--bew-text-3)'
-  const d = props.problem.difficulty
-  if (d <= 1)
-    return '#bfbfbf' // gray - 入门
-  if (d <= 3)
-    return '#1890ff' // blue - medium
-  if (d <= 5)
-    return '#262626' // black - NOI
-  if (d <= 7)
-    return '#eb2f96' // pink - very hard
-  return '#262626' // black - expert
-})
-
-const difficultyLabel = computed(() => {
-  if (!props.problem)
-    return ''
-  const d = props.problem.difficulty
-  if (d <= 1)
-    return '入门'
-  if (d <= 3)
-    return '普及-'
-  if (d <= 5)
-    return '提高'
-  if (d <= 7)
-    return '省选'
-  return 'NOI'
-})
-
 const passRate = computed(() => {
   if (!props.problem || props.problem.totalSubmit === 0)
     return 0
@@ -133,17 +103,7 @@ function handleClick() {
           >
             {{ problem.pid }}
           </span>
-          <span
-            text="xs"
-            p="x-2 y-0.5"
-            rounded="$bew-radius-half"
-            :style="{
-              backgroundColor: `${difficultyColor}20`,
-              color: difficultyColor,
-            }"
-          >
-            {{ difficultyLabel }}
-          </span>
+          <DifficultyBadge :difficulty="problem.difficulty" size="sm" />
         </div>
 
         <!-- Title -->

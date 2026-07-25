@@ -31,18 +31,7 @@ const selectedDifficulty = ref<number | null>(null)
 const selectedType = ref('')
 const sentinelRef = ref<HTMLDivElement>()
 
-const difficultyMap: Record<number, { label: string, color: string }> = {
-  0: { label: '暂无评定', color: '#909399' },
-  1: { label: '入门', color: '#FE4D61' },
-  2: { label: '普及−', color: '#F39B18' },
-  3: { label: '普及', color: '#FFBF1C' },
-  4: { label: '普及+/提高-', color: '#54C320' },
-  5: { label: '提高', color: '#1AC1C1' },
-  6: { label: '提高+/省选−', color: '#3797DA' },
-  7: { label: '省选/NOI−', color: '#9A3FCE' },
-  8: { label: 'NOI/NOI+/CTS', color: '#162369' },
-}
-
+// 题目难度文案/配色统一走 utils/difficulty + DifficultyBadge(此处即全站标准源头)
 const typeOptions = [
   { label: '全部题库', value: '' },
   { label: '洛谷', value: 'P' },
@@ -199,12 +188,6 @@ async function randomProblem() {
   }
   catch (e) { console.warn('[GuluGulu] random problem failed', e) }
 }
-function difficultyLabel(d: number) {
-  return difficultyMap[d]?.label || '未知'
-}
-function difficultyColor(d: number) {
-  return difficultyMap[d]?.color || '#909399'
-}
 </script>
 
 <template>
@@ -354,16 +337,7 @@ function difficultyColor(d: number) {
                 font-family: monospace;
               "
             >{{ p.pid }}</span>
-            <span
-              text="xs"
-              fw-bold
-              p="x-2 y-0.5"
-              rounded="$bew-radius-half"
-              :style="{
-                backgroundColor: `${difficultyColor(p.difficulty)}20`,
-                color: difficultyColor(p.difficulty),
-              }"
-            >{{ difficultyLabel(p.difficulty) }}</span>
+            <DifficultyBadge :difficulty="p.difficulty" size="sm" />
           </div>
           <h3
             style="

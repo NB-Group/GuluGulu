@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { useGuluApp } from '~/composables/useAppProvider'
 import { AppPage } from '~/enums/appEnums'
-import { ccfColor, ccfLabel, diffColor, diffLabel } from '~/utils/difficulty'
+import { ccfColor, ccfLabel, diffColor, diffColorAlpha, diffLabel } from '~/utils/difficulty'
 import { renderIcon } from '~/utils/icons'
 import { getCsrfToken } from '~/utils/luogu-api'
 import { parseMarkdownContent } from '~/utils/markdown'
@@ -270,7 +270,10 @@ function formatDate(ts: number): string {
 }
 
 // ============================================================
-// Heatmap (GitHub-style contribution graph)
+// Heatmap (GitHub-style contribution graph) — 半年
+// 颜色 = 当日提交的最高难度(level,API 返回);透明度 = 当日提交题数,8 档
+// (≤8 题每题一档,>8 题不透明)。按周日对齐,保证每列是完整的 周日→周六 周,
+// 时间从左到右单调递增(修「排序混乱」)。
 // ============================================================
 interface HeatCell {
   date: string
@@ -280,20 +283,27 @@ interface HeatCell {
   weekIndex: number
   dayIndex: number
 }
+const HEAT_DAYS = 182 // 半年 ≈ 26 周
+function localDateKey(d: Date): string {
+  const p = (n: number) => String(n).padStart(2, '0')
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`
+}
 const heatmapCells = computed<HeatCell[]>(() => {
-  const now = new Date()
   const cells: HeatCell[] = []
-  for (let i = 364; i >= 0; i--) {
-    const d = new Date(now)
-    d.setDate(d.getDate() - i)
-    const key = d.toISOString().slice(0, 10)
+  const today = new Date(); today.setHours(0, 0, 0, 0)
+  const start = new Date(today)
+  start.setDate(start.getDate() - (HEAT_DAYS - 1))
+  // 对齐到周日:保证每列(每 7 个 cell)正好是 周日→周六,cell 落在正确行
+  start.setDate(start.getDate() - start.getDay())
+  for (let d = new Date(start); d.getTime() <= today.getTime(); d.setDate(d.getDate() + 1)) {
+    const key = localDateKey(d)
     const entry = dailyCounts.value[key]
     cells.push({
       date: key,
       count: entry?.[0] || 0,
       level: entry?.[1] || 0,
       dayOfWeek: d.getDay(),
-      weekIndex: Math.floor((364 - i) / 7),
+      weekIndex: Math.floor(cells.length / 7),
       dayIndex: d.getDay(),
     })
   }
@@ -314,57 +324,26 @@ const heatmapMonths = computed(() => {
     if (!mid)
       continue
     const label = `${Number(mid.date.slice(5, 7))}月`
-    if (!seen.has(label) || w === heatmapWeeks.value.length - 1) {
+    if (!seen.has(label)) {
       months.push({ label, startWeek: w })
       seen.add(label)
     }
   }
   return months
 })
-
-const heatmapHalves = computed(() => {
-  const months = heatmapMonths.value
-  const weeks = heatmapWeeks.value
-  const cells = heatmapCells.value
-  if (!weeks.length)
-    return []
-  // split at the month boundary nearest the middle so no month is cut across two rows
-  const midWeek = weeks.length / 2
-  let splitWeek = Math.ceil(midWeek)
-  let best = Infinity
-  for (const m of months) {
-    if (m.startWeek <= 0)
-      continue
-    const d = Math.abs(m.startWeek - midWeek)
-    if (d < best) {
-      best = d
-      splitWeek = m.startWeek
-    }
-  }
-  const build = (wStart: number, wEnd: number) => ({
-    weekCount: wEnd - wStart,
-    months: months
-      .filter(m => m.startWeek >= wStart && m.startWeek < wEnd)
-      .map(m => ({ label: m.label, startWeek: m.startWeek - wStart })),
-    cells: cells
-      .filter(c => c.weekIndex >= wStart && c.weekIndex < wEnd)
-      .map(c => ({ ...c, weekIndex: c.weekIndex - wStart })),
-  })
-  return [build(0, splitWeek), build(splitWeek, weeks.length)]
-})
 const totalYearCount = computed(() => heatmapCells.value.reduce((s, c) => s + (c.count || 0), 0))
 
 function cellColor(level: number, count: number): string {
   if (count <= 0)
     return 'var(--bew-fill-2)'
-  // alpha floor ~0.67 so even 1-problem days read clearly; scales to full at 6+
-  const a = Math.round((0.67 + (Math.min(count, 6) / 6) * 0.33) * 255)
-  return `${diffColor(level)}${a.toString(16).padStart(2, '0').toUpperCase()}`
+  // 8 档透明度:≤8 题每题一档,>8 题不透明;颜色=当日最高难度
+  return diffColorAlpha(level, Math.min(count, 8) / 8)
 }
 function cellTooltip(cell: HeatCell): string {
   if (cell.count === 0)
     return `${cell.date} — 无提交`
-  return `${cell.date} — ${cell.count} 题`
+  const lv = diffLabel(cell.level)
+  return `${cell.date} — ${cell.count} 题${lv ? ` · 最高${lv}` : ''}`
 }
 
 onMounted(() => {
@@ -567,14 +546,14 @@ watch(uid, () => {
                     <div flex="~ items-center justify-between wrap" mb-3 gap-2>
                       <div>
                         <h2 style="font-size: var(--bew-base-font-size); color: var(--bew-text-1); font-weight: 700">
-                          过去一年共 {{ totalYearCount }} 次提交
+                          过去半年共 {{ totalYearCount }} 次提交
                         </h2>
                       </div>
                       <!-- difficulty palette legend -->
                       <div flex="~ items-center gap-1" text="xs $bew-text-3">
                         <span>难度</span>
                         <span
-                          v-for="lv in [1, 2, 3, 4, 5, 6, 7]"
+                          v-for="lv in [1, 2, 3, 4, 5, 6, 7, 8]"
                           :key="lv"
                           :title="diffLabel(lv)"
                           style="width: 10px; height: 10px; border-radius: 2px"
@@ -584,13 +563,11 @@ watch(uid, () => {
                     </div>
                     <div class="heatmap-wrap">
                       <div
-                        v-for="(half, hi) in heatmapHalves"
-                        :key="hi"
                         class="heatmap-grid"
-                        :style="{ gridTemplateColumns: `22px repeat(${half.weekCount}, minmax(0, 1fr))` }"
+                        :style="{ gridTemplateColumns: `22px repeat(${heatmapWeeks.length}, minmax(0, 1fr))` }"
                       >
                         <span
-                          v-for="m in half.months"
+                          v-for="m in heatmapMonths"
                           :key="`${m.label}-${m.startWeek}`"
                           class="hm-month"
                           :style="{ gridColumn: `${m.startWeek + 2} / span 1`, gridRow: '1' }"
@@ -601,7 +578,7 @@ watch(uid, () => {
                         <span class="hm-day" style="grid-row: 6; grid-column: 1">五</span>
                         <span class="hm-day" style="grid-row: 8; grid-column: 1">日</span>
                         <span
-                          v-for="cell in half.cells"
+                          v-for="cell in heatmapCells"
                           :key="cell.date"
                           class="hm-cell"
                           :style="{ gridColumn: cell.weekIndex + 2, gridRow: ((cell.dayIndex + 6) % 7) + 2, background: cellColor(cell.level, cell.count) }"
@@ -613,10 +590,11 @@ watch(uid, () => {
                     <div flex="~ items-center justify-end gap-1" mt-2 style="font-size: 10px; color: var(--bew-text-4)">
                       <span>少</span>
                       <span
-                        v-for="a in [0.6, 0.75, 0.88, 1]"
-                        :key="a"
+                        v-for="n in [1, 3, 5, 7, 9]"
+                        :key="n"
+                        :title="`${n}+ 题`"
                         style="width: 12px; height: 12px; border-radius: 3px"
-                        :style="{ background: 'var(--bew-theme-color)', opacity: a }"
+                        :style="{ background: diffColor(5), opacity: Math.min(n, 8) / 8 }"
                       />
                       <span>多</span>
                     </div>

@@ -30,8 +30,6 @@ onMounted(async () => {
   loading.value = false
 })
 
-const diffColors: Record<number,string> = {0:'#909399',1:'#bfbfbf',2:'#52c41a',3:'#3498db',4:'#f39c12',5:'#e74c3c',6:'#9b59b6',7:'#262626'}
-const diffLabels: Record<number,string> = {0:'暂无评定',1:'入门',2:'普及−',3:'普及/提高−',4:'普及+/提高',5:'提高+/省选−',6:'省选/NOI−',7:'NOI/NOI+/CTSC'}
 function openProblem(pid: string) { navigateTo(AppPage.ProblemDetail, location.origin + '/problem/'+pid) }
 </script>
 
@@ -50,7 +48,7 @@ function openProblem(pid: string) { navigateTo(AppPage.ProblemDetail, location.o
         <div v-for="(p, idx) in items" :key="p.pid" class="stagger-row hover:bg-$bew-fill-2" :style="{'--row-index':idx}" flex="~ items-center" p="x-6 y-3.5" border="b-1 $bew-border-color" cursor="pointer" @click="openProblem(p.pid)">
           <span style="width:80px;font-size:var(--bew-base-font-size);color:var(--bew-text-3);font-family:monospace;flex-shrink:0">{{ p.pid }}</span>
           <span flex-1 style="font-size:var(--bew-base-font-size);color:var(--bew-text-1);font-weight:500">{{ p.title }}</span>
-          <span text="xs" px-2 py-0.5 rounded-full shrink-0 :style="{background:diffColors[p.difficulty||0]+'20',color:diffColors[p.difficulty||0]}">{{ diffLabels[p.difficulty||0] || '未知' }}</span>
+          <DifficultyBadge :difficulty="p.difficulty || 0" size="sm" />
         </div>
       </div>
     </Transition>

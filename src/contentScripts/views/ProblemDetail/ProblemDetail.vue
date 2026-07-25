@@ -71,7 +71,7 @@ const { loadLocalCode, flushLocalCode } = useCodePersistence({
 })
 
 // 题目核心数据(拉取/归一化/派生渲染)抽到 useProblemData;loadRealData 会把草稿写回 codeContent/selectedLang
-const { problem, loading, loadError, discussions, difficultyColor, passRate, renderedDescription, renderedHint, loadRealData } = useProblemData({ problemId, codeContent, selectedLang, loadLocalCode })
+const { problem, loading, loadError, discussions, passRate, renderedDescription, renderedHint, loadRealData } = useProblemData({ problemId, codeContent, selectedLang, loadLocalCode })
 
 
 
@@ -391,16 +391,7 @@ onUnmounted(() => {
                   <span text="$bew-text-3" font-mono>{{ problem.pid }}</span>
                   {{ problem.title }}
                 </h1>
-                <span
-                  text="xs" fw-bold shrink-0
-                  p="x-2 y-0.5"
-                  rounded="$bew-radius-half"
-                  flex="~ items-center gap-1"
-                  :style="{ backgroundColor: `${difficultyColor}20`, color: difficultyColor }"
-                >
-                  <span style="display:contents" v-html="renderIcon('mingcute:fire-line', 14)" />
-                  {{ problem.difficultyLabel }}
-                </span>
+                <DifficultyBadge :difficulty="problem.difficulty" size="md" />
               </div>
 
               <!-- Tags: 收起为开关按钮,点击展开(标签多为数字 id,铺开是噪音) -->
@@ -783,7 +774,7 @@ onUnmounted(() => {
               <span text="$bew-text-3" font-mono>{{ problem.pid }}</span> {{ problem.title }}
             </h1>
             <div flex="~ gap-2 wrap" style="font-size:.8em;color:var(--bew-text-2)">
-              <span v-if="problem.difficultyLabel" flex="~ items-center gap-1" px-2 py-0.5 rounded-full :style="{ backgroundColor: `${difficultyColor}20`, color: difficultyColor }"><span style="display:contents" v-html="renderIcon('mingcute:fire-line', 14)" /> {{ problem.difficultyLabel }}</span>
+              <DifficultyBadge v-if="problem.difficulty >= 0" :difficulty="problem.difficulty" size="sm" />
               <span>{{ problem.timeLimit }}</span>
               <span>{{ problem.memoryLimit }}</span>
             </div>

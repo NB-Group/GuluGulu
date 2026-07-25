@@ -387,7 +387,7 @@ watch(() => currentUrl.value, () => loadContent())
                       </div>
                     </div>
                     <div flex="~ items-center gap-2" style="flex-shrink:0;margin-left:8px">
-                      <span v-if="item.difficulty" px-2 py-0.5 rounded-full style="font-size:.7em;color:var(--bew-text-2);background:var(--bew-fill-2)">{{ { 1: '入门', 2: '普及-', 3: '普及', 4: '普及+', 5: '提高-', 6: '提高', 7: '提高+', 8: '省选' }[item.difficulty] || item.difficulty }}</span>
+                      <DifficultyBadge v-if="item.difficulty" :difficulty="item.difficulty" size="sm" />
                       <span v-if="item.status !== undefined" style="font-size:.75em;color:var(--bew-text-3)">{{ item.status === 12 ? '已AC' : item.score ? `${item.score}分` : '' }}</span>
                     </div>
                   </div>
@@ -413,7 +413,7 @@ watch(() => currentUrl.value, () => loadContent())
                         <span v-if="item.passedCount || item.doneCount" style="color:var(--bew-success-color)">完成 {{ item.passedCount || item.doneCount }}</span>
                       </div>
                     </div>
-                    <span v-if="item.difficulty" style="font-size:.75em;color:var(--bew-text-3);flex-shrink:0;margin-left:8px">{{ { 1: '入门', 2: '普及-', 3: '普及', 4: '普及+', 5: '提高-', 6: '提高', 7: '提高+', 8: '省选' }[item.difficulty] || '' }}</span>
+                    <DifficultyBadge v-if="item.difficulty" :difficulty="item.difficulty" size="sm" />
                   </div>
                 </template>
 

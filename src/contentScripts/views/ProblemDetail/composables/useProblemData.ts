@@ -1,6 +1,7 @@
 import { computed, ref, type Ref } from 'vue'
 import type { LuoguLanguage } from '~/utils/luogu-api'
 import { extractProblemData, fetchProblemData, LUOGU_LANGUAGES } from '~/utils/luogu-api'
+import { diffColor, diffLabel } from '~/utils/difficulty'
 import { parseProblemMarkdown } from '~/utils/markdown'
 
 interface ProblemData {
@@ -23,16 +24,7 @@ interface ProblemData {
   provider: { uid: number, name: string, avatar: string, color: string } | null
 }
 
-const difficultyMap: Record<number, { label: string, color: string }> = {
-  0: { label: '暂无评定', color: '#909399' },
-  1: { label: '入门', color: '#bfbfbf' },
-  2: { label: '普及−', color: '#52c41a' },
-  3: { label: '普及/提高−', color: '#3498db' },
-  4: { label: '普及+/提高', color: '#f39c12' },
-  5: { label: '提高+/省选−', color: '#e74c3c' },
-  6: { label: '省选/NOI−', color: '#9b59b6' },
-  7: { label: 'NOI/NOI+/CTSC', color: '#262626' },
-}
+// 题目难度文案/配色统一走 utils/difficulty(以题库页面为准),不再本地维护。
 
 /**
  * 题目核心数据:拉取/归一化 lentille-context,派生难度色/通过率/渲染后的题面与提示。
@@ -133,7 +125,7 @@ export function useProblemData(opts: {
         pid: p.pid,
         title: p.name || p.title || '',
         difficulty: p.difficulty || 0,
-        difficultyLabel: difficultyMap[p.difficulty || 0]?.label || '暂无评定',
+        difficultyLabel: diffLabel(p.difficulty || 0),
         timeLimit: `${(timeMs / 1000).toFixed(2)}s`,
         memoryLimit: memKb >= 1024 ? `${(memKb / 1024).toFixed(0)}.00MB` : `${memKb}.00KB`,
         tags: Array.isArray(p.tags) ? p.tags.map((t: any) => (typeof t === 'number' ? { id: t, name: tagMap.get(t) || `标签 ${t}` } : t)) : [],
@@ -186,7 +178,7 @@ export function useProblemData(opts: {
     }
   }
 
-  const difficultyColor = computed(() => difficultyMap[problem.value.difficulty]?.color || '#909399')
+  const difficultyColor = computed(() => diffColor(problem.value.difficulty))
 
   const passRate = computed(() => {
     if (problem.value.totalSubmit === 0)

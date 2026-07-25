@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { fetchLentilleContext, friendlyError, needLogin } from '~/utils/luogu-api'
+import { diffLabel } from '~/utils/difficulty'
 
 const props = defineProps<{
   query?: string
@@ -22,28 +23,12 @@ const needLoginFlag = ref(false)
 const results = ref<SearchResultItem[]>([])
 const totalCount = ref(0)
 
-// Difficulty labels mirror ProblemList.vue (Luogu's numeric difficulty scale)
-const difficultyMap: Record<number, { label: string, color: string }> = {
-  0: { label: '暂无评定', color: '#909399' },
-  1: { label: '入门', color: '#FE4D61' },
-  2: { label: '普及−', color: '#F39B18' },
-  3: { label: '普及', color: '#FFBF1C' },
-  4: { label: '普及+/提高-', color: '#54C320' },
-  5: { label: '提高', color: '#1AC1C1' },
-  6: { label: '提高+/省选−', color: '#3797DA' },
-  7: { label: '省选/NOI−', color: '#9A3FCE' },
-  8: { label: 'NOI/NOI+/CTS', color: '#162369' },
-}
-
+// 题目难度文案/配色统一走 utils/difficulty + DifficultyBadge
 const typeConfig: Record<string, { label: string; color: string; bg: string; icon: string }> = {
   problem: { label: '题目', color: '#1890ff', bg: '#1890ff20', icon: 'i-mingcute:code-line' },
   contest: { label: '比赛', color: '#52c41a', bg: '#52c41a20', icon: 'i-mingcute:trophy-line' },
   blog: { label: '讨论', color: '#722ed1', bg: '#722ed120', icon: 'i-mingcute:comment-line' },
   user: { label: '用户', color: '#faad14', bg: '#faad1420', icon: 'i-mingcute:user-4-line' },
-}
-
-function difficultyLabel(d: number) {
-  return difficultyMap[d]?.label || '未知'
 }
 
 async function handleSearch(keyword: string) {
@@ -81,7 +66,7 @@ async function handleSearch(keyword: string) {
         return {
           type: 'problem',
           title: `${p.pid} ${p.name || p.title || ''}`,
-          subtitle: `${difficultyLabel(p.difficulty || 0)} | 通过率 ${rate}%`,
+          subtitle: `${diffLabel(p.difficulty || 0)} | 通过率 ${rate}%`,
           id: p.pid,
           extra: `${submit.toLocaleString()} 次提交`,
         } as SearchResultItem

@@ -27,11 +27,6 @@ function ratingColor(r: number): string {
   if (r >= 300) return '#AA00AA'; if (r >= 250) return '#0000FF'
   if (r >= 200) return '#03A89E'; return '#808080'
 }
-function ratingLabel(r: number): string {
-  if (r >= 400) return 'NOI 巨佬'; if (r >= 350) return '省选'
-  if (r >= 300) return '提高'; if (r >= 250) return '普及+/提高'
-  if (r >= 200) return '普及'; return '入门'
-}
 
 async function fetchRanking(append = false) {
   if (append) loadingMore.value = true; else loading.value = true
@@ -94,7 +89,7 @@ onUnmounted(() => obs?.disconnect())
     <Transition name="content-reveal">
       <div v-if="!loading && users.length>0" bg="$bew-content" rounded="$bew-radius" shadow="[var(--bew-shadow-1),var(--bew-shadow-edge-glow-1)]" border="1 $bew-border-color" style="backdrop-filter:var(--bew-filter-glass-1)">
         <div flex="~" items="center" p="x-6 y-3" bg="$bew-fill-1" border="b-1 $bew-border-color" text="sm $bew-text-2" fw-bold style="border-top-left-radius:var(--bew-radius);border-top-right-radius:var(--bew-radius)">
-          <div w="60px" text-center>#</div><div flex="1">用户</div><div w="80px" text-center>咕值</div><div w="120px" text-center class="hidden md:block">等级</div>
+          <div w="60px" text-center>#</div><div flex="1">用户</div><div w="80px" text-center>咕值</div>
         </div>
         <div overflow="hidden" style="border-bottom-left-radius:var(--bew-radius);border-bottom-right-radius:var(--bew-radius)">
         <div v-for="(u, idx) in users" :key="u.uid" class="stagger-row hover:bg-$bew-fill-2" :style="{ '--row-index': idx }" flex="~" items="center" p="x-6 y-3.5" cursor="pointer" duration-200 border="b-1 $bew-border-color" @click="openUser(u.uid)">
@@ -113,9 +108,6 @@ onUnmounted(() => obs?.disconnect())
             </div>
           </div>
           <div w="80px" text="sm" fw-bold text-center :style="{ color: ratingColor(u.rating) }">{{ u.rating }}</div>
-          <div w="120px" flex="~" justify="center" class="hidden md:flex">
-            <span text="xs" p="x-2 y-0.5" rounded="$bew-radius-half" :style="{ backgroundColor: `${ratingColor(u.rating)}20`, color: ratingColor(u.rating) }">{{ ratingLabel(u.rating) }}</span>
-          </div>
         </div>
         </div>
       </div>
