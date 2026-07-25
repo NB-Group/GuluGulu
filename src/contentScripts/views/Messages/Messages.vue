@@ -432,7 +432,7 @@ onMessagePoll((json: any) => {
                   <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
                 </button>
                 <img v-if="activeChatUser?.avatar" :src="activeChatUser.avatar" style="width:32px;height:32px;border-radius:50%;object-fit:cover" @error="(e:any) => e.target.style.display='none'" />
-                <span fw-bold cursor="pointer" style="font-size:var(--bew-base-font-size);color:var(--bew-text-1)" @click="openUser(activeChatUid)">{{ activeChatUser?.name || 'UID:' + activeChatUid }}<UserBadges :name="activeChatUser?.name" :luogu-badge="activeChatUser?.badge" :color="activeChatUser?.color ? `var(--bew-${activeChatUser.color})` : undefined" /></span>
+                <span fw-bold cursor="pointer" style="font-size:var(--bew-base-font-size);color:var(--bew-text-1)" @click="openUser(activeChatUid)">{{ activeChatUser?.name || 'UID:' + activeChatUid }}<UserBadges :uid="activeChatUser?.uid" :name="activeChatUser?.name" :luogu-badge="activeChatUser?.badge" :color="activeChatUser?.color ? `var(--bew-${activeChatUser.color})` : undefined" /></span>
               </div>
 
               <!-- Messages list — flex:1 fills remaining space, input at bottom -->

@@ -399,7 +399,7 @@ watch(uid, () => {
 
             <!-- Name + username -->
             <h1 class="gh-name" :style="{ color: colorVar(user.color) }">
-              {{ user.name }}<UserBadges :name="user.name" :luogu-badge="user.badge" :color="colorVar(user.color)" />
+              {{ user.name }}<UserBadges :uid="user.uid" :name="user.name" :luogu-badge="user.badge" :color="colorVar(user.color)" />
             </h1>
             <div class="gh-username">
               UID {{ user.uid }}
@@ -652,7 +652,7 @@ watch(uid, () => {
                               fontSize: 'var(--bew-base-font-size)',
                             }"
                           >{{ fu.name }}</span>
-                          <UserBadges :name="fu.name" :luogu-badge="fu.badge" :color="fu.color ? `var(--bew-${fu.color})` : undefined" />
+                          <UserBadges :uid="fu.uid" :name="fu.name" :luogu-badge="fu.badge" :color="fu.color ? `var(--bew-${fu.color})` : undefined" />
                         </div>
                         <div flex="~ gap-3" shrink-0 style="font-size: 0.85em; color: var(--bew-text-3)">
                           <span>{{ fu.followerCount || 0 }} 粉丝</span>

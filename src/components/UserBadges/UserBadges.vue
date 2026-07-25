@@ -7,14 +7,21 @@
  */
 const props = defineProps<{
   name?: string | number
+  uid?: number | string
   luoguBadge?: string | null
   /** 已解析的 CSS 颜色(与用户名同色),如 var(--bew-red) / #fe4d61 */
   color?: string
 }>()
 
-// GuluGulu 开发者(按用户名特判,要加人改这里;洛谷用户名不区分大小写)
-const DEV_NAMES = ['nb_group', '782', 'shu123']
-const isDev = computed(() => DEV_NAMES.includes(String(props.name ?? '').toLowerCase()))
+// GuluGulu 开发者:优先按 UID(稳定,不会重名/改名),用户名作兜底(洛谷用户名不区分大小写)。
+// 要加人改这里。
+const DEV_UIDS = new Set([1064642, 1239371, 1601422])
+const DEV_NAMES = new Set(['nb_group', '782', 'shu123'])
+const isDev = computed(() => {
+  if (props.uid != null && DEV_UIDS.has(Number(props.uid)))
+    return true
+  return DEV_NAMES.has(String(props.name ?? '').toLowerCase())
+})
 const hasAny = computed(() => !!props.luoguBadge || isDev.value)
 </script>
 
