@@ -12,9 +12,9 @@ const props = defineProps<{
   color?: string
 }>()
 
-// GuluGulu 开发者(按用户名特判,要加人改这里)
-const DEV_NAMES = ['NB_Group', '782', 'shu123']
-const isDev = computed(() => DEV_NAMES.includes(String(props.name ?? '')))
+// GuluGulu 开发者(按用户名特判,要加人改这里;洛谷用户名不区分大小写)
+const DEV_NAMES = ['nb_group', '782', 'shu123']
+const isDev = computed(() => DEV_NAMES.includes(String(props.name ?? '').toLowerCase()))
 const hasAny = computed(() => !!props.luoguBadge || isDev.value)
 </script>
 
