@@ -365,7 +365,6 @@ async function onDOMLoaded() {
 
 function waitForBodyThenInject() {
   if (document.body) {
-    document.body.style.display = 'none' // 内联隐藏,保险(与 CSS display:none 双重)
     onDOMLoaded()
     return
   }
@@ -373,8 +372,6 @@ function waitForBodyThenInject() {
   const observer = new MutationObserver(() => {
     if (document.body) {
       observer.disconnect()
-      // 同步内联隐藏,抢在首帧前挡住原生页(CSS 已有 body{display:none},这是双保险)
-      document.body.style.display = 'none'
       onDOMLoaded()
     }
   })
