@@ -109,18 +109,22 @@ async function loadProfile() {
       loading.value = false
       return
     }
-    const u = ctx?.data?.user
-    if (u) {
-      user.value = {
-        uid: u.uid ?? myUid.value,
-        name: u.name ?? '',
-        avatar: u.avatar ?? '',
-        slogan: u.slogan ?? '',
-        introduction: u.introduction ?? '',
-        ...u,
-      }
-      editIntroduction.value = u.introduction ?? ''
-      editSlogan.value = u.slogan ?? ''
+    const u = ctx?.data?.user || ctx?.currentUser || ctx?.user || {}
+    // /user/setting 的 lentille 顶层 user 可能不带头像/签名/简介(或字段在别的位置),
+    // 多探几处 + 用全局 __gulu_user 兜底,保证原值能回显。
+    const g = (window as any).__gulu_user || {}
+    const merged = {
+      uid: u.uid ?? g.uid ?? myUid.value,
+      name: u.name ?? g.name ?? '',
+      avatar: u.avatar ?? g.avatar ?? '',
+      slogan: u.slogan ?? '',
+      introduction: u.introduction ?? '',
+      ...u,
+    }
+    if (merged.uid) {
+      user.value = merged
+      editIntroduction.value = merged.introduction ?? ''
+      editSlogan.value = merged.slogan ?? ''
     }
     vjudgeAccounts.value = ctx?.data?.vjudgeAccounts || []
     openidAccounts.value = ctx?.data?.openidAccounts || []
@@ -513,7 +517,7 @@ watch(activeTab, async (t) => {
               <!-- 个性签名 -->
               <section class="us-section">
                 <div class="us-section-title">
-                  <span style="display: contents" v-html="renderIcon('mingcute:chat', 16)" />
+                  <span style="display: contents" v-html="renderIcon('mingcute:edit-line', 16)" />
                   <span>个性签名</span>
                 </div>
                 <input
@@ -530,12 +534,7 @@ watch(activeTab, async (t) => {
                   <span style="display: contents" v-html="renderIcon('mingcute:book-4-line', 16)" />
                   <span>个人简介</span>
                 </div>
-                <textarea
-                  v-model="editIntroduction"
-                  class="us-textarea"
-                  placeholder="支持 Markdown 的个人简介"
-                  rows="6"
-                />
+                <MarkdownEditor v-model="editIntroduction" placeholder="支持 Markdown 的个人简介" :rows="8" />
               </section>
 
               <!-- 保存按钮 -->

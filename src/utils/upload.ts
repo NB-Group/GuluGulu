@@ -55,7 +55,10 @@ export async function fetchOssUploadLink(
 
   const res = await fetch(url, {
     method: 'GET',
-    headers: { 'X-Requested-With': 'XMLHttpRequest' },
+    headers: {
+      'X-Requested-With': 'XMLHttpRequest',
+      'X-CSRF-TOKEN': getCsrfToken(),
+    },
     credentials: 'same-origin',
   })
 
