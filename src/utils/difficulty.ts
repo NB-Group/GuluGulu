@@ -30,12 +30,23 @@ export function ccfLabel(lv: number): string {
   if (!lv || lv <= 0) return '暂无'
   return `${lv} 级`
 }
-// CCF level color follows the user's name color on Luogu, not problem difficulty colors
+// CCF 等级颜色(GESP):0 暂无(灰)、1-2 灰、3-5 绿、6-7 蓝、8-10 金
 const CCF_COLORS: Record<number, string> = {
-  0: '#909399', 1: '#bfbfbf', 2: '#52c41a', 3: '#52c41a',
-  4: '#3498db', 5: '#3498db', 6: '#f39c12', 7: '#e74c3c', 8: '#262626',
+  0: '#909399',
+  1: '#bfbfbf',
+  2: '#bfbfbf',
+  3: '#52c41a',
+  4: '#52c41a',
+  5: '#52c41a',
+  6: '#3498db',
+  7: '#3498db',
+  8: '#FAAD14',
+  9: '#FAAD14',
+  10: '#FAAD14',
 }
 export function ccfColor(lv: number): string {
+  if (lv >= 8)
+    return '#FAAD14' // 8 及以上(含 9/10)统一金
   return CCF_COLORS[lv] || '#909399'
 }
 export function diffLabel(d: number): string {
