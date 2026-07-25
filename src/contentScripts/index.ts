@@ -365,6 +365,7 @@ async function onDOMLoaded() {
 
 function waitForBodyThenInject() {
   if (document.body) {
+    document.body.style.display = 'none' // 内联隐藏,保险(与 CSS display:none 双重)
     onDOMLoaded()
     return
   }
@@ -372,6 +373,8 @@ function waitForBodyThenInject() {
   const observer = new MutationObserver(() => {
     if (document.body) {
       observer.disconnect()
+      // 同步内联隐藏,抢在首帧前挡住原生页(CSS 已有 body{display:none},这是双保险)
+      document.body.style.display = 'none'
       onDOMLoaded()
     }
   })
@@ -384,10 +387,9 @@ function waitForBodyThenInject() {
   }, 5000)
 }
 
-if (document.readyState !== 'loading')
-  waitForBodyThenInject()
-else
-  document.addEventListener('DOMContentLoaded', () => waitForBodyThenInject())
+// body 一出现就接管(不等 DOMContentLoaded)—— 我们走 API,不需要等 DOM 扒内容;
+// 越早清屏越不容易露出原生页。CSRF 在 head(早于 body 解析)、uid 在 cookie,都瞬时可得。
+waitForBodyThenInject()
 
 // 后退/前进恢复:Chrome 可能不重跑本内容脚本就还原页面(bfcache,或 instant/prerender
 // 等非 bfcache 路径)。只要还原出的页面 #gulu 缺失且 URL 受支持,就重注——不限定
@@ -487,12 +489,14 @@ function injectApp() {
     const cssUrl = browser.runtime.getURL('dist/contentScripts/style.css')
     fetch(cssUrl)
       .then(r => r.text())
-      .then(async (css) => {
+      .then((css) => {
         const s = document.createElement('style')
         s.textContent = css
         shadowDOM.insertBefore(s, root)
-        await ensureKatex()
+        // 先挂载 app(尽快出首屏,缩短原生/空白窗口);katex 后台并行加载,不阻塞 ——
+        // markdown 渲染时 ensureKatex 本就 lazy-await,首屏没公式不受影响。
         mountApp()
+        ensureKatex().catch(() => {})
       })
       .catch(() => {
         mountApp()

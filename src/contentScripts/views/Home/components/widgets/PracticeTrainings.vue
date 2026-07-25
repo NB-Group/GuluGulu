@@ -13,14 +13,10 @@ const submitted = ref(0)
 const loading = ref(true)
 
 async function resolveUid(): Promise<number | null> {
-  try {
-    const res = await fetch(`${location.origin}/user/mine?_contentOnly=1`, { credentials: 'same-origin' })
-    if (!res.ok)
-      return null
-    const j = await res.json()
-    return Number(j?.currentUser?.uid) || Number(j?.user?.uid) || null
-  }
-  catch { return null }
+  // 直接读 cookie 里的 uid(瞬时、无 WAF、无 CORS、任何页都有)。
+  // 注:/user/mine?_contentOnly=1 会 404(/mine 别名不带 _contentOnly),别用。
+  const m = document.cookie.match(/(?:^|;\s)uid=(\d+)/)
+  return m ? Number(m[1]) : null
 }
 
 async function fetchList() {

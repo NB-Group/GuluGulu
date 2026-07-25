@@ -225,6 +225,16 @@ function copyWithFeedback(key: string, text: string) {
   }, 1500)
 }
 
+// IDE 样例「运行」:把样例写入自测输入框、带上期望输出、自动开自测面板并立即跑一次
+function runSample(sample: any) {
+  const input = String(Array.isArray(sample) ? sample[0] : sample.input)
+  const output = String(Array.isArray(sample) ? sample[1] : sample.output)
+  testInput.value = input
+  testExpectedOutput.value = output
+  showTestPanel.value = true // 若未打开自测则自动开启
+  runTest()
+}
+
 function buildProblemMarkdown(): string {
   const p = problem.value
   const lines: string[] = []
@@ -789,11 +799,17 @@ onUnmounted(() => {
                   <div bg="$bew-fill-1" rounded="$bew-radius" p-3 mb-2>
                     <div flex="~ items-center justify-between" mb-1>
                       <span text="xs $bew-text-3">输入 #{{ idx + 1 }}</span>
-                      <button class="sample-copy-btn" :class="{ copied: copiedSample === `in-${idx}` }" @click="copyWithFeedback(`in-${idx}`, String(Array.isArray(sample) ? sample[0] : sample.input))">
-                        <span v-if="copiedSample === `in-${idx}`" style="display:contents" v-html="renderIcon('mingcute:check-circle-fill', 14)" />
-                        <span v-else style="display:contents" v-html="renderIcon('mingcute:copy-line', 14)" />
-                        {{ copiedSample === `in-${idx}` ? '已复制' : '复制' }}
-                      </button>
+                      <div flex="~ items-center gap-2">
+                        <button class="sample-copy-btn sample-run-btn" title="写入自测输入并运行" @click="runSample(sample)">
+                          <span style="display:contents" v-html="renderIcon('mingcute:play-line', 14)" />
+                          运行
+                        </button>
+                        <button class="sample-copy-btn" :class="{ copied: copiedSample === `in-${idx}` }" @click="copyWithFeedback(`in-${idx}`, String(Array.isArray(sample) ? sample[0] : sample.input))">
+                          <span v-if="copiedSample === `in-${idx}`" style="display:contents" v-html="renderIcon('mingcute:check-circle-fill', 14)" />
+                          <span v-else style="display:contents" v-html="renderIcon('mingcute:copy-line', 14)" />
+                          {{ copiedSample === `in-${idx}` ? '已复制' : '复制' }}
+                        </button>
+                      </div>
                     </div>
                     <pre style="margin:0;white-space:pre-wrap;font-size:1.05em;color:var(--bew-text-1);font-family:Consolas,monospace">{{ Array.isArray(sample) ? sample[0] : sample.input }}</pre>
                   </div>
@@ -1036,6 +1052,15 @@ onUnmounted(() => {
     background: var(--bew-success-color-20);
     color: var(--bew-success-color);
     font-weight: 600;
+  }
+}
+// 样例「运行」按钮:主题色强调(写入自测输入并运行)
+.sample-run-btn {
+  border-color: var(--bew-theme-color-40) !important;
+  color: var(--bew-theme-color) !important;
+  &:hover {
+    background: var(--bew-theme-color-20) !important;
+    color: var(--bew-theme-color) !important;
   }
 }
 
