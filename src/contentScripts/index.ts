@@ -268,12 +268,10 @@ async function onDOMLoaded() {
     const csrfToken = csrfMeta?.getAttribute('content') || ''
 
     // 登录态:优先用当前页 lentille 的 user(任何页都带,server 渲染登录态,不依赖 WAF 接口)。
-    // 之前只 fetch /record/list(列表页,被 C3VK WAF 拦)→ 直接进文章页时 WAF cookie 未就绪,
-    // 该 fetch 302 读不到 uid,误判"需要登录"。现在 lentille.user 优先,record/list 兜底。
     let userIdCookie = ''
     let userName = ''
 
-    // Extract lentille-context JSON BEFORE clearing body (Vue app reads it after mount)
+    // Extract lentille-context JSON BEFORE clearing body (Vue app reads it after mount) —— 瞬时
     let lentilleUser: any = null
     try {
       const lcEl = document.getElementById('lentille-context')
@@ -291,44 +289,18 @@ async function onDOMLoaded() {
       userName = lentilleUser.name || ''
     }
 
-    // 兜底1:cookie 里的 uid(最可靠:无 WAF、无 CORS,任何页都有)
+    // 兜底1:cookie 里的 uid(瞬时:无 WAF、无 CORS,任何页都有)
     const uidFromCookie = (document.cookie.match(/(?:^|;\s)uid=(\d+)/) || [])[1]
     if (!userIdCookie && uidFromCookie)
       userIdCookie = uidFromCookie
 
-    // 兜底2:退回 record/list 接口(同源,可能被 WAF 返回 HTML)
-    if (!userIdCookie) {
-      try {
-        const res = await fetch(location.origin + '/record/list?_contentOnly=1', { credentials: 'same-origin' })
-        const json = await res.json()
-        const user = json?.user || json?.currentUser
-        if (user?.uid) {
-          userIdCookie = String(user.uid)
-          userName = user.name || ''
-        }
-      }
-      catch (e) { console.warn('[GuluGulu]', e) }
-    }
-
-    // Wait up to 2s for Luogu's punch card to render, then extract it
-    for (let i = 0; i < 20; i++) {
-      try {
-        const punchEl = document.querySelector('.lg-punch')
-        if (punchEl && punchEl.innerHTML.includes('运势')) {
-          ;(window as any).__gulu_punch = { done: true, html: punchEl.innerHTML }
-          break
-        }
-      }
-      catch (e) { console.warn('[GuluGulu]', e) }
-      await new Promise(r => setTimeout(r, 100))
-    }
-
-    // Try to find and preserve the Luogu top bar
+    // Try to find and preserve the Luogu top bar —— 瞬时查询
     originalTopBar = document.querySelector<HTMLElement>(
       '.lfe-header, header.lfe-header, .header, nav.header, .navbar, #app > header, .top-nav',
     )
 
-    // Clear the original Luogu content — GuluGulu takes over the full page
+    // ★ 立即清空原生 body —— 我们大多走 API,不需要扒 DOM 内容;越早清越不容易露出原生页。
+    // (lentille 已快照到 window、CSRF 已取,清掉 body 不影响。)
     document.body.innerHTML = ''
 
     // Re-inject CSRF meta tag (needed for submission)
@@ -352,6 +324,30 @@ async function onDOMLoaded() {
       ;(originalTopBar as HTMLElement).style.display = 'none'
       document.body.appendChild(originalTopBar)
     }
+
+    // 兜底2:record/list 拿 uid(慢、可能被 WAF 拦)—— 改成挂载后异步,不阻塞清屏;
+    // 拿到再回填 __gulu_user.uid(绝大多数用户已被 lentille/cookie 命中,这段只在少数情况补)。
+    if (!userIdCookie) {
+      fetch(location.origin + '/record/list?_contentOnly=1', { credentials: 'same-origin' })
+        .then(r => r.json())
+        .then((json) => {
+          const user = json?.user || json?.currentUser
+          if (user?.uid) {
+            ;(window as any).__gulu_user.uid = String(user.uid)
+            ;(window as any).__gulu_user.name = user.name || ''
+          }
+        })
+        .catch(e => console.warn('[GuluGulu]', e))
+    }
+
+    // 签到运势:不再阻塞 2s 等 .lg-punch 渲染(CheckInCalendar 会自己 fetch 主页拿)。
+    // 若清 body 前 .lg-punch 已瞬时存在,顺手缓存一下;否则直接跳过。
+    try {
+      const punchEl = document.querySelector('.lg-punch')
+      if (punchEl && punchEl.innerHTML.includes('运势'))
+        (window as any).__gulu_punch = { done: true, html: punchEl.innerHTML }
+    }
+    catch { /* ignore */ }
   }
 
   if (isSupported) {
