@@ -103,7 +103,7 @@ onUnmounted(() => obs?.disconnect())
               <span v-html="renderIcon('mingcute:user-4-line',18)" style="pointer-events:none" />
             </div>
             <div flex="~ col">
-              <span text="sm" fw-bold :style="{ color: ratingColor(u.rating) }">{{ u.name }}</span>
+              <span text="sm" fw-bold :style="{ color: ratingColor(u.rating) }">{{ u.name }}<UserBadges :name="u.name" :luogu-badge="u.badge" :color="ratingColor(u.rating)" /></span>
               <span v-if="u.slogan" text="xs $bew-text-3" overflow-hidden style="text-overflow:ellipsis;white-space:nowrap;max-width:clamp(80px, 30vw, 200px)">{{ u.slogan }}</span>
             </div>
           </div>

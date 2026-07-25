@@ -459,7 +459,7 @@ onUnmounted(() => obs?.disconnect())
         </h1>
         <div v-if="detail" flex="~ items-center gap-3 wrap" mt-2 style="font-size:.9em;color:var(--bew-text-3)">
           <img :src="detail.author?.avatar" style="width:24px;height:24px;border-radius:50%;object-fit:cover" @error="(e:any) => { e.target.style.display = 'none' }">
-          <span :style="{ color: detail.author?.color ? `var(--bew-${detail.author.color})` : 'var(--bew-text-1)' }" fw-bold>{{ detail.author?.name }}</span>
+          <span :style="{ color: detail.author?.color ? `var(--bew-${detail.author.color})` : 'var(--bew-text-1)' }" fw-bold>{{ detail.author?.name }}<UserBadges :name="detail.author?.name" :luogu-badge="detail.author?.badge" :color="detail.author?.color ? `var(--bew-${detail.author.color})` : undefined" /></span>
           <span
             v-if="detail.category" text="xs white" px-2 py-0.5 rounded-full
             :style="{ background: 'var(--bew-theme-color)' }"

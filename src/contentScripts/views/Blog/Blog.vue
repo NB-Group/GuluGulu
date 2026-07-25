@@ -213,7 +213,7 @@ onUnmounted(() => obs?.disconnect())
         <h1 style="font-size:var(--bew-base-font-size);color:var(--bew-text-1);font-weight:700">{{ detail?.title || '加载中...' }}</h1>
         <div v-if="detail" flex="~ items-center gap-3" mt-2 style="font-size:var(--bew-base-font-size);color:var(--bew-text-3)">
           <img :src="detail.author?.avatar" style="width:24px;height:24px;border-radius:50%;object-fit:cover" @error="(e:any)=>{e.target.style.display='none'}">
-          <span :style="{color:detail.author?.color?`var(--bew-${detail.author.color})`:'var(--bew-text-1)'}">{{ detail.author?.name }}</span>
+          <span :style="{color:detail.author?.color?`var(--bew-${detail.author.color})`:'var(--bew-text-1)'}">{{ detail.author?.name }}<UserBadges :name="detail.author?.name" :luogu-badge="detail.author?.badge" :color="detail.author?.color ? `var(--bew-${detail.author.color})` : undefined" /></span>
           <span>{{ new Date((detail.time||0)*1000).toLocaleString('zh-CN') }}</span>
         </div>
       </div>
