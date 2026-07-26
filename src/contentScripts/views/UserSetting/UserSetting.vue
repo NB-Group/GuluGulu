@@ -103,9 +103,10 @@ async function loadProfile() {
   loading.value = true
   errorMsg.value = ''
   try {
-    // /user/setting 的 lentille 实测(playwright 抓包确认):顶层 user = 当前用户
-    // (含 avatar/slogan/introduction 等);data 里只有 qqGroupToken/vjudgeAccounts/openidAccounts。
-    // 之前误读 data.user → 取不到头像/签名/简介。
+    // /user/setting 的 lentille 实测(playwright 抓包确认):顶层 user = 当前用户摘要
+    // (uid/avatar/name/slogan/badge/...),但**不含 introduction**;data 里只有
+    // qqGroupToken/vjudgeAccounts/openidAccounts。个人简介(introduction)只存在于
+    // 个人主页 /user/{uid} 的 lentille → data.user.introduction。故补抓一次主页。
     const sctx = await fetchLentilleContext(location.origin + '/user/setting')
     if (!sctx || (sctx as any).__needLogin) {
       errorMsg.value = '请先登录洛谷后再使用设置页'
@@ -114,13 +115,28 @@ async function loadProfile() {
     }
     const u = (sctx as any)?.user || sctx?.data?.user || {}
     const g = (window as any).__gulu_user || {}
+    const uid = u.uid ?? g.uid ?? myUid.value
+    // 补抓个人主页拿 introduction(设置页摘要里没这字段)
+    let introduction = u.introduction ?? ''
+    let slogan = u.slogan ?? ''
+    if (uid) {
+      try {
+        const hp = await fetchLentilleContext(`${location.origin}/user/${uid}`)
+        const hu = (hp as any)?.data?.user || (hp as any)?.user || {}
+        if (hu.introduction != null)
+          introduction = hu.introduction
+        if (hu.slogan != null && hu.slogan !== '')
+          slogan = hu.slogan
+      }
+      catch { /* 主页抓取失败不阻塞,沿用摘要值 */ }
+    }
     const merged = {
-      uid: u.uid ?? g.uid ?? myUid.value,
+      ...u,
+      uid,
       name: u.name ?? g.name ?? '',
       avatar: u.avatar ?? g.avatar ?? '',
-      slogan: u.slogan ?? '',
-      introduction: u.introduction ?? '',
-      ...u,
+      slogan,
+      introduction,
     }
     if (merged.uid) {
       user.value = merged
