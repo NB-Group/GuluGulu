@@ -103,15 +103,16 @@ async function loadProfile() {
   loading.value = true
   errorMsg.value = ''
   try {
-    const ctx = await fetchLentilleContext(location.origin + '/user/setting')
-    if (!ctx || ctx.__needLogin) {
+    // /user/setting 的 lentille 实测(playwright 抓包确认):顶层 user = 当前用户
+    // (含 avatar/slogan/introduction 等);data 里只有 qqGroupToken/vjudgeAccounts/openidAccounts。
+    // 之前误读 data.user → 取不到头像/签名/简介。
+    const sctx = await fetchLentilleContext(location.origin + '/user/setting')
+    if (!sctx || (sctx as any).__needLogin) {
       errorMsg.value = '请先登录洛谷后再使用设置页'
       loading.value = false
       return
     }
-    const u = ctx?.data?.user || ctx?.currentUser || ctx?.user || {}
-    // /user/setting 的 lentille 顶层 user 可能不带头像/签名/简介(或字段在别的位置),
-    // 多探几处 + 用全局 __gulu_user 兜底,保证原值能回显。
+    const u = (sctx as any)?.user || sctx?.data?.user || {}
     const g = (window as any).__gulu_user || {}
     const merged = {
       uid: u.uid ?? g.uid ?? myUid.value,
@@ -126,8 +127,8 @@ async function loadProfile() {
       editIntroduction.value = merged.introduction ?? ''
       editSlogan.value = merged.slogan ?? ''
     }
-    vjudgeAccounts.value = ctx?.data?.vjudgeAccounts || []
-    openidAccounts.value = ctx?.data?.openidAccounts || []
+    vjudgeAccounts.value = sctx?.data?.vjudgeAccounts || []
+    openidAccounts.value = sctx?.data?.openidAccounts || []
   }
   catch (e: any) {
     errorMsg.value = friendlyError(e)
