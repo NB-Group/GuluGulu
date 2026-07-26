@@ -2,7 +2,7 @@
 import { useGuluApp } from '~/composables/useAppProvider'
 import { useMonaco } from '~/composables/useMonaco'
 import { AppPage } from '~/enums/appEnums'
-import { settings } from '~/logic'
+import { settings, resolveAiModel } from '~/logic'
 import { renderIcon } from '~/utils/icons'
 import { setAiState } from '~/utils/aiCompletion'
 import emitter from '~/utils/mitt'
@@ -150,25 +150,29 @@ function onLangIdChange(id: string | number | null) {
 }
 
 // AI 补全:强度下拉 + 把设置注入 monaco 的 inline provider(读 settings,响应式)
+// 统一模型池:activeMode 决定走哪个模块(light/strong→补全模块,guide→思路模块),
+// 各模块从池里挑自己的模型 + 自己的思考开关。
 const aiIntensityOptions = [
   { label: 'AI: 关', value: 'off' },
   { label: 'AI: 轻', value: 'light' },
   { label: 'AI: 强', value: 'strong' },
   { label: 'AI: 思路', value: 'guide' },
 ]
-const aiIntensityProxy = computed({
-  get: () => settings.value.aiIntensity,
-  set: (v: any) => {
-    settings.value.aiIntensity = v
-    // 在编辑器里把强度调到非「关」即视为打开补全(否则用户只调强度、总闸仍关 → 打字没反应)
-    if (v !== 'off')
-      settings.value.aiCompletionEnabled = true
-  },
+const aiActiveModeProxy = computed({
+  get: () => settings.value.aiActiveMode,
+  set: (v: any) => { settings.value.aiActiveMode = v },
 })
-// 思考模式开关(对 strong/guide 生效)
+// 思考开关路由到当前激活模块(guide→思路模块,其余→补全模块)
 const aiThinkingProxy = computed({
-  get: () => settings.value.aiThinking,
-  set: (v: boolean) => { settings.value.aiThinking = v },
+  get: () => settings.value.aiActiveMode === 'guide'
+    ? settings.value.aiGuide.thinking
+    : settings.value.aiCompletion.thinking,
+  set: (v: boolean) => {
+    if (settings.value.aiActiveMode === 'guide')
+      settings.value.aiGuide.thinking = v
+    else
+      settings.value.aiCompletion.thinking = v
+  },
 })
 watchEffect(() => {
   // 思路指引模式需要题目上下文:把题目各段 markdown 拼成原始文本注入 AI state
@@ -180,14 +184,17 @@ watchEffect(() => {
     p?.outputFormat && `输出格式:${p.outputFormat}`,
     p?.hint && `提示:${p.hint}`,
   ].filter(Boolean)
+  const mode = settings.value.aiActiveMode
+  const mod = mode === 'guide' ? settings.value.aiGuide : settings.value.aiCompletion
+  const m = resolveAiModel(mod.modelId)
   setAiState({
-    enabled: settings.value.aiCompletionEnabled,
-    intensity: settings.value.aiIntensity,
-    baseURL: settings.value.aiBaseURL,
-    apiKey: settings.value.aiApiKey,
-    model: settings.value.aiModelName,
-    thinking: settings.value.aiThinking,
-    fim: settings.value.aiFim,
+    enabled: mode !== 'off',
+    intensity: mode,
+    baseURL: m?.baseUrl ?? '',
+    apiKey: m?.apiKey ?? '',
+    model: m?.modelName ?? '',
+    thinking: mod.thinking,
+    fim: mode === 'guide' ? false : settings.value.aiCompletion.fim,
     problemMarkdown: parts.join('\n\n'),
   })
 })
@@ -861,7 +868,7 @@ onUnmounted(() => {
                   <input v-model="enableO2" type="checkbox" style="width:13px;height:13px;cursor:pointer"> O2
                 </label>
                 <Select
-                  v-model="aiIntensityProxy"
+                  v-model="aiActiveModeProxy"
                   :options="aiIntensityOptions"
                   style="width:104px;flex-shrink:0"
                 />

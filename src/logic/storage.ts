@@ -57,14 +57,36 @@ export interface Settings {
   // 主页「开始」tab 的可定制 widget 布局(Apple 小组件式网格):数组顺序=显示顺序,size=占位档
   startLayout: { i: string, size: WidgetGridSize }[]
 
-  // AI 自动补全(OpenAI 兼容端点)
-  aiCompletionEnabled: boolean
-  aiBaseURL: string // 如 https://api.openai.com/v1
-  aiApiKey: string
-  aiModelName: string
-  aiIntensity: 'off' | 'light' | 'strong' | 'guide'
-  aiThinking: boolean // 思考模式:开启后给 strong/guide 注入「先推理再输出」的指令、并放宽 token
-  aiFim: boolean // FIM(Fill In the Middle)代码补全:用 /completions + prompt/suffix,补中间
+  // AI 统一模型池 + 按模块分配(OpenAI 兼容端点)
+  aiModels: AiModel[] // 模型注册表:增/删/改在一处(settings AI 面板)
+  aiActiveMode: AiActiveMode // IDE 工具栏「当前走哪个模块」:off / light / strong / guide
+  aiCompletion: AiCompletionModule // 代码补全模块:从池里挑模型 + 自己的 fim/thinking
+  aiGuide: AiGuideModule // 思路指引/验证模块:从池里挑模型 + 自己的 thinking
+}
+
+/** AI 模型注册表条目 */
+export interface AiModel {
+  id: string // crypto.randomUUID()
+  name: string // 展示名 "DeepSeek V3"
+  baseUrl: string // https://api.deepseek.com/v1
+  apiKey: string
+  modelName: string // deepseek-chat
+}
+
+/** IDE 当前激活的 AI 模式(决定走哪个模块) */
+export type AiActiveMode = 'off' | 'light' | 'strong' | 'guide'
+
+/** 代码补全模块配置(light/strong 走它) */
+export interface AiCompletionModule {
+  modelId: string | null // 指向 aiModels[].id;null=未选
+  fim: boolean
+  thinking: boolean
+}
+
+/** 思路指引/验证模块配置(guide 走它,可指向另一个推理模型) */
+export interface AiGuideModule {
+  modelId: string | null
+  thinking: boolean
 }
 
 /** 「开始」看板 widget 的尺寸档:小=4 列 / 中=6 列 / 大=12 列(整行) */
@@ -127,16 +149,60 @@ export const originalSettings: Settings = {
   // 这里给空数组占位,mergeDefaults 会保留用户已有布局。
   startLayout: [],
 
-  aiCompletionEnabled: false,
-  aiBaseURL: '',
-  aiApiKey: '',
-  aiModelName: '',
-  aiIntensity: 'off',
-  aiThinking: false,
-  aiFim: true,
+  aiModels: [],
+  aiActiveMode: 'off',
+  aiCompletion: { modelId: null, fim: true, thinking: false },
+  aiGuide: { modelId: null, thinking: false },
+}
+
+/** 旧单模型配置 → 新统一模型池的一次性迁移(幂等)。 */
+function migrateAiModels() {
+  const s = settings.value as any
+  if (Array.isArray(s.aiModels) && s.aiModels.length)
+    return // 已有池子,不重复迁移
+  const oldBase = s.aiBaseURL as string | undefined
+  const oldKey = s.aiApiKey as string | undefined
+  const oldModel = s.aiModelName as string | undefined
+  if (oldBase || oldKey || oldModel) {
+    const id = (globalThis.crypto?.randomUUID?.() || `m_${Date.now()}_${Math.random().toString(36).slice(2)}`)
+    s.aiModels = [{
+      id,
+      name: oldModel || '默认模型',
+      baseUrl: oldBase || '',
+      apiKey: oldKey || '',
+      modelName: oldModel || '',
+    }]
+    s.aiCompletion = { modelId: id, fim: s.aiFim ?? true, thinking: s.aiThinking ?? false }
+    s.aiGuide = { modelId: id, thinking: s.aiThinking ?? false }
+    s.aiActiveMode = s.aiIntensity ?? 'off'
+  }
+  else {
+    s.aiModels = []
+    s.aiCompletion = { modelId: null, fim: true, thinking: false }
+    s.aiGuide = { modelId: null, thinking: false }
+    s.aiActiveMode = 'off'
+  }
+  // 清 orphan 旧 key(类型已删,但 localStorage 里 mergeDefaults 会保留,这里显式清掉)
+  delete s.aiBaseURL
+  delete s.aiApiKey
+  delete s.aiModelName
+  delete s.aiCompletionEnabled
+  delete s.aiIntensity
+  delete s.aiThinking
+  delete s.aiFim
 }
 
 export const settings = useStorageLocal('settings', ref<Settings>(originalSettings), { mergeDefaults: true })
+
+// 启动即迁移旧单模型配置进统一模型池(幂等,已有池子则跳过)
+migrateAiModels()
+
+/** 按 id 从模型池解析出完整模型配置(找不到返回 null)。供各 AI 模块在发请求前解析用。 */
+export function resolveAiModel(modelId: string | null): AiModel | null {
+  if (!modelId)
+    return null
+  return settings.value.aiModels.find(m => m.id === modelId) || null
+}
 
 export type GridLayoutType = 'adaptive' | 'twoColumns' | 'singleColumn'
 
