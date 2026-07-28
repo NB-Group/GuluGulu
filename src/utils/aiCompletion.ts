@@ -21,9 +21,12 @@ interface AiState {
   thinking: boolean
   fim: boolean
   problemMarkdown: string
+  // 守卫用:比赛模式(?contestId=)禁一切 AI;step 档需 trigger='comment'(用户先写注释)
+  isContest: boolean
+  trigger?: 'comment'
 }
 
-let state: AiState = { enabled: false, intensity: 'off', baseURL: '', apiKey: '', model: '', thinking: false, fim: true, problemMarkdown: '' }
+let state: AiState = { enabled: false, intensity: 'off', baseURL: '', apiKey: '', model: '', thinking: false, fim: true, problemMarkdown: '', isContest: false }
 export function setAiState(s: Partial<AiState>) {
   state = { ...state, ...s }
 }
@@ -53,7 +56,7 @@ function stripFences(s: string): string {
 
 /** 组 chat 模式的 messages。guide(思路指引)时带上题目 markdown,让指引贴合本题。 */
 function buildChatMessages(intensity: Exclude<AiIntensity, 'off'>, lang: string, prefix: string) {
-  const sys = INTENSITY_PROMPT[intensity] + (state.thinking && intensity !== 'light' ? THINKING_SUFFIX : '') + `\nProgramming language: ${lang}.`
+  const sys = `${INTENSITY_PROMPT[intensity] + (state.thinking && intensity !== 'light' ? THINKING_SUFFIX : '')}\nProgramming language: ${lang}.`
   if (intensity === 'guide' && state.problemMarkdown.trim()) {
     const prob = state.problemMarkdown.length > 2400 ? `${state.problemMarkdown.slice(0, 2400)}…` : state.problemMarkdown
     return [
@@ -68,7 +71,8 @@ function buildChatMessages(intensity: Exclude<AiIntensity, 'off'>, lang: string,
 }
 
 export function aiGated(): boolean {
-  return !state.enabled || state.intensity === 'off' || !state.baseURL || !state.model
+  // 比赛模式内容侧即拒(SW 还会再拦一次,双保险)
+  return !state.enabled || state.isContest || state.intensity === 'off' || !state.baseURL || !state.model
 }
 
 /** 当前强度是否走 FIM */
@@ -79,7 +83,9 @@ export function aiUseFim(): boolean {
 // ---- 流式 ----
 let curPort: any = null
 export function abortAiStream() {
-  try { curPort?.disconnect() }
+  try {
+    curPort?.disconnect()
+  }
   catch { /* ignore */ }
   curPort = null
 }
@@ -110,6 +116,10 @@ export function streamInlineCompletion(lang: string, prefix: string, suffix: str
         maxTokens: FIM_CONFIG[intensity as 'light' | 'strong'].maxTokens,
         stop: FIM_CONFIG[intensity as 'light' | 'strong'].stop,
         temperature,
+        // 守卫字段:SW enforceAiPolicy 据此判 比赛禁用 / 禁 strong / FIM 钳长 / step 需注释
+        intensity: state.intensity,
+        isContest: state.isContest,
+        trigger: state.trigger,
       }
     : {
         mode: 'chat',
@@ -119,12 +129,15 @@ export function streamInlineCompletion(lang: string, prefix: string, suffix: str
         messages: buildChatMessages(intensity, lang, prefix),
         maxTokens: state.thinking ? CHAT_MAXTOKENS[intensity] * 2 : CHAT_MAXTOKENS[intensity],
         temperature,
+        intensity: state.intensity,
+        isContest: state.isContest,
+        trigger: state.trigger,
       }
 
   const port = browser.runtime.connect({ name: 'guly-ai-stream' })
   curPort = port
   let acc = ''
-  let reasoningAcc = ''   // 推理模型兜底:content 空时用 reasoning 的最后几句
+  let reasoningAcc = '' // 推理模型兜底:content 空时用 reasoning 的最后几句
   console.warn('[guly-ai] stream start', { mode: payload.mode })
   return new Promise<string>((resolve) => {
     port.onMessage.addListener((m: any) => {
@@ -161,7 +174,9 @@ export function streamInlineCompletion(lang: string, prefix: string, suffix: str
   })
 
   function cleanup() {
-    try { port.disconnect() }
+    try {
+      port.disconnect()
+    }
     catch { /* ignore */ }
     if (curPort === port)
       curPort = null

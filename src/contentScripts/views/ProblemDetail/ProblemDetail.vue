@@ -203,6 +203,8 @@ watchEffect(() => {
     problemMarkdown: parts.join('\n\n'),
   })
 })
+// 比赛模式(?contestId=)→ setAiState.isContest,内容侧 aiGated 即拒、SW 守卫再拦(双保险)
+watch(inContestMode, v => setAiState({ isContest: v }), { immediate: true })
 
 // ============================================================
 // Computed
