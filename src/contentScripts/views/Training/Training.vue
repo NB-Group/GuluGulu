@@ -4,8 +4,12 @@ import { friendlyError, getCsrfToken } from '~/utils/luogu-api'
 import { AppPage } from '~/enums/appEnums'
 import { useGuluApp } from '~/composables/useAppProvider'
 import { diffLabel, diffColor } from '~/utils/difficulty'
+import { settings } from '~/logic'
+import { useViewedProblems } from '~/composables/useViewedProblems'
 
 const { navigateTo, currentUrl } = useGuluApp()
+const { isViewed } = useViewedProblems()
+const highlightViewed = computed(() => settings.value.highlightViewedProblems)
 
 function backToList() {
   const ref = document.referrer || ''
@@ -185,6 +189,7 @@ watch(trainingId, () => loadTrainingContent())
           <div
             v-for="(p, idx) in detailProblems" :key="p.pid"
             class="stagger-row training-problem-row"
+            :class="{ 'row-viewed': highlightViewed && isViewed(p.pid) }"
             :style="{'--row-index':idx}"
             flex="~ items-center" p="x-4 y-3" border="b-1 $bew-border-color"
             cursor="pointer" duration-200 @click="openProblem(p.pid)"
@@ -238,4 +243,7 @@ watch(trainingId, () => loadTrainingContent())
 .training-card:hover { box-shadow:var(--bew-shadow-2)!important;transform:translateY(-2px) }
 .training-problem-row { transition: background var(--bew-dur-fast) }
 .training-problem-row:hover { background: var(--bew-fill-2) }
+/* 已浏览过的题目行:加底色与已浏览过的 PID 颜色微调,hover 仍用更深的 fill-2 */
+.training-problem-row.row-viewed { background: var(--bew-fill-1) }
+.training-problem-row.row-viewed:hover { background: var(--bew-fill-2) }
 </style>

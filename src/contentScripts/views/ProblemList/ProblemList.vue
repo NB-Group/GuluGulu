@@ -1,13 +1,18 @@
 <script setup lang="ts">
 import { AppPage } from '~/enums/appEnums'
 import { useGuluApp } from '~/composables/useAppProvider'
+import { settings } from '~/logic'
 import type { GridLayoutType } from '~/logic'
 import { renderIcon } from '~/utils/icons'
 import { searchKeyword } from '~/utils/luogu-api'
+import { useViewedProblems } from '~/composables/useViewedProblems'
 
 defineProps<{
   gridLayout?: GridLayoutType
 }>()
+
+const { isViewed } = useViewedProblems()
+const highlightViewed = computed(() => settings.value.highlightViewedProblems)
 
 interface ProblemItem {
   pid: string
@@ -317,6 +322,7 @@ async function randomProblem() {
           v-for="(p, idx) in problems"
           :key="p.pid"
           class="stagger-card problem-card"
+          :class="{ 'card-viewed': highlightViewed && isViewed(p.pid) }"
           :style="{
             '--card-index': idx,
             'backdropFilter': 'var(--bew-filter-glass-1)',
@@ -438,7 +444,12 @@ async function randomProblem() {
 .problem-card {
   transition:
     box-shadow var(--bew-dur-fast),
-    transform var(--bew-dur-fast);
+    transform var(--bew-dur-fast),
+    border-color var(--bew-dur-fast);
+}
+/* 已浏览过的题目卡片:主题色细描边,区分看过与否 */
+.problem-card.card-viewed {
+  border-color: var(--bew-theme-color-40);
 }
 .problem-card:hover {
   box-shadow: var(--bew-shadow-2) !important;

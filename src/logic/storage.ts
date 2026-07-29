@@ -41,6 +41,7 @@ export interface Settings {
 
   // Misc
   touchScreenOptimization: boolean
+  highlightViewedProblems: boolean // 题单/题库列表:给已浏览过的题目行/卡片加背景色
 
   // Custom CSS
   customizeCSS: boolean
@@ -122,6 +123,7 @@ export const originalSettings: Settings = {
   enableWallpaperMasking: true,
   useLinearGradientThemeColorBackground: true,
   touchScreenOptimization: false,
+  highlightViewedProblems: true,
   customizeCSS: false,
   customizeCSSContent: '',
 

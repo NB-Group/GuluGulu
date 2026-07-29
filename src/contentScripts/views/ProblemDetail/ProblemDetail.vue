@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { useGuluApp } from '~/composables/useAppProvider'
 import { useMonaco } from '~/composables/useMonaco'
+import { markViewed } from '~/composables/useViewedProblems'
 import { AppPage } from '~/enums/appEnums'
 import { settings, resolveAiModel } from '~/logic'
 import { renderIcon } from '~/utils/icons'
@@ -37,6 +38,8 @@ function extractPidFromUrl(): string {
   return match?.[1] || 'P1001'
 }
 const problemId = computed(() => props.pid || extractPidFromUrl())
+// 进入题目即标记「已浏览」,供题单/题库列表高亮(可设置关闭)
+watch(problemId, pid => pid && markViewed(pid), { immediate: true })
 
 // 题解列表(懒加载,切 tab 触发)抽到 useSolutions
 const { solutions, solutionsLoading, solutionsNeedLogin, loadSolutions } = useSolutions(problemId)
