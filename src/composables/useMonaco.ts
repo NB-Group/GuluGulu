@@ -258,8 +258,11 @@ export function useMonaco(opts: {
     // editor. Capture-phase stopPropagation on the editor DOM prevents the
     // keydown from reaching window listeners — more reliable than a
     // composedPath() check (Monaco 0.56 may use the EditContext API).
+    // ⚠️ 仅在「裸按」(无 Ctrl/Meta/Alt)时拦截:Monaco 0.56 的 keybinding 处理挂在
+    // 更内层(EditContext/textarea,getDomNode 的后代),捕获阶段若对带修饰键的按键也
+    // stopPropagation,会阻止事件传到后代监听器 → Ctrl+/(注释)等编辑器快捷键失效。
     editor.getDomNode()?.addEventListener('keydown', (e: KeyboardEvent) => {
-      if (e.key === '/' || e.key === '\'')
+      if ((e.key === '/' || e.key === '\'') && !e.ctrlKey && !e.metaKey && !e.altKey)
         e.stopPropagation()
     }, true)
 
