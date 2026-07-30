@@ -15,10 +15,7 @@ const value = computed({
 
 const options = computed(() => [
   { label: '未选择', value: null },
-  ...settings.value.aiModels.map(m => ({
-    label: m.modelName ? `${m.name} · ${m.modelName}` : m.name,
-    value: m.id,
-  })),
+  ...settings.value.aiModels.map(m => ({ label: m.name || m.modelName || '(未命名)', value: m.id })),
 ])
 </script>
 
