@@ -490,14 +490,16 @@ function injectApp() {
     const cssUrl = browser.runtime.getURL('dist/contentScripts/style.css')
     fetch(cssUrl)
       .then(r => r.text())
-      .then((css) => {
+      .then(async (css) => {
         const s = document.createElement('style')
         s.textContent = css
         shadowDOM.insertBefore(s, root)
-        // 先挂载 app(尽快出首屏,缩短原生/空白窗口);katex 后台并行加载,不阻塞 ——
-        // markdown 渲染时 ensureKatex 本就 lazy-await,首屏没公式不受影响。
+        // ⚠️ 必须在 mountApp 之前 await ensureKatex:题面 v-html 走 parseProblemMarkdown,
+        // 首次渲染时若 katex 未就绪,renderLatexRaw 会原样返回 $...$ 并被 PARSE_CACHE 缓存;
+        // 之后 katex 加载完虽会 clear 缓存,但题面 computed 的输入(原始 markdown)未变 →
+        // 不会重新求值 → 公式永久不渲染。body 此时仍 display:none,await 不侧漏原生页。
+        await ensureKatex()
         mountApp()
-        ensureKatex().catch(() => {})
       })
       .catch(() => {
         mountApp()

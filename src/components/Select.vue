@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { useGuluApp } from '~/composables/useAppProvider'
+
 defineProps<{
   modelValue?: string | number | null
   placeholder?: string
@@ -10,6 +12,14 @@ const emit = defineEmits<{
   (e: 'update:modelValue', value: string | number | null): void
 }>()
 
+// Teleport 到 app 根(mainAppRef,shadow 内无 transform 的容器),逃出设置弹窗等
+// 带 transform 的祖先 —— 否则 position:fixed 会被它们当成包含块,坐标错位/滚动漂移。
+// 无 provider(popup/options 等场景)则降级为原地渲染。
+const mainAppRef = (() => {
+  try { return useGuluApp().mainAppRef }
+  catch { return undefined }
+})()
+
 const open = ref(false)
 const dropdownRef = ref<HTMLDivElement>()
 const triggerRef = ref<HTMLButtonElement>()
@@ -19,12 +29,20 @@ function updatePosition() {
   if (!triggerRef.value)
     return
   const rect = triggerRef.value.getBoundingClientRect()
-  dropdownStyle.value = {
+  const spaceBelow = window.innerHeight - rect.bottom
+  const spaceAbove = rect.top
+  const need = 220 // 下拉期望高度
+  const style: Record<string, string> = {
     position: 'fixed',
-    // top: rect.bottom + 4 + 'px',
-    // left: rect.left + 'px',
     width: `${rect.width}px`,
+    left: `${rect.left}px`,
   }
+  // 下方放不下且上方更宽裕 → 翻到触发器上方(修复靠近视口底部的下拉找不到的问题)
+  if (spaceBelow < need && spaceAbove > spaceBelow)
+    style.bottom = `${window.innerHeight - rect.top + 4}px`
+  else
+    style.top = `${rect.bottom + 4}px`
+  dropdownStyle.value = style
 }
 function toggleOpen() {
   open.value = !open.value
@@ -37,21 +55,22 @@ function select(value: string | number | null) {
   open.value = false
 }
 
-// Close on outside click
+function closeIfOutside(e: MouseEvent) {
+  const path = e.composedPath()
+  if (triggerRef.value && path.includes(triggerRef.value))
+    return // 点的是触发器,交给 toggleOpen
+  if (dropdownRef.value && !path.includes(dropdownRef.value))
+    open.value = false
+}
+
 onMounted(() => {
-  document.addEventListener('click', (e) => {
-    const path = e.composedPath()
-    if (dropdownRef.value && !path.includes(dropdownRef.value))
-      open.value = false
-  })
-  window.addEventListener('scroll', () => {
-    if (open.value)
-      updatePosition()
-  }, true)
-  window.addEventListener('resize', () => {
-    if (open.value)
-      updatePosition()
-  })
+  document.addEventListener('click', closeIfOutside)
+  // capture=true:捕获设置面板内 OverlayScrollbars 等任意滚动容器的滚动,实时重算位置
+  window.addEventListener('scroll', () => { if (open.value) updatePosition() }, true)
+  window.addEventListener('resize', () => { if (open.value) updatePosition() })
+})
+onBeforeUnmount(() => {
+  document.removeEventListener('click', closeIfOutside)
 })
 </script>
 
@@ -70,20 +89,22 @@ onMounted(() => {
       <span v-else class="placeholder">{{ placeholder || '请选择' }}</span>
       <span class="arrow" v-html="'▾'" />
     </button>
-    <Transition name="dropdown">
-      <div v-if="open && !disabled" class="g-select-dropdown" :style="dropdownStyle">
-        <div
-          v-for="option in options"
-          :key="option.value"
-          class="g-select-option"
-          :class="{ active: modelValue === option.value }"
-          @click="select(option.value)"
-        >
-          {{ option.label }}
+    <Teleport :to="mainAppRef" :disabled="!mainAppRef">
+      <Transition name="dropdown">
+        <div v-if="open && !disabled" class="g-select-dropdown" :style="dropdownStyle" @click.stop>
+          <div
+            v-for="option in options"
+            :key="option.value === null ? '__null__' : option.value"
+            class="g-select-option"
+            :class="{ active: modelValue === option.value }"
+            @click="select(option.value)"
+          >
+            {{ option.label }}
+          </div>
+          <slot />
         </div>
-        <slot />
-      </div>
-    </Transition>
+      </Transition>
+    </Teleport>
   </div>
 </template>
 

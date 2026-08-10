@@ -34,6 +34,10 @@ const searchBarModeOptions = computed(() => [
       <SettingsItem title="顶栏自动隐藏" desc="向下滚动时自动隐藏顶栏">
         <Radio v-model="settings.topBarAutoHide" />
       </SettingsItem>
+
+      <SettingsItem title="高亮已浏览题目" desc="在题单列表与题库中,为已打开过/做过的题目加背景色标记">
+        <Radio v-model="settings.highlightViewedProblems" />
+      </SettingsItem>
     </SettingsItemGroup>
 
     <SettingsItemGroup title="字体">
