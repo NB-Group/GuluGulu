@@ -279,6 +279,9 @@ onMounted(() => {
 })
 
 const currentUrl = ref(window.location.href)
+// 主出口动画 key:页面类型 + 路径(去掉 query 避免分页重挂)。同类页面间跳转
+// (题目→题目、记录列表→详情)路径变化 → key 变 → 触发 page-switch 动画。
+const pageKey = computed(() => `${activatedPage.value}:${currentUrl.value.split('?')[0]}`)
 let navigatingFromUs = false
 
 function navigateTo(pageName: AppPage, url?: string) {
@@ -454,7 +457,7 @@ provide<GuluAppProvider>('GULY_APP', {
                 :style="settings.dockCollapsed ? { width: 'calc(100% - 40px)' } : undefined"
               >
                 <Transition name="page-switch" mode="out-in">
-                  <Component :is="pages[activatedPage]" :key="activatedPage" />
+                  <Component :is="pages[activatedPage]" :key="pageKey" />
                 </Transition>
               </div>
             </main>

@@ -160,12 +160,25 @@ function openPost(id: number) {
   try { sessionStorage.setItem('gulu.discussRef', location.href) } catch {}
   navigateTo(AppPage.Blog, `${location.origin}/discuss/${id}`)
 }
+// navigateTo(pageName,url) 直接设 activatedPage=pageName 且 navigatingFromUs 守卫
+// 会阻止 historyChange 按 URL 重推导 —— 故 ref 是别的页面类型(/problem/、/user/…)
+// 时必须传对应 AppPage,否则 URL 对了但渲染的还是 Blog。
+function pageFromUrl(u: string): AppPage {
+  if (/\/discuss|\/blog/i.test(u)) return AppPage.Blog
+  if (/\/problem\//i.test(u)) return AppPage.ProblemDetail
+  if (/\/user\//i.test(u)) return AppPage.UserProfile
+  if (/\/training/i.test(u)) return AppPage.Training
+  if (/\/contest\//i.test(u)) return AppPage.ContestDetail
+  if (/\/record/i.test(u)) return AppPage.Record
+  return AppPage.Home
+}
 // 从哪进回哪:有 gulu.discussRef 回来源,否则回 /discuss 主 hub
 function goToDiscussList() {
   let ref = ''
   try { ref = sessionStorage.getItem('gulu.discussRef') || '' } catch {}
   if (ref) { try { sessionStorage.removeItem('gulu.discussRef') } catch {} }
-  navigateTo(AppPage.Blog, ref || (location.origin + '/discuss'))
+  const target = ref || (location.origin + '/discuss')
+  navigateTo(pageFromUrl(target), target)
 }
 // Load appropriate content based on URL (list vs detail)
 function loadContent() {
