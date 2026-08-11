@@ -34,10 +34,17 @@ export const WIDGETS: WidgetDef[] = [
     component: () => import('./FavoriteTrainings.vue'),
   },
   {
+    id: 'problemJumper',
+    name: '题目跳转',
+    icon: 'mingcute:send-line',
+    defaultSize: 'md',
+    component: () => import('./ProblemJumper.vue'),
+  },
+  {
     id: 'contestJoined',
     name: '已报比赛',
     icon: 'mingcute:trophy-line',
-    defaultSize: 'md',
+    defaultSize: 'lg',
     component: () => import('./JoinedContests.vue'),
   },
 ]
