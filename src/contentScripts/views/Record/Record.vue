@@ -405,7 +405,12 @@ onUnmounted(() => {
           <button style="background:none;border:none;cursor:pointer;color:var(--bew-theme-color)" @click="backToList">
             ← 返回记录列表
           </button>
-          <button v-if="detail?.problem?.pid" style="background:none;border:none;cursor:pointer;color:var(--bew-theme-color)" @click="backToProblem">
+          <button
+            :disabled="!detail?.problem?.pid"
+            style="background:none;border:none;color:var(--bew-theme-color)"
+            :style="{ cursor: detail?.problem?.pid ? 'pointer' : 'not-allowed', opacity: detail?.problem?.pid ? 1 : 0.5 }"
+            @click="backToProblem"
+          >
             ← 返回题目<span v-if="detail?.contest" style="color:var(--bew-text-3);font-size:.85em;margin-left:4px">（比赛）</span>
           </button>
         </div>
