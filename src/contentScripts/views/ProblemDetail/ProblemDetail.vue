@@ -147,6 +147,8 @@ const { contestProblems, showProblemSwitcher, showTags, switchToProblem } = useC
 // 提交态 / 验证码 / 提交历史 / 我的提交记录抽到 useProblemSubmit
 const { submitting, submitError, submitResult, submitHistory, captchaSrc, captchaCode, loadCaptcha, handleSubmit, resetSubmit, myRecordsVisible, myRecords, myRecordsLoading, recStatus, toggleMyRecords } = useProblemSubmit({ code: codeContent, isLoggedIn, problemId, inContestMode, contestId, lang: selectedLang, enableO2 })
 const copiedMarkdown = ref(false)
+// 讨论页 gate:登录 且 (本会话提交过 / 历史提交过 / 已 AC)才放行讨论 tab
+const hasSubmitted = computed(() => isLoggedIn.value && (problem.value.submitted || problem.value.accepted || submitHistory.value.length > 0))
 const copiedSample = ref<string | null>(null)
 
 function onLangChange(lang: LuoguLanguage) {
@@ -788,7 +790,19 @@ onUnmounted(() => {
           <!-- ============================================================ -->
           <!-- Discussions Tab -->
           <!-- ============================================================ -->
-          <DiscussionsTab v-else-if="activeTab === 'discussions'" key="discussions" :discussions="discussions" />
+          <div v-else-if="activeTab === 'discussions'" key="discussions">
+            <DiscussionsTab v-if="hasSubmitted" :discussions="discussions" />
+            <div
+              v-else bg="$bew-content" rounded="$bew-radius" p-10
+              shadow="[var(--bew-shadow-1),var(--bew-shadow-edge-glow-1)]"
+              border="1 $bew-border-color" text="center $bew-text-2"
+              style="backdrop-filter:var(--bew-filter-glass-1)"
+            >
+              <span style="display:contents" v-html="renderIcon('mingcute:lock-line', 40)" />
+              <p mt-3>提交本题后才能查看讨论</p>
+              <p mt-1 text="xs $bew-text-3">先到「提交」tab 提交一次代码吧</p>
+            </div>
+          </div>
 
           <!-- ============================================================ -->
           <!-- Solutions Tab -->

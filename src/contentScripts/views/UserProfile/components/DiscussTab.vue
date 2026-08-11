@@ -38,6 +38,7 @@ async function load() {
 }
 
 function open(id: number) {
+  try { sessionStorage.setItem('gulu.discussRef', location.href) } catch {}
   navigateTo(AppPage.Blog, `${location.origin}/discuss/${id}`)
 }
 

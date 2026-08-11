@@ -204,7 +204,7 @@ onMounted(ensureLayout)
   transition: box-shadow var(--bew-dur-fast) ease, transform var(--bew-dur-fast) ease;
 }
 .widget-head { margin-bottom: 8px; flex-shrink: 0; cursor: default; }
-.widget-body { flex: 1; min-height: 0; overflow: auto; }
+.widget-body { flex: 1; min-height: 0; overflow-x: hidden; overflow-y: auto; }
 
 // 编辑态:手柄可抓、内容禁用交互(防误点)、抖动
 .widget-card.editing {

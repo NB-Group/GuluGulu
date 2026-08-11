@@ -9,6 +9,11 @@ defineProps<{
 }>()
 
 const { navigateTo } = useGuluApp()
+// 记下来源(题目页),讨论返回按钮回题目而非 /discuss 主 hub
+function openPost(id: number) {
+  try { sessionStorage.setItem('gulu.discussRef', location.href) } catch {}
+  navigateTo(AppPage.Blog, `${location.origin}/discuss/${id}`)
+}
 </script>
 
 <template>
@@ -37,7 +42,7 @@ const { navigateTo } = useGuluApp()
         :style="{ '--row-index': idx }"
         p="x-4 y-3" flex="~ items-center gap-4"
         border="b-1 $bew-border-color" cursor="pointer" duration-200
-        @click="navigateTo(AppPage.Blog, `${location.origin}/discuss/${d.id}`)"
+        @click="openPost(d.id)"
       >
         <div flex="~ items-center gap-2" shrink-0>
           <img :src="d.author?.avatar" style="width:24px;height:24px;border-radius:50%;object-fit:cover" @error="(e:any) => { e.target.style.display = 'none' }">

@@ -95,6 +95,7 @@ function statusColor(s: number): string {
 interface RecordItem {
   rid: number
   problem: { pid: string, name: string }
+  contest: number | null
   status: number
   score: number | null
   time: number
@@ -171,6 +172,7 @@ async function fetchRecords(append = false) {
         return {
           rid: rc.id || 0,
           problem: { pid: rc.problem?.pid || '', name: rc.problem?.title || '' },
+          contest: rc.contest?.id ?? (typeof rc.contest === 'number' ? rc.contest : null),
           status: cached?.status ?? rc.status,
           score: cached?.score ?? rc.score,
           time: rc.time || 0,
@@ -320,7 +322,38 @@ function cancelTcHide() {
 
 function openRecord(rid: number) { navigateTo(AppPage.Record, `${location.origin}/record/${rid}`) }
 function backToList() { navigateTo(AppPage.Record, location.origin + '/record/list') }
-function openProblem(pid: string) { navigateTo(AppPage.ProblemDetail, `${location.origin}/problem/${pid}`) }
+// 带 contest 上下文回题目:比赛提交记录的 record.contest 非空时拼 ?contestId=,
+// 否则进 ProblemDetail 会丢失比赛模式/题目切换器(来源信息)。
+function openProblem(pid: string, contest?: any) {
+  const cid = typeof contest === 'number' ? contest : contest?.id
+  const url = cid ? `${location.origin}/problem/${pid}?contestId=${cid}` : `${location.origin}/problem/${pid}`
+  navigateTo(AppPage.ProblemDetail, url)
+}
+function backToProblem() {
+  if (!detail.value?.problem?.pid)
+    return
+  openProblem(detail.value.problem.pid, detail.value.contest)
+}
+// 复制源代码:优先剪贴板 API,非安全上下文(普通 http / file)回退 execCommand
+const sourceCopied = ref(false)
+async function copySource() {
+  const code = detail.value?.sourceCode || ''
+  if (!code)
+    return
+  try {
+    await navigator.clipboard.writeText(code)
+  }
+  catch {
+    const ta = document.createElement('textarea')
+    ta.value = code
+    document.body.appendChild(ta)
+    ta.select()
+    document.execCommand('copy')
+    ta.remove()
+  }
+  sourceCopied.value = true
+  setTimeout(() => { sourceCopied.value = false }, 1500)
+}
 function langName(id: number | string): string {
   const lang = LUOGU_LANGUAGES.find(l => l.id === Number(id))
   return lang?.name || String(id)
@@ -368,9 +401,14 @@ onUnmounted(() => {
         bg="$bew-content" rounded="$bew-radius" p-6 mb-6 shadow="[var(--bew-shadow-1),var(--bew-shadow-edge-glow-1)]"
         border="1 $bew-border-color" style="backdrop-filter:var(--bew-filter-glass-1)"
       >
-        <button style="background:none;border:none;cursor:pointer;color:var(--bew-theme-color);font-size:var(--bew-base-font-size)" mb-2 @click="backToList">
-          ← 返回记录列表
-        </button>
+        <div flex="~ items-center gap-4" mb-2 style="font-size:var(--bew-base-font-size)">
+          <button style="background:none;border:none;cursor:pointer;color:var(--bew-theme-color)" @click="backToList">
+            ← 返回记录列表
+          </button>
+          <button v-if="detail?.problem?.pid" style="background:none;border:none;cursor:pointer;color:var(--bew-theme-color)" @click="backToProblem">
+            ← 返回题目<span v-if="detail?.contest" style="color:var(--bew-text-3);font-size:.85em;margin-left:4px">（比赛）</span>
+          </button>
+        </div>
         <h1 style="font-size:var(--bew-base-font-size);color:var(--bew-text-1);font-weight:700">
           评测记录 #{{ recordId }}
         </h1>
@@ -401,7 +439,7 @@ onUnmounted(() => {
 
           <!-- Info grid -->
           <div grid="~ cols-2 md:cols-4" gap-4 mb-6 style="font-size:var(--bew-base-font-size)">
-            <div><span style="color:var(--bew-text-3)">题目</span><br><span style="color:var(--bew-theme-color);cursor:pointer;font-weight:500" @click="openProblem(detail.problem.pid)">{{ detail.problem.pid }} {{ detail.problem.title }}</span></div>
+            <div><span style="color:var(--bew-text-3)">题目</span><br><span style="color:var(--bew-theme-color);cursor:pointer;font-weight:500" @click="openProblem(detail.problem.pid, detail.contest)">{{ detail.problem.pid }} {{ detail.problem.title }}</span></div>
             <div><span style="color:var(--bew-text-3)">用时</span><br><span style="color:var(--bew-text-1)">{{ formatTime(detail.time || 0) }}</span></div>
             <div><span style="color:var(--bew-text-3)">内存</span><br><span style="color:var(--bew-text-1)">{{ formatMemory(detail.memory || 0) }}</span></div>
             <div><span style="color:var(--bew-text-3)">语言</span><br><span style="color:var(--bew-text-1)">{{ langName(detail.language) }} {{ detail.enableO2 ? '(O2)' : '' }}</span></div>
@@ -458,8 +496,14 @@ onUnmounted(() => {
 
           <!-- Source code -->
           <div v-if="detail.sourceCode" mt-6>
-            <div style="font-size:var(--bew-base-font-size);color:var(--bew-text-2);font-weight:600" mb-2>
-              源代码
+            <div flex="~ items-center justify-between" mb-2>
+              <span style="font-size:var(--bew-base-font-size);color:var(--bew-text-2);font-weight:600">源代码</span>
+              <button
+                style="background:var(--bew-fill-1);color:var(--bew-text-2);border:1px solid var(--bew-border-color);border-radius:var(--bew-radius-half);padding:3px 10px;cursor:pointer;font-size:.8em;font-weight:600"
+                @click="copySource"
+              >
+                {{ sourceCopied ? '已复制' : '复制' }}
+              </button>
             </div>
             <pre bg="$bew-fill-1" rounded="$bew-radius" p-4 style="font-size:var(--bew-base-font-size);font-family:monospace;overflow:auto;color:var(--bew-text-1);tab-size:4" v-html="highlightedSource" />
           </div>
@@ -506,7 +550,7 @@ onUnmounted(() => {
               <span :style="{ color: statusColor(r.status), fontSize: 'var(--bew-base-font-size)', fontWeight: 600 }">{{ statusLabel(r.status) }}</span>
             </div>
             <div flex="1" min-w-0>
-              <div style="font-size:var(--bew-base-font-size);color:var(--bew-text-1);font-weight:500;cursor:pointer" class="hover:underline" @click.stop="openProblem(r.problem.pid)">
+              <div style="font-size:var(--bew-base-font-size);color:var(--bew-text-1);font-weight:500;cursor:pointer" class="hover:underline" @click.stop="openProblem(r.problem.pid, r.contest)">
                 {{ r.problem.pid }} {{ r.problem.name }}
               </div>
               <div flex="~ gap-3" mt-1 style="font-size:calc(var(--bew-base-font-size) * 0.85);color:var(--bew-text-3)">

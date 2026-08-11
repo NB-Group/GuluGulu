@@ -34,7 +34,10 @@ async function fetchPosts() {
   } catch (e) { console.warn('[GuluGulu]', e) }
   loading.value = false
 }
-function openPost(id: number) { navigateTo(AppPage.Blog, `${location.origin}/discuss/${id}`) }
+function openPost(id: number) {
+  try { sessionStorage.setItem('gulu.discussRef', location.href) } catch {}
+  navigateTo(AppPage.Blog, `${location.origin}/discuss/${id}`)
+}
 
 onMounted(fetchPosts)
 </script>

@@ -37,7 +37,7 @@ export const WIDGETS: WidgetDef[] = [
     id: 'contestJoined',
     name: '已报比赛',
     icon: 'mingcute:trophy-line',
-    defaultSize: 'lg',
+    defaultSize: 'md',
     component: () => import('./JoinedContests.vue'),
   },
 ]

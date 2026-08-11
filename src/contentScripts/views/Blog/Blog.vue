@@ -155,8 +155,18 @@ async function postReply() {
   replySending.value = false
 }
 
-function openPost(id: number) { navigateTo(AppPage.Blog, `${location.origin}/discuss/${id}`) }
-function goToDiscussList() { navigateTo(AppPage.Blog, location.origin + '/discuss') }
+function openPost(id: number) {
+  // 记下来源(题目的讨论 tab / 主页近期讨论 / 个人页 等),返回按钮回此处而非主 hub
+  try { sessionStorage.setItem('gulu.discussRef', location.href) } catch {}
+  navigateTo(AppPage.Blog, `${location.origin}/discuss/${id}`)
+}
+// 从哪进回哪:有 gulu.discussRef 回来源,否则回 /discuss 主 hub
+function goToDiscussList() {
+  let ref = ''
+  try { ref = sessionStorage.getItem('gulu.discussRef') || '' } catch {}
+  if (ref) { try { sessionStorage.removeItem('gulu.discussRef') } catch {} }
+  navigateTo(AppPage.Blog, ref || (location.origin + '/discuss'))
+}
 // Load appropriate content based on URL (list vs detail)
 function loadContent() {
   if (discussId.value) {
