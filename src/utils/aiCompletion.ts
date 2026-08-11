@@ -96,7 +96,7 @@ export function abortAiStream() {
  */
 export function streamInlineCompletion(lang: string, prefix: string, suffix: string, onChunk: (acc: string) => void): Promise<string> {
   if (aiGated()) {
-    console.warn('[guly-ai] stream gated off', { enabled: state.enabled, intensity: state.intensity, hasBase: !!state.baseURL, hasModel: !!state.model })
+    console.debug('[guly-ai] stream gated off', { enabled: state.enabled, intensity: state.intensity, hasBase: !!state.baseURL, hasModel: !!state.model })
     return Promise.resolve('')
   }
   abortAiStream()
@@ -138,7 +138,7 @@ export function streamInlineCompletion(lang: string, prefix: string, suffix: str
   curPort = port
   let acc = ''
   let reasoningAcc = '' // 推理模型兜底:content 空时用 reasoning 的最后几句
-  console.warn('[guly-ai] stream start', { mode: payload.mode })
+  console.debug('[guly-ai] stream start', { mode: payload.mode })
   return new Promise<string>((resolve) => {
     port.onMessage.addListener((m: any) => {
       if (!m)
@@ -153,7 +153,7 @@ export function streamInlineCompletion(lang: string, prefix: string, suffix: str
       else if (m.done) {
         // 推理模型可能 content 为空、全在 reasoning:取 reasoning 末尾一两句兜底
         const final = acc || reasoningAcc.trim().split('\n').filter(Boolean).slice(-2).join(' ')
-        console.warn('[guly-ai] stream done', JSON.stringify(final).slice(0, 120), reasoningAcc ? '(from reasoning)' : '')
+        console.debug('[guly-ai] stream done', JSON.stringify(final).slice(0, 120), reasoningAcc ? '(from reasoning)' : '')
         cleanup()
         resolve(stripFences(final))
       }

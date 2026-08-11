@@ -570,7 +570,7 @@ watch(activeTab, (t) => { if (t === 'ranking' && scoreboard.value.length === 0) 
                 <span style="color:var(--bew-text-1);font-weight:500;font-size:.88em;line-height:1.45">{{ timeRange }}</span>
               </div>
               <div flex="~ items-center gap-3" style="font-size:var(--bew-base-font-size)">
-                <span v-html="renderIcon('mingcute:watch', 18)" style="display:contents;color:var(--bew-theme-color);flex-shrink:0" />
+                <span v-html="renderIcon('mingcute:time-fill', 18)" style="display:contents;color:var(--bew-theme-color);flex-shrink:0" />
                 <span style="color:var(--bew-text-3);width:2.5em;flex-shrink:0;font-size:.9em">时长</span>
                 <span style="color:var(--bew-text-1);font-weight:500">{{ duration || '—' }}</span>
               </div>

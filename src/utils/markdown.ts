@@ -177,13 +177,13 @@ function renderLatexRaw(text: string): string {
   // Block math: $$...$$
   text = text.replace(/\$\$([^$]+)\$\$/g, (_match, formula) => {
     try {
-      return k.renderToString(formula.trim(), { displayMode: true, throwOnError: false, trust: true })
+      return k.renderToString(formula.trim(), { displayMode: true, throwOnError: false, trust: true, strict: false })
     } catch { return _match }
   })
   // Inline math: $...$ (single $ only)
   text = text.replace(/\$([^$]+?)\$/g, (_match, formula) => {
     try {
-      return k.renderToString(formula.trim(), { displayMode: false, throwOnError: false, trust: true })
+      return k.renderToString(formula.trim(), { displayMode: false, throwOnError: false, trust: true, strict: false })
     } catch { return _match }
   })
   return text

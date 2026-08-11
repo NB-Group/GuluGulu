@@ -361,7 +361,7 @@ export function summarizeVerdict(rid: number, record: any, total: number, tlim: 
     return { ...base, state: 'done', verdict: 'CE', compileMessage: d.compileResult.message || null, failedCase: null, summary: 'CE · 编译错误' }
 
   const cases = flattenCases(d.judgeResult?.subtasks)
-  const pass = (c: any) => c?.status === 12
+  const pass = (c: any) => c?.status === 12 || c?.status === 4
   const allPass = cases.length > 0 ? cases.every(pass) : (score != null && score >= 100)
   if (allPass)
     return { ...base, state: 'done', verdict: 'AC', compileMessage: null, failedCase: null, summary: `AC${(time != null || mem != null) ? ` · ${[fmtTime(time), fmtMem(mem)].filter(Boolean).join(' ')}` : ''}` }
@@ -413,9 +413,9 @@ export function derivedRecordStatus(record: any): number | undefined {
   // 仍有 pending(0-3)测试点 → 还没评完,别提前下结论
   if (cases.some((c: any) => { const s = Number(c?.status); return s >= 0 && s <= 3 }))
     return undefined
-  if (cases.every((c: any) => Number(c?.status) === 12))
+  if (cases.every((c: any) => Number(c?.status) === 12 || Number(c?.status) === 4))
     return 12
-  const fc = cases.find((c: any) => Number(c?.status) !== 12)
+  const fc = cases.find((c: any) => Number(c?.status) !== 12 && Number(c?.status) !== 4)
   const code = fc ? Number(fc.status) : 12
   return Number.isNaN(code) ? undefined : code
 }
@@ -464,21 +464,48 @@ export interface IdeExecResult {
   memory: number | null
 }
 
+// luogu 0-14 状态枚举 → 自测 verdict(与 record verdict 同源:12=AC/7=TLE/8=MLE/
+// 9=RE/5,6,14=WA/10=CE)。IDE execute 同属 judge 基建,通常带 status 字段。
+const IDE_STATUS_VERDICT: Record<number, string> = {
+  4: 'AC',
+  12: 'AC',
+  7: 'TLE',
+  8: 'MLE',
+  9: 'RE',
+  10: 'CE',
+  5: 'WA',
+  6: 'WA',
+  14: 'WA',
+}
+
 /**
  * Parse an ide_submit `execute` WS message into a verdict + display fields.
- * The execute-message shape for CE/TLE/MLE is undocumented, so those are
- * detected heuristically: TLE/MLE by error text, CE by error-with-no-exit-code
- * or compiler markers, RE by non-zero exit / runtime error. AC/WA compare the
- * run output to the user-supplied expected output.
+ *
+ * 判定优先级:① luogu 标准 0-14 `status` 枚举(最可靠);② `exit_code` + `error`
+ * 文本启发式(无 status 时兜底)。AC(12)只表示程序正常跑完,用户「期望输出」
+ * 比对仍由本函数做。TLE/MLE 文本正则只认严格短语——RE 报错常带 "Time/Memory"
+ * 统计行,裸匹配 time/memory 会把 RE 误盖成 TLE/MLE。
  */
 export function parseIdeExecute(exec: any, msg: any, expected: string): IdeExecResult {
   const time = exec?.cpu_time ?? exec?.time ?? null
   const memory = exec?.memory ?? null
   const err: string | null = exec?.error ? String(exec.error) : null
   const exit = exec?.exit_code
-  const out: string = msg?.output ?? ''
+  const out: string = msg?.output ?? exec?.output ?? ''
 
-  // 程序正常退出(exit===0):stderr 只是编译 warning,忽略,走正常 verdict
+  // ① luogu 标准 status 枚举优先
+  const rawStatus = exec?.status ?? msg?.status
+  const status = rawStatus != null ? Number(rawStatus) : null
+  if (status != null && !Number.isNaN(status)) {
+    const v = IDE_STATUS_VERDICT[status]
+    if (v) {
+      const verdict = (v === 'AC' && expected.trim() && out.trim() !== expected.trim()) ? 'WA' : v
+      const display = (v === 'AC' || v === 'WA') ? (out || '(no output)') : (err || out || '(no output)')
+      return { verdict, output: display, message: err, time, memory }
+    }
+  }
+
+  // ② 无 status → 启发式兜底。exit===0:程序正常退出(stderr 只是编译 warning,忽略)
   if (exit === 0) {
     if (expected.trim())
       return { verdict: out.trim() === expected.trim() ? 'AC' : 'WA', output: out || '(no output)', message: null, time, memory }
@@ -486,8 +513,9 @@ export function parseIdeExecute(exec: any, msg: any, expected: string): IdeExecR
   }
   if (err) {
     const low = err.toLowerCase()
-    if (/tim(e|ing)|超时|时间|time limit/.test(low)) return { verdict: 'TLE', output: err, message: err, time, memory }
-    if (/mem(ory)?|内存|memory limit/.test(low)) return { verdict: 'MLE', output: err, message: err, time, memory }
+    // 严格短语:裸 time/memory/时间/内存 会命中 RE 报错里的 "Time:.. Memory:.." 统计行
+    if (/time limit|timed out|execution timed|时间超限|超时/.test(low)) return { verdict: 'TLE', output: err, message: err, time, memory }
+    if (/memory limit|out of memory|exceeded memory|内存超限/.test(low)) return { verdict: 'MLE', output: err, message: err, time, memory }
     if (exit == null || /error:|编译|undefined reference|collect2:|expected|cannot find/.test(low))
       return { verdict: 'CE', output: err, message: err, time, memory }
     return { verdict: 'RE', output: err, message: err, time, memory }

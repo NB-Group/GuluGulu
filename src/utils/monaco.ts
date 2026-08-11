@@ -323,7 +323,7 @@ function tryPatchSatisfies() {
       return origSatisfies.call(this, other)
     }
     proto.__gulyPatched = satisfiesPatched = streamingHookReady = true
-    console.warn('[guly-ai] streaming hook ready')
+    console.debug('[guly-ai] streaming hook ready')
   }
   catch { /* 内部结构不符 → 静默降级 */ }
 }
@@ -400,7 +400,7 @@ function registerInlineAiProvider(monaco: any) {
           // hook 就绪 + 同位置活跃流 → 返回「已 reveal 的文本」(打字机平滑:partial.slice(0, shown))
           if (streamingHookReady && stream && stream.posKey === posKey && stream.preLen === pre.length) {
             const shown = stream.partial.slice(0, stream.shown)
-            console.warn('[guly-ai] progressive', stream.shown, '/', stream.partial.length)
+            console.debug('[guly-ai] progressive', stream.shown, '/', stream.partial.length)
             if (!shown)
               return { items: [] }
             return { items: [{ insertText: shown, range: mkRange() }] }
@@ -424,7 +424,7 @@ function registerInlineAiProvider(monaco: any) {
                 return
               stream.partial = final || stream.partial
               stream.done = true
-              console.warn('[guly-ai] ghost final', JSON.stringify(stream.partial).slice(0, 160))
+              console.debug('[guly-ai] ghost final', JSON.stringify(stream.partial).slice(0, 160))
               startTicker() // 收尾:把剩余 reveal 完
             })
             return { items: [] }
