@@ -84,6 +84,15 @@ const { problem, loading, loadError, discussions, passRate, renderedDescription,
 const activeTab = ref<'statement' | 'submit' | 'solutions' | 'discussions'>('statement')
 const contestId = computed(() => { const m = (currentUrl.value || window.location.href).match(/[?&]contestId=(\d+)/); return m ? m[1] : '' })
 const inContestMode = computed(() => !!contestId.value)
+// 从题单跳转来时,Training.vue 写入的来源 URL;读后即清(一次性)
+const fromTraining = ref<string>(typeof sessionStorage !== 'undefined' ? (sessionStorage.getItem('gulu.trainingRef') || '') : '')
+function backToTraining() {
+  if (!fromTraining.value)
+    return
+  try { sessionStorage.removeItem('gulu.trainingRef') }
+  catch {}
+  navigateTo(AppPage.Training, fromTraining.value)
+}
 // 默认始终普通题面页;IDE 仅手动按钮进入(不再因 #ide hash 或 contestId 自动进)。
 const ideMode = ref(false)
 // 窄屏(<768px)下禁用分屏视图:编辑器和题面会挤到无法阅读,移动端直接走 tab 切换。
@@ -436,6 +445,14 @@ onUnmounted(() => {
             </div>
 
             <div flex="~ gap-2" shrink-0>
+              <Button
+                v-if="fromTraining"
+                type="secondary"
+                @click="backToTraining"
+              >
+                <span style="display:contents" v-html="renderIcon('mingcute:arrow-left-line', 14)" />
+                返回题单
+              </Button>
               <Button
                 v-if="externalUrl"
                 type="secondary"

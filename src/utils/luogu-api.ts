@@ -478,6 +478,12 @@ export function parseIdeExecute(exec: any, msg: any, expected: string): IdeExecR
   const exit = exec?.exit_code
   const out: string = msg?.output ?? ''
 
+  // 程序正常退出(exit===0):stderr 只是编译 warning,忽略,走正常 verdict
+  if (exit === 0) {
+    if (expected.trim())
+      return { verdict: out.trim() === expected.trim() ? 'AC' : 'WA', output: out || '(no output)', message: null, time, memory }
+    return { verdict: '运行完成', output: out || '(no output)', message: null, time, memory }
+  }
   if (err) {
     const low = err.toLowerCase()
     if (/tim(e|ing)|超时|时间|time limit/.test(low)) return { verdict: 'TLE', output: err, message: err, time, memory }

@@ -85,17 +85,22 @@ async function fetchTeamDetail(id: number) {
   }
   catch (e) { console.warn('[GuluGulu]', e) }
   detailLoading.value = false
-  // usages.training is a combined (trainings+homework) quota, not a per-type
-  // count — fetch each sub-page's real count so 题单/作业 show correct numbers.
-  Promise.all([fetchTeamSubCount(id, 'training'), fetchTeamSubCount(id, 'homework')]).then(([tr, hw]) => {
+  // usages values are quotas, not real item counts — fetch each sub-page's
+  // real count so tabs/dashboards show correct numbers.
+  Promise.all([
+    fetchTeamSubCount(id, 'training'),
+    fetchTeamSubCount(id, 'homework'),
+    fetchTeamSubCount(id, 'problem'),
+    fetchTeamSubCount(id, 'contest'),
+  ]).then(([tr, hw, pr, ct]) => {
     if (detail.value)
-      detail.value = { ...detail.value, counts: { training: tr, homework: hw } }
+      detail.value = { ...detail.value, counts: { training: tr, homework: hw, problem: pr, contest: ct } }
   })
 }
 
-// Fetch a team sub-page's real item count. trainings & homework are both served
-// under data.trainings on their respective sub-pages (pre-filtered server-side),
-// so the count must be read per sub-page — usages.training is only a combined quota.
+// Fetch a team sub-page's real item count. Each sub-page has its own data
+// structure — trainings/homework use data.trainings, problems use data.problems,
+// contests use data.contests. The count is extracted from the matching field.
 async function fetchTeamSubCount(id: number, path: string): Promise<number | null> {
   try {
     const res = await fetch(`${location.origin}/team/${id}/${path}`, { credentials: 'same-origin' })
@@ -103,9 +108,22 @@ async function fetchTeamSubCount(id: number, path: string): Promise<number | nul
     const m = html.match(/<script\s+id="lentille-context"\s+type="application\/json"[^>]*>([^<]+)<\/script>/)
     if (m?.[1]) {
       const ctx = JSON.parse(m[1])
-      const t = ctx?.data?.trainings
-      if (t && typeof t === 'object')
-        return t.count ?? t.result?.length ?? 0
+      const cd = ctx?.data || ctx?.currentData || {}
+      // Map sub-page paths to their data field names
+      const fieldMap: Record<string, string[]> = {
+        training: ['trainings', 'teamTrainings'],
+        homework: ['trainings', 'homeworks', 'teamHomeworks'],
+        problem: ['problems', 'teamProblems'],
+        contest: ['contests', 'teamContests'],
+      }
+      const fields = fieldMap[path] || [path]
+      for (const f of fields) {
+        if (cd[f] && typeof cd[f] === 'object') {
+          const count = (cd[f] as any).count ?? (cd[f] as any).result?.length ?? 0
+          if (count !== undefined && count !== 0)
+            return count
+        }
+      }
     }
   }
   catch (e) { console.warn('[GuluGulu]', e) }
@@ -308,10 +326,10 @@ watch(() => currentUrl.value, () => loadContent())
           <button
             v-for="t in [
               { k: '', l: '主页', icon: 'mingcute:home-5-line' },
-              { k: 'problem', l: '题目', icon: 'mingcute:code-line', n: detail?.usages?.problem?.[0] },
+              { k: 'problem', l: '题目', icon: 'mingcute:code-line', n: detail?.counts?.problem },
               { k: 'training', l: '题单', icon: 'mingcute:book-4-line', n: detail?.counts?.training },
               { k: 'homework', l: '作业', icon: 'mingcute:document-line', n: detail?.counts?.homework },
-              { k: 'contest', l: '比赛', icon: 'mingcute:trophy-line', n: detail?.usages?.contest?.[0] },
+              { k: 'contest', l: '比赛', icon: 'mingcute:trophy-line', n: detail?.counts?.contest },
               { k: 'file', l: '文件', icon: 'mingcute:folder-line' },
             ]" :key="t.k" class="team-tab" :class="{ 'team-tab--active': (subPath || '') === t.k }" @click="t.k ? openTeamPage(t.k) : backToTeamHome()"
           >
@@ -505,7 +523,7 @@ watch(() => currentUrl.value, () => loadContent())
                 <!-- Usage dashboard -->
                 <div class="team-section">
                   <h2 class="team-section-title">
-                    <span style="display:contents" v-html="renderIcon('mingcute:grid-line', 16)" /> 团队内容
+                    <span style="display:contents" v-html="renderIcon('mingcute:grid-line', 16)" /> 资源概览
                   </h2>
                   <div grid="~ cols-2 md:cols-3 xl:cols-5" gap-3>
                     <div
@@ -527,9 +545,11 @@ watch(() => currentUrl.value, () => loadContent())
                         <span v-if="item.k === 'file' && detail.usages.file?.[0]">{{ formatFileSize(detail.usages.file[0]) }}</span>
                         <span v-else-if="item.k === 'training' && detail.counts?.training != null">{{ detail.counts.training }}</span>
                         <span v-else-if="item.k === 'homework' && detail.counts?.homework != null">{{ detail.counts.homework }}</span>
+                        <span v-else-if="item.k === 'problem' && detail.counts?.problem != null">{{ detail.counts.problem }}</span>
+                        <span v-else-if="item.k === 'contest' && detail.counts?.contest != null">{{ detail.counts.contest }}</span>
                         <span v-else-if="detail.usages[item.k]?.[0]">{{ detail.usages[item.k][0] }}</span>
                         <span v-else style="color:var(--bew-text-4);font-size:.9em;font-weight:500">—</span>
-                        <span v-if="item.k !== 'file' && detail.usages[item.k]?.[0] != null || (item.k === 'training' && detail.counts?.training != null) || (item.k === 'homework' && detail.counts?.homework != null)" style="font-size:.6em;color:var(--bew-text-3);font-weight:500;margin-left:4px">个</span>
+                        <span v-if="item.k !== 'file' && (detail.counts?.[item.k] != null || detail.usages[item.k]?.[0] != null)" style="font-size:.6em;color:var(--bew-text-3);font-weight:500;margin-left:4px">个</span>
                       </div>
                     </div>
                   </div>
