@@ -739,8 +739,8 @@ onUnmounted(() => {
               >
                 <img :src="captchaSrc" style="max-width:200px;border-radius:4px" alt="验证码">
                 <div flex="~ items-center gap-2">
-                  <input v-model="captchaCode" placeholder="输入验证码" style="flex:1;padding:6px 10px;background:var(--bew-bg);color:var(--bew-text-1);border:1px solid var(--bew-border-color);border-radius:4px;font-size:1.05em;outline:none" @keydown.enter="handleSubmit">
-                  <button :disabled="!captchaCode" style="background:var(--bew-theme-color);color:#fff;border:none;border-radius:4px;padding:6px 12px;cursor:pointer;font-size:1.05em;font-weight:600;white-space:nowrap" @click="handleSubmit">
+                  <input v-model="captchaCode" placeholder="输入验证码" style="flex:1;min-width:0;padding:6px 10px;background:var(--bew-bg);color:var(--bew-text-1);border:1px solid var(--bew-border-color);border-radius:4px;font-size:1.05em;outline:none" @keydown.enter="handleSubmit">
+                  <button :disabled="!captchaCode" style="background:var(--bew-theme-color);color:#fff;border:none;border-radius:4px;padding:6px 12px;cursor:pointer;font-size:1.05em;font-weight:600;white-space:nowrap;flex-shrink:0" @click="handleSubmit">
                     提交
                   </button>
                 </div>
@@ -953,8 +953,8 @@ onUnmounted(() => {
               <div v-if="captchaSrc" style="display:flex;flex-direction:column;gap:6px">
                 <img :src="captchaSrc" style="max-width:180px;border-radius:4px" alt="验证码">
                 <div style="display:flex;align-items:center;gap:6px">
-                  <input v-model="captchaCode" placeholder="输入验证码" style="flex:1;padding:5px 8px;background:var(--bew-fill-1);color:var(--bew-text-1);border:1px solid var(--bew-border-color);border-radius:var(--bew-radius-half);font-size:1.05em;outline:none" @keydown.enter="handleSubmit">
-                  <button class="btn-press" :disabled="!captchaCode" style="background:var(--bew-theme-color);color:#fff;border:none;border-radius:var(--bew-radius-half);padding:5px 10px;cursor:pointer;font-weight:600;white-space:nowrap" @click="handleSubmit">
+                  <input v-model="captchaCode" placeholder="输入验证码" style="flex:1;min-width:0;padding:5px 8px;background:var(--bew-fill-1);color:var(--bew-text-1);border:1px solid var(--bew-border-color);border-radius:var(--bew-radius-half);font-size:1.05em;outline:none" @keydown.enter="handleSubmit">
+                  <button class="btn-press" :disabled="!captchaCode" style="background:var(--bew-theme-color);color:#fff;border:none;border-radius:var(--bew-radius-half);padding:5px 10px;cursor:pointer;font-weight:600;white-space:nowrap;flex-shrink:0" @click="handleSubmit">
                     提交
                   </button>
                 </div>

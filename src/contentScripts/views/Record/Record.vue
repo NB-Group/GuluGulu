@@ -555,18 +555,18 @@ onUnmounted(() => {
               <span :style="{ color: statusColor(r.status), fontSize: 'var(--bew-base-font-size)', fontWeight: 600 }">{{ statusLabel(r.status) }}</span>
             </div>
             <div flex="1" min-w-0>
-              <div style="font-size:var(--bew-base-font-size);color:var(--bew-text-1);font-weight:500;cursor:pointer" class="hover:underline" @click.stop="openProblem(r.problem.pid, r.contest)">
+              <div style="font-size:var(--bew-base-font-size);color:var(--bew-text-1);font-weight:500;cursor:pointer" class="hover:underline truncate" @click.stop="openProblem(r.problem.pid, r.contest)">
                 {{ r.problem.pid }} {{ r.problem.name }}
               </div>
-              <div flex="~ gap-3" mt-1 style="font-size:calc(var(--bew-base-font-size) * 0.85);color:var(--bew-text-3)">
-                <span>#{{ r.rid }}</span>
-                <span v-if="r.time">{{ formatTime(r.time) }}</span>
-                <span v-if="r.memory">{{ formatMemory(r.memory) }}</span>
-                <span>{{ langName(r.language) }}</span>
-                <span>{{ timeAgo(r.submitTime) }}</span>
+              <div flex="~ gap-3" mt-1 class="min-w-0" style="font-size:calc(var(--bew-base-font-size) * 0.85);color:var(--bew-text-3)">
+                <span flex-shrink-0>#{{ r.rid }}</span>
+                <span v-if="r.time" flex-shrink-0>{{ formatTime(r.time) }}</span>
+                <span v-if="r.memory" class="hidden sm:inline" flex-shrink-0>{{ formatMemory(r.memory) }}</span>
+                <span flex-shrink-0>{{ langName(r.language) }}</span>
+                <span class="hidden md:inline" flex-shrink-0>{{ timeAgo(r.submitTime) }}</span>
               </div>
             </div>
-            <div v-if="r.score != null" flex-shrink-0 text-right style="font-size:var(--bew-base-font-size);font-weight:600" :style="{ color: r.score === 100 ? 'var(--bew-success-color)' : 'var(--bew-error-color)' }">
+            <div v-if="r.score != null" flex-shrink-0 text-right style="font-size:var(--bew-base-font-size);font-weight:600;padding-left:16px" :style="{ color: r.score === 100 ? 'var(--bew-success-color)' : 'var(--bew-error-color)' }">
               {{ r.score }} 分
             </div>
           </div>

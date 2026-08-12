@@ -578,8 +578,8 @@ onUnmounted(() => obs?.disconnect())
               v-if="captchaSrc" mt-2 flex="~ items-center gap-2" p-2 rounded="$bew-radius"
               bg="$bew-fill-1"
             >
-              <img :src="captchaSrc" style="height:36px;border-radius:4px;cursor:pointer" title="点击刷新" alt="验证码" @click="loadReplyCaptcha">
-              <input v-model="captchaCode" placeholder="输入验证码" style="flex:1;padding:6px 10px;background:var(--bew-bg);color:var(--bew-text-1);border:1px solid var(--bew-border-color);border-radius:4px;font-size:.85em;outline:none" @keydown.enter="postReply">
+              <img :src="captchaSrc" style="height:36px;flex-shrink:0;border-radius:4px;cursor:pointer" title="点击刷新" alt="验证码" @click="loadReplyCaptcha">
+              <input v-model="captchaCode" placeholder="输入验证码" style="flex:1;min-width:0;padding:6px 10px;background:var(--bew-bg);color:var(--bew-text-1);border:1px solid var(--bew-border-color);border-radius:4px;font-size:.85em;outline:none" @keydown.enter="postReply">
               <span style="font-size:.7em;color:var(--bew-text-3)">填好后点评论</span>
             </div>
             <div v-if="replyError" mt-2 p-2 rounded="$bew-radius" style="background:var(--bew-error-color-20);color:var(--bew-error-color);font-size:.85em">
