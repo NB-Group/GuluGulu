@@ -84,6 +84,15 @@ const { problem, loading, loadError, discussions, passRate, renderedDescription,
 const activeTab = ref<'statement' | 'submit' | 'solutions' | 'discussions'>('statement')
 const contestId = computed(() => { const m = (currentUrl.value || window.location.href).match(/[?&]contestId=(\d+)/); return m ? m[1] : '' })
 const inContestMode = computed(() => !!contestId.value)
+// 从题单跳转来时,Training.vue 写入的来源 URL;读后即清(一次性)
+const fromTraining = ref<string>(typeof sessionStorage !== 'undefined' ? (sessionStorage.getItem('gulu.trainingRef') || '') : '')
+function backToTraining() {
+  if (!fromTraining.value)
+    return
+  try { sessionStorage.removeItem('gulu.trainingRef') }
+  catch {}
+  navigateTo(AppPage.Training, fromTraining.value)
+}
 // 默认始终普通题面页;IDE 仅手动按钮进入(不再因 #ide hash 或 contestId 自动进)。
 const ideMode = ref(false)
 // 窄屏(<768px)下禁用分屏视图:编辑器和题面会挤到无法阅读,移动端直接走 tab 切换。
@@ -138,6 +147,8 @@ const { contestProblems, showProblemSwitcher, showTags, switchToProblem } = useC
 // 提交态 / 验证码 / 提交历史 / 我的提交记录抽到 useProblemSubmit
 const { submitting, submitError, submitResult, submitHistory, captchaSrc, captchaCode, loadCaptcha, handleSubmit, resetSubmit, myRecordsVisible, myRecords, myRecordsLoading, recStatus, toggleMyRecords } = useProblemSubmit({ code: codeContent, isLoggedIn, problemId, inContestMode, contestId, lang: selectedLang, enableO2 })
 const copiedMarkdown = ref(false)
+// 讨论页 gate:登录 且 (本会话提交过 / 历史提交过 / 已 AC)才放行讨论 tab
+const hasSubmitted = computed(() => isLoggedIn.value && (problem.value.submitted || problem.value.accepted || submitHistory.value.length > 0))
 const copiedSample = ref<string | null>(null)
 
 function onLangChange(lang: LuoguLanguage) {
@@ -437,6 +448,14 @@ onUnmounted(() => {
 
             <div flex="~ gap-2" shrink-0>
               <Button
+                v-if="fromTraining"
+                type="secondary"
+                @click="backToTraining"
+              >
+                <span style="display:contents" v-html="renderIcon('mingcute:arrow-left-line', 14)" />
+                返回题单
+              </Button>
+              <Button
                 v-if="externalUrl"
                 type="secondary"
                 @click="openOriginalSite"
@@ -720,8 +739,8 @@ onUnmounted(() => {
               >
                 <img :src="captchaSrc" style="max-width:200px;border-radius:4px" alt="验证码">
                 <div flex="~ items-center gap-2">
-                  <input v-model="captchaCode" placeholder="输入验证码" style="flex:1;padding:6px 10px;background:var(--bew-bg);color:var(--bew-text-1);border:1px solid var(--bew-border-color);border-radius:4px;font-size:1.05em;outline:none" @keydown.enter="handleSubmit">
-                  <button :disabled="!captchaCode" style="background:var(--bew-theme-color);color:#fff;border:none;border-radius:4px;padding:6px 12px;cursor:pointer;font-size:1.05em;font-weight:600;white-space:nowrap" @click="handleSubmit">
+                  <input v-model="captchaCode" placeholder="输入验证码" style="flex:1;min-width:0;padding:6px 10px;background:var(--bew-bg);color:var(--bew-text-1);border:1px solid var(--bew-border-color);border-radius:4px;font-size:1.05em;outline:none" @keydown.enter="handleSubmit">
+                  <button :disabled="!captchaCode" style="background:var(--bew-theme-color);color:#fff;border:none;border-radius:4px;padding:6px 12px;cursor:pointer;font-size:1.05em;font-weight:600;white-space:nowrap;flex-shrink:0" @click="handleSubmit">
                     提交
                   </button>
                 </div>
@@ -771,7 +790,19 @@ onUnmounted(() => {
           <!-- ============================================================ -->
           <!-- Discussions Tab -->
           <!-- ============================================================ -->
-          <DiscussionsTab v-else-if="activeTab === 'discussions'" key="discussions" :discussions="discussions" />
+          <div v-else-if="activeTab === 'discussions'" key="discussions">
+            <DiscussionsTab v-if="hasSubmitted" :discussions="discussions" />
+            <div
+              v-else bg="$bew-content" rounded="$bew-radius" p-10
+              shadow="[var(--bew-shadow-1),var(--bew-shadow-edge-glow-1)]"
+              border="1 $bew-border-color" text="center $bew-text-2"
+              style="backdrop-filter:var(--bew-filter-glass-1)"
+            >
+              <span style="display:contents" v-html="renderIcon('mingcute:lock-line', 40)" />
+              <p mt-3>提交本题后才能查看讨论</p>
+              <p mt-1 text="xs $bew-text-3">先到「提交」tab 提交一次代码吧</p>
+            </div>
+          </div>
 
           <!-- ============================================================ -->
           <!-- Solutions Tab -->
@@ -922,8 +953,8 @@ onUnmounted(() => {
               <div v-if="captchaSrc" style="display:flex;flex-direction:column;gap:6px">
                 <img :src="captchaSrc" style="max-width:180px;border-radius:4px" alt="验证码">
                 <div style="display:flex;align-items:center;gap:6px">
-                  <input v-model="captchaCode" placeholder="输入验证码" style="flex:1;padding:5px 8px;background:var(--bew-fill-1);color:var(--bew-text-1);border:1px solid var(--bew-border-color);border-radius:var(--bew-radius-half);font-size:1.05em;outline:none" @keydown.enter="handleSubmit">
-                  <button class="btn-press" :disabled="!captchaCode" style="background:var(--bew-theme-color);color:#fff;border:none;border-radius:var(--bew-radius-half);padding:5px 10px;cursor:pointer;font-weight:600;white-space:nowrap" @click="handleSubmit">
+                  <input v-model="captchaCode" placeholder="输入验证码" style="flex:1;min-width:0;padding:5px 8px;background:var(--bew-fill-1);color:var(--bew-text-1);border:1px solid var(--bew-border-color);border-radius:var(--bew-radius-half);font-size:1.05em;outline:none" @keydown.enter="handleSubmit">
+                  <button class="btn-press" :disabled="!captchaCode" style="background:var(--bew-theme-color);color:#fff;border:none;border-radius:var(--bew-radius-half);padding:5px 10px;cursor:pointer;font-weight:600;white-space:nowrap;flex-shrink:0" @click="handleSubmit">
                     提交
                   </button>
                 </div>

@@ -570,7 +570,7 @@ watch(activeTab, (t) => { if (t === 'ranking' && scoreboard.value.length === 0) 
                 <span style="color:var(--bew-text-1);font-weight:500;font-size:.88em;line-height:1.45">{{ timeRange }}</span>
               </div>
               <div flex="~ items-center gap-3" style="font-size:var(--bew-base-font-size)">
-                <span v-html="renderIcon('mingcute:watch', 18)" style="display:contents;color:var(--bew-theme-color);flex-shrink:0" />
+                <span v-html="renderIcon('mingcute:time-fill', 18)" style="display:contents;color:var(--bew-theme-color);flex-shrink:0" />
                 <span style="color:var(--bew-text-3);width:2.5em;flex-shrink:0;font-size:.9em">时长</span>
                 <span style="color:var(--bew-text-1);font-weight:500">{{ duration || '—' }}</span>
               </div>
@@ -686,8 +686,8 @@ watch(activeTab, (t) => { if (t === 'ranking' && scoreboard.value.length === 0) 
               <div v-if="captchaSrc" mt-3 flex="~ col gap-2" p-3 bg="$bew-fill-1" rounded="$bew-radius" border="1 $bew-border-color">
                 <img :src="captchaSrc" style="max-width:200px;border-radius:4px" alt="验证码" />
                 <div flex="~ items-center gap-2">
-                  <input v-model="captchaCode" placeholder="输入验证码" style="flex:1;padding:6px 10px;background:var(--bew-bg);color:var(--bew-text-1);border:1px solid var(--bew-border-color);border-radius:4px;font-size:.85em;outline:none" @keydown.enter="handleSubmit" />
-                  <button :disabled="!captchaCode" @click="handleSubmit" style="background:var(--bew-theme-color);color:#fff;border:none;border-radius:4px;padding:6px 12px;cursor:pointer;font-size:.85em;font-weight:600;white-space:nowrap">
+                  <input v-model="captchaCode" placeholder="输入验证码" style="flex:1;min-width:0;padding:6px 10px;background:var(--bew-bg);color:var(--bew-text-1);border:1px solid var(--bew-border-color);border-radius:4px;font-size:.85em;outline:none" @keydown.enter="handleSubmit" />
+                  <button :disabled="!captchaCode" @click="handleSubmit" style="background:var(--bew-theme-color);color:#fff;border:none;border-radius:4px;padding:6px 12px;cursor:pointer;font-size:.85em;font-weight:600;white-space:nowrap;flex-shrink:0">
                     提交
                   </button>
                 </div>

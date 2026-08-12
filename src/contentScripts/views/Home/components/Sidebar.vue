@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import CheckInCalendar from './CheckInCalendar.vue'
-import ProblemJumper from './ProblemJumper.vue'
 import { renderIcon } from '~/utils/icons'
 
 const announcements = [
@@ -33,7 +32,6 @@ const links = {
 <template>
   <aside style="display:flex;flex-direction:column;gap:16px;">
     <CheckInCalendar />
-    <ProblemJumper />
 
     <!-- 本站公告 -->
     <div class="side-card">

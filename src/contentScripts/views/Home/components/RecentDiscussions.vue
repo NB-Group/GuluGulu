@@ -34,7 +34,10 @@ async function fetchPosts() {
   } catch (e) { console.warn('[GuluGulu]', e) }
   loading.value = false
 }
-function openPost(id: number) { navigateTo(AppPage.Blog, `${location.origin}/discuss/${id}`) }
+function openPost(id: number) {
+  try { sessionStorage.setItem('gulu.discussRef', location.href) } catch {}
+  navigateTo(AppPage.Blog, `${location.origin}/discuss/${id}`)
+}
 
 onMounted(fetchPosts)
 </script>
@@ -58,10 +61,10 @@ onMounted(fetchPosts)
             <div style="font-size:var(--bew-base-font-size);color:var(--bew-text-1);font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">
               <span v-if="p.topped" style="color:var(--bew-error-color);font-weight:700">[置顶] </span>{{ p.title }}
             </div>
-            <div flex="~ items-center gap-2" style="font-size:.75em;color:var(--bew-text-3)">
-              <span :style="{ color: p.author.color ? `var(--bew-${p.author.color})` : 'var(--bew-text-2)', fontWeight: 600 }">{{ p.author.name }}</span>
-              <span>{{ timeAgo(p.time) }}</span>
-              <span flex="~ items-center gap-1"><span v-html="renderIcon('mingcute:comment-line',12)" style="display:contents"/>{{ p.replyCount }}</span>
+            <div flex="~ items-center gap-2 min-w-0" style="font-size:.75em;color:var(--bew-text-3)">
+              <span class="truncate min-w-0" :style="{ color: p.author.color ? `var(--bew-${p.author.color})` : 'var(--bew-text-2)', fontWeight: 600 }">{{ p.author.name }}</span>
+              <span flex-shrink-0>{{ timeAgo(p.time) }}</span>
+              <span flex-shrink-0 flex="~ items-center gap-1"><span v-html="renderIcon('mingcute:comment-line',12)" style="display:contents"/>{{ p.replyCount }}</span>
             </div>
           </div>
           <span style="font-size:.7em;color:var(--bew-text-3)" px-1.5 py-0.5 rounded-full bg="$bew-fill-2" flex-shrink-0>{{ p.forum.name }}</span>

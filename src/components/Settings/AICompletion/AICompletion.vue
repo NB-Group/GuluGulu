@@ -49,6 +49,8 @@ async function testModel(m: AiModel) {
       baseURL: (m.baseUrl || '').replace(/\/+$/, ''),
       apiKey: m.apiKey,
       model: m.modelName,
+      mode: 'chat',
+      intensity: 'guide',
       maxTokens: 16,
       messages: [{ role: 'user', content: 'ping' }],
     })

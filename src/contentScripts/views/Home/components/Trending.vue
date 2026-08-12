@@ -79,8 +79,11 @@ function typeColor(t: string): string {
 }
 function openItem(url: string) {
   if (!url) return
-  if (url.includes('/discuss/'))
+  if (url.includes('/discuss/')) {
+    // 记下来源(主页动态流),讨论返回按钮回此处而非 /discuss 主 hub
+    try { sessionStorage.setItem('gulu.discussRef', location.href) } catch {}
     navigateTo(AppPage.Blog, url)
+  }
   else
     window.open(url, '_blank')
 }

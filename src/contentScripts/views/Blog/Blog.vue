@@ -155,8 +155,31 @@ async function postReply() {
   replySending.value = false
 }
 
-function openPost(id: number) { navigateTo(AppPage.Blog, `${location.origin}/discuss/${id}`) }
-function goToDiscussList() { navigateTo(AppPage.Blog, location.origin + '/discuss') }
+function openPost(id: number) {
+  // 记下来源(题目的讨论 tab / 主页近期讨论 / 个人页 等),返回按钮回此处而非主 hub
+  try { sessionStorage.setItem('gulu.discussRef', location.href) } catch {}
+  navigateTo(AppPage.Blog, `${location.origin}/discuss/${id}`)
+}
+// navigateTo(pageName,url) 直接设 activatedPage=pageName 且 navigatingFromUs 守卫
+// 会阻止 historyChange 按 URL 重推导 —— 故 ref 是别的页面类型(/problem/、/user/…)
+// 时必须传对应 AppPage,否则 URL 对了但渲染的还是 Blog。
+function pageFromUrl(u: string): AppPage {
+  if (/\/discuss|\/blog/i.test(u)) return AppPage.Blog
+  if (/\/problem\//i.test(u)) return AppPage.ProblemDetail
+  if (/\/user\//i.test(u)) return AppPage.UserProfile
+  if (/\/training/i.test(u)) return AppPage.Training
+  if (/\/contest\//i.test(u)) return AppPage.ContestDetail
+  if (/\/record/i.test(u)) return AppPage.Record
+  return AppPage.Home
+}
+// 从哪进回哪:有 gulu.discussRef 回来源,否则回 /discuss 主 hub
+function goToDiscussList() {
+  let ref = ''
+  try { ref = sessionStorage.getItem('gulu.discussRef') || '' } catch {}
+  if (ref) { try { sessionStorage.removeItem('gulu.discussRef') } catch {} }
+  const target = ref || (location.origin + '/discuss')
+  navigateTo(pageFromUrl(target), target)
+}
 // Load appropriate content based on URL (list vs detail)
 function loadContent() {
   if (discussId.value) {
@@ -254,8 +277,8 @@ onUnmounted(() => obs?.disconnect())
             </div>
             <!-- 验证码(洛谷回复强制要求) -->
             <div v-if="captchaSrc" mt-2 flex="~ items-center gap-2" p-2 rounded="$bew-radius" bg="$bew-fill-1">
-              <img :src="captchaSrc" style="height:36px;border-radius:4px;cursor:pointer" title="点击刷新" alt="验证码" @click="loadReplyCaptcha">
-              <input v-model="captchaCode" placeholder="输入验证码" style="flex:1;padding:6px 10px;background:var(--bew-bg);color:var(--bew-text-1);border:1px solid var(--bew-border-color);border-radius:4px;font-size:.85em;outline:none" @keydown.enter="postReply">
+              <img :src="captchaSrc" style="height:36px;flex-shrink:0;border-radius:4px;cursor:pointer" title="点击刷新" alt="验证码" @click="loadReplyCaptcha">
+              <input v-model="captchaCode" placeholder="输入验证码" style="flex:1;min-width:0;padding:6px 10px;background:var(--bew-bg);color:var(--bew-text-1);border:1px solid var(--bew-border-color);border-radius:4px;font-size:.85em;outline:none" @keydown.enter="postReply">
             </div>
             <div v-if="replyError" mt-2 p-2 rounded="$bew-radius" style="background:var(--bew-error-color-20);color:var(--bew-error-color);font-size:.85em">{{ replyError }}</div>
           </div>

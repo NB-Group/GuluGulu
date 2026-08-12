@@ -14,6 +14,9 @@ interface ProblemData {
   tags: Array<{ id: number, name: string }>
   totalSubmit: number
   totalAccepted: number
+  // 当前用户是否提交过 / 已 AC 此题(lentille user 级布尔,用于讨论 gate)
+  submitted: boolean
+  accepted: boolean
   background: string
   description: string
   inputFormat: string
@@ -49,6 +52,8 @@ export function useProblemData(opts: {
     tags: [],
     totalSubmit: 0,
     totalAccepted: 0,
+    submitted: false,
+    accepted: false,
     background: '',
     description: '加载中...',
     inputFormat: '',
@@ -131,6 +136,8 @@ export function useProblemData(opts: {
         tags: Array.isArray(p.tags) ? p.tags.map((t: any) => (typeof t === 'number' ? { id: t, name: tagMap.get(t) || `标签 ${t}` } : t)) : [],
         totalSubmit: p.totalSubmit || 0,
         totalAccepted: p.totalAccepted || 0,
+        submitted: !!p.submitted,
+        accepted: !!p.accepted,
         background: p.contenu?.background || p.content?.background || '',
         description: [p.contenu?.description || p.content?.description || ''].join('\n\n'),
         inputFormat: p.contenu?.formatI || p.content?.formatI || '',

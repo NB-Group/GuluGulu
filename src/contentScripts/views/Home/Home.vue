@@ -104,9 +104,11 @@ function toggleTabContentLoading(loading: boolean) {
         </section>
       </header>
 
-      <!-- Content area: main + sidebar -->
-      <div flex="~ row wrap" gap-4>
-        <div flex="1" min-w-0>
+      <!-- Content area: main + sidebar
+           <lg(1024px):纵向堆叠 —— 公告/友链侧栏在上、widget 区在下,窄屏不再被挤压;
+           ≥lg:横向并排 —— widget 区在左、侧栏固定 280px 在右。 -->
+      <div class="home-layout">
+        <div class="home-main">
           <Transition name="page-switch" mode="out-in">
             <Component
               :is="pages[activatedPage]" :key="activatedPage"
@@ -116,7 +118,7 @@ function toggleTabContentLoading(loading: boolean) {
             />
           </Transition>
         </div>
-        <div class="home-sidebar" w="280px" flex-shrink-0 display="none md:block">
+        <div class="home-sidebar">
           <Sidebar />
         </div>
       </div>
@@ -125,6 +127,17 @@ function toggleTabContentLoading(loading: boolean) {
 </template>
 
 <style scoped>
+/* 主栏 + 侧栏响应式布局:<lg 纵向堆叠(侧栏在上、主栏在下),≥lg 横向并排。
+   用 order 控制堆叠顺序,避免窄屏侧栏挤压主栏 widget 网格。 */
+.home-layout { display: flex; flex-direction: column; gap: 16px; }
+.home-main { order: 2; min-width: 0; }
+.home-sidebar { order: 1; }
+@media (min-width: 900px) {
+  .home-layout { flex-direction: row; }
+  .home-main { order: 1; flex: 1 1 0; }
+  .home-sidebar { order: 2; flex: 0 0 280px; width: 280px; }
+}
+
 .home-header {
   position: sticky;
   top: calc(var(--bew-top-bar-height) + 10px);

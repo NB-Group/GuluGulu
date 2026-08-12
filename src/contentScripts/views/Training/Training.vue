@@ -139,7 +139,11 @@ function passRate(ac: number, sub: number): string {
 }
 
 function openTraining(id: number) { navigateTo(AppPage.Training, `${location.origin}/training/${id}`) }
-function openProblem(pid: string) { navigateTo(AppPage.ProblemDetail, `${location.origin}/problem/${pid}`) }
+function openProblem(pid: string) {
+  try { sessionStorage.setItem('gulu.trainingRef', location.href) }
+  catch {}
+  navigateTo(AppPage.ProblemDetail, `${location.origin}/problem/${pid}`)
+}
 
 function loadTrainingContent() {
   if (trainingId.value) { detailProblems.value = []; fetchDetail(trainingId.value) }
