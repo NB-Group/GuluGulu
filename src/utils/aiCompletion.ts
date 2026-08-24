@@ -55,6 +55,19 @@ function stripFences(s: string): string {
   return s.replace(/^\s*```[\w-]*\n?/, '').replace(/\n?```\s*$/, '').trimEnd()
 }
 
+/**
+ * 去掉 fenced 代码块与行内代码,只留文字(ce 档:把编译错误文本发 AI 前先脱码,
+ * 免得把用户的代码原样回传)。行为与 aiCompletion.test.ts 的期望对齐。
+ */
+export function stripCodeBlocks(s: string): string {
+  return s
+    .replace(/```[\w-]*\n?[\s\S]*?```/g, '')
+    .replace(/`[^`\n]*`/g, '')
+    .replace(/[ \t]{2,}/g, ' ')
+    .replace(/\n{2,}/g, '\n')
+    .trim()
+}
+
 /** 组 chat 模式的 messages。guide(思路指引)时带上题目 markdown,让指引贴合本题。 */
 function buildChatMessages(intensity: Exclude<AiIntensity, 'off'>, lang: string, prefix: string) {
   const sys = `${INTENSITY_PROMPT[intensity] + (state.thinking && intensity !== 'light' ? THINKING_SUFFIX : '')}\nProgramming language: ${lang}.`
