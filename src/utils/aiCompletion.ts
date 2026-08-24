@@ -20,13 +20,14 @@ interface AiState {
   model: string
   thinking: boolean
   fim: boolean
+  apiFormat: 'openai' | 'anthropic'
   problemMarkdown: string
   // 守卫用:比赛模式(?contestId=)禁一切 AI;step 档需 trigger='comment'(用户先写注释)
   isContest: boolean
   trigger?: 'comment'
 }
 
-let state: AiState = { enabled: false, intensity: 'off', baseURL: '', apiKey: '', model: '', thinking: false, fim: true, problemMarkdown: '', isContest: false }
+let state: AiState = { enabled: false, intensity: 'off', baseURL: '', apiKey: '', model: '', thinking: false, fim: true, apiFormat: 'openai', problemMarkdown: '', isContest: false }
 export function setAiState(s: Partial<AiState>) {
   state = { ...state, ...s }
 }
@@ -75,9 +76,9 @@ export function aiGated(): boolean {
   return !state.enabled || state.isContest || state.intensity === 'off' || !state.baseURL || !state.model
 }
 
-/** 当前强度是否走 FIM */
+/** 当前强度是否走 FIM(Anthropic 无 FIM 端点,一律 chat) */
 export function aiUseFim(): boolean {
-  return state.fim && state.intensity !== 'guide' && state.intensity !== 'off'
+  return state.fim && state.apiFormat !== 'anthropic' && state.intensity !== 'guide' && state.intensity !== 'off'
 }
 
 // ---- 流式 ----
@@ -111,6 +112,7 @@ export function streamInlineCompletion(lang: string, prefix: string, suffix: str
         baseURL: base,
         apiKey: state.apiKey,
         model: state.model,
+        apiFormat: state.apiFormat,
         prompt: prefix,
         suffix,
         maxTokens: FIM_CONFIG[intensity as 'light' | 'strong'].maxTokens,
@@ -126,6 +128,7 @@ export function streamInlineCompletion(lang: string, prefix: string, suffix: str
         baseURL: base,
         apiKey: state.apiKey,
         model: state.model,
+        apiFormat: state.apiFormat,
         messages: buildChatMessages(intensity, lang, prefix),
         maxTokens: state.thinking ? CHAT_MAXTOKENS[intensity] * 2 : CHAT_MAXTOKENS[intensity],
         temperature,

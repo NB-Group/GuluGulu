@@ -2,7 +2,8 @@ import { ref, type Ref } from 'vue'
 import { AppPage } from '~/enums/appEnums'
 import { useGuluApp } from '~/composables/useAppProvider'
 import type { LuoguLanguage } from '~/utils/luogu-api'
-import { RECORD_STATUS_MAP, submitCode } from '~/utils/luogu-api'
+import { RECORD_STATUS_MAP, pollRecordVerdict, submitCode } from '~/utils/luogu-api'
+import { markTutorAc } from '~/utils/aiTutor'
 
 /**
  * 题目提交:提交态 / 验证码 / 提交历史 / 我的提交记录。
@@ -86,6 +87,11 @@ export function useProblemSubmit(opts: {
         submitHistory.value.pop()
       // Jump to the record page; the AC-stamp plays there once judging finishes.
       navigateTo(AppPage.Record, `${location.origin}/record/${result.rid}?from=submit`)
+      // 思路导师 AC 庆祝:后台轮询测评结果,AC 则落标记;下次打开导师面板自动报喜
+      pollRecordVerdict(result.rid).then((v) => {
+        if (v.verdict === 'AC')
+          markTutorAc(problemId.value)
+      }).catch(() => { /* 不影响提交流程 */ })
       return
     }
 

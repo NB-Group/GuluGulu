@@ -58,11 +58,12 @@ export interface Settings {
   // 主页「开始」tab 的可定制 widget 布局(Apple 小组件式网格):数组顺序=显示顺序,size=占位档
   startLayout: { i: string, size: WidgetGridSize }[]
 
-  // AI 统一模型池 + 按模块分配(OpenAI 兼容端点)
+  // AI 统一模型池 + 按模块分配(OpenAI 兼容 / Anthropic 端点)
   aiModels: AiModel[] // 模型注册表:增/删/改在一处(settings AI 面板)
   aiActiveMode: AiActiveMode // IDE 工具栏「当前走哪个模块」:off / light / strong / guide
   aiCompletion: AiCompletionModule // 代码补全模块:从池里挑模型 + 自己的 fim/thinking
-  aiGuide: AiGuideModule // 思路指引/验证模块:从池里挑模型 + 自己的 thinking
+  aiGuide: AiGuideModule // 思路指引(编辑器内单行 ghost)模块
+  aiTutor: AiTutorModule // 思路导师(对话面板,备课+授课)模块
 }
 
 /** AI 模型注册表条目 */
@@ -72,6 +73,7 @@ export interface AiModel {
   baseUrl: string // https://api.deepseek.com/v1
   apiKey: string
   modelName: string // deepseek-chat
+  apiFormat?: 'openai' | 'anthropic' // 接口格式;缺省 = openai(已存条目免迁移)
 }
 
 /** IDE 当前激活的 AI 模式(决定走哪个模块) */
@@ -86,6 +88,12 @@ export interface AiCompletionModule {
 
 /** 思路指引/验证模块配置(guide 走它,可指向另一个推理模型) */
 export interface AiGuideModule {
+  modelId: string | null
+  thinking: boolean
+}
+
+/** 思路导师模块配置(TutorPanel 备课+授课都用它;备课强制深度思考) */
+export interface AiTutorModule {
   modelId: string | null
   thinking: boolean
 }
@@ -155,6 +163,7 @@ export const originalSettings: Settings = {
   aiActiveMode: 'off',
   aiCompletion: { modelId: null, fim: true, thinking: false },
   aiGuide: { modelId: null, thinking: false },
+  aiTutor: { modelId: null, thinking: true },
 }
 
 /** 旧单模型配置 → 新统一模型池的一次性迁移(幂等)。 */
@@ -198,6 +207,13 @@ export const settings = useStorageLocal('settings', ref<Settings>(originalSettin
 
 // 启动即迁移旧单模型配置进统一模型池(幂等,已有池子则跳过)
 migrateAiModels()
+
+// 导师模块后补:老用户升级时不存在 aiTutor → 默认沿用思路模块的模型、思考开(备课要深想)
+;(() => {
+  const s = settings.value as any
+  if (!s.aiTutor)
+    s.aiTutor = { modelId: s.aiGuide?.modelId ?? null, thinking: true }
+})()
 
 /** 按 id 从模型池解析出完整模型配置(找不到返回 null)。供各 AI 模块在发请求前解析用。 */
 export function resolveAiModel(modelId: string | null): AiModel | null {

@@ -1,15 +1,18 @@
 /**
- * AI 补全中继:内容脚本(在 luogu origin)直连 OpenAI 兼容端点会 CORS,故由 background
+ * AI 中继:内容脚本(在 luogu origin)直连 AI 端点会 CORS,故由 background
  * SW(chrome-extension origin)代发。manifest host_permissions 通配所有 host 覆盖自定义端点。
  *
- * 两种模式:
- *  - mode==='fim':POST {base}/completions,body {model,prompt,suffix,max_tokens,stop,...},
- *    返回 {ok, content: choices[0].text}(DeepSeek 等 FIM 代码补全,beta base)。
- *  - 其它(默认 chat):POST {base}/chat/completions,body {model,messages,...},
- *    返回 {ok, content: choices[0].message.content}。
+ * 两种接口格式(按 message.apiFormat 分支,归一化后回推,内容脚本无感):
+ *  - openai(默认):
+ *    · mode==='fim':POST {base}/completions,body {model,prompt,suffix,max_tokens,stop},
+ *      流式取 choices[0].text(DeepSeek 等 FIM,beta base)。
+ *    · chat:POST {base}/chat/completions,body {model,messages},流式取
+ *      choices[0].delta.content(+reasoning_content 推理兜底),[DONE] 结束。
+ *  - anthropic:POST {base}(/v1)/messages,headers x-api-key + anthropic-version,
+ *    system 是顶层参数(从 messages 里拎出),流式事件 content_block_delta 的
+ *    delta.text → chunk、delta.thinking → reasoning,message_stop → done。
  *
- * 另有流式版本 handleAiStreamPort:用 runtime.connect port 边读 SSE 边把 chunk 推回内容脚本,
- * 让 Monaco 的 ghost 能逐字更新。fim 取 choices[0].text,chat 取 choices[0].delta.content。
+ * port 协议统一为 {chunk}/{reasoning}/{done}/{error},格式差异全部在本层消化。
  */
 import { enforceAiPolicy } from './ai.policy'
 
@@ -24,8 +27,35 @@ function buildUrlAndBody(message: any): { url: string, body: any } {
     maxTokens = 256,
     temperature = 0.2,
     stop = [],
+    apiFormat = 'openai',
   } = message
   const base = baseURL.replace(/\/+$/, '')
+
+  // ---- Anthropic Messages API ----
+  if (apiFormat === 'anthropic') {
+    // Anthropic 无 FIM,一律 chat。base 已含 /v1 则直接拼 /messages,否则补 /v1。
+    const url = /\/v1$/i.test(base) ? `${base}/messages` : `${base}/v1/messages`
+    // system 必须是顶层参数;从 messages 里拎出所有 system 条目拼接
+    const sys = messages
+      .filter((m: any) => m?.role === 'system')
+      .map((m: any) => String(m.content ?? ''))
+      .filter(Boolean)
+      .join('\n\n')
+    const rest = messages.filter((m: any) => m?.role !== 'system')
+    const body: any = {
+      model,
+      messages: rest,
+      max_tokens: Math.max(1, maxTokens | 0), // Anthropic 必填
+      stream: true,
+    }
+    if (sys)
+      body.system = sys
+    if (temperature != null)
+      body.temperature = temperature
+    return { url, body }
+  }
+
+  // ---- OpenAI 兼容 ----
   const isFim = mode === 'fim'
   // DeepSeek 的 FIM 必须走 /beta base(报 "completions api is only available when using
   // beta api")。用户填普通 host 或 /v1 时,FIM 自动补 /beta;chat 不动。
@@ -39,11 +69,30 @@ function buildUrlAndBody(message: any): { url: string, body: any } {
   return { url, body }
 }
 
-function authHeaders(apiKey: string) {
+function authHeaders(apiKey: string, apiFormat = 'openai') {
+  if (apiFormat === 'anthropic') {
+    return {
+      'Content-Type': 'application/json',
+      ...(apiKey ? { 'x-api-key': apiKey } : {}),
+      'anthropic-version': '2023-06-01',
+    }
+  }
   return {
     'Content-Type': 'application/json',
     ...(apiKey ? { Authorization: `Bearer ${apiKey}` } : {}),
   }
+}
+
+/** 非流式响应正文提取(两格式归一)。 */
+function extractNonStreamContent(json: any, mode: string, apiFormat: string): string {
+  if (apiFormat === 'anthropic') {
+    // content 是块数组(text/thinking/...),拼全部 text 块
+    const blocks = Array.isArray(json?.content) ? json.content : []
+    return blocks.filter((b: any) => b?.type === 'text').map((b: any) => String(b.text ?? '')).join('')
+  }
+  return mode === 'fim'
+    ? (json?.choices?.[0]?.text || '')
+    : (json?.choices?.[0]?.message?.content || '')
 }
 
 // 非流式(设置面板「测试连接」用)
@@ -53,27 +102,56 @@ const API_AI = {
     if (!pol.allowed)
       return { ok: false, blocked: true, reason: pol.reason }
     const guarded = { ...message, mode: pol.mode, maxTokens: pol.maxTokens, stop: pol.stop }
+    const apiFormat = guarded.apiFormat || 'openai'
     const { url, body } = buildUrlAndBody({ ...guarded /* 测试连接强制非流式 */ })
     const nonStreamBody = { ...body, stream: false }
     try {
       const res = await fetch(url, {
         method: 'POST',
-        headers: authHeaders(message.apiKey || ''),
+        headers: authHeaders(message.apiKey || '', apiFormat),
         body: JSON.stringify(nonStreamBody),
       })
       const text = await res.text()
       if (!res.ok)
         return { ok: false, status: res.status, url, error: text.slice(0, 240) || `HTTP ${res.status}` }
       const json = JSON.parse(text)
-      const content: string = message.mode === 'fim'
-        ? (json?.choices?.[0]?.text || '')
-        : (json?.choices?.[0]?.message?.content || '')
-      return { ok: true, url, content }
+      return { ok: true, url, content: extractNonStreamContent(json, message.mode || 'chat', apiFormat) }
     }
     catch (e: any) {
       return { ok: false, error: e?.message || 'network error' }
     }
   },
+}
+
+/** 单条 SSE data JSON → 归一化 {chunk?}/{reasoning?}/{done?}/{error?},两格式通用。 */
+function sseJsonToPortMessage(j: any, isFim: boolean, apiFormat: string): { chunk?: string, reasoning?: string, done?: boolean, error?: string } | null {
+  if (apiFormat === 'anthropic') {
+    const t = j?.type
+    if (t === 'content_block_delta') {
+      if (j?.delta?.text)
+        return { chunk: j.delta.text }
+      if (j?.delta?.thinking)
+        return { reasoning: j.delta.thinking }
+      return null
+    }
+    if (t === 'message_stop')
+      return { done: true }
+    if (t === 'error')
+      return { error: String(j?.error?.message || 'anthropic stream error') }
+    return null // message_start / ping / content_block_start 等忽略
+  }
+  const ch = j?.choices?.[0]
+  const chunk: string = isFim
+    ? (ch?.text || '')
+    : (ch?.delta?.content || ch?.text || '')
+  // 推理模型(deepseek-reasoner 等)把内容放 reasoning_content、content 可能为空;
+  // 一并推回,内容侧作兜底。
+  const reasoning: string = !isFim ? (ch?.delta?.reasoning_content || '') : ''
+  if (chunk)
+    return { chunk }
+  if (reasoning)
+    return { reasoning }
+  return null
 }
 
 // 流式:port 收到首条参数消息后开 SSE 流,逐 chunk post 回内容脚本
@@ -89,9 +167,10 @@ export function handleAiStreamPort(port: any) {
     }
     const guarded = { ...message, mode: pol.mode, maxTokens: pol.maxTokens, stop: pol.stop }
     const isFim = guarded.mode === 'fim'
+    const apiFormat = guarded.apiFormat || 'openai'
     const { url, body } = buildUrlAndBody(guarded)
     try {
-      const res = await fetch(url, { method: 'POST', headers: authHeaders(message.apiKey || ''), body: JSON.stringify(body) })
+      const res = await fetch(url, { method: 'POST', headers: authHeaders(message.apiKey || '', apiFormat), body: JSON.stringify(body) })
       if (!res.ok || !res.body) {
         const text = res.ok ? 'no body' : await res.text()
         try {
@@ -113,38 +192,20 @@ export function handleAiStreamPort(port: any) {
           const line = buf.slice(0, nl).trim()
           buf = buf.slice(nl + 1)
           if (!line.startsWith('data:'))
-            continue
+            continue // anthropic 的 event: 行天然跳过
           const data = line.slice(5).trim()
-          if (!data || data === '[DONE]') {
-            if (data === '[DONE]') {
-              try {
-                port.postMessage({ done: true })
-              }
-              catch {}
-              return
-            }
+          if (!data)
             continue
+          if (data === '[DONE]') { // OpenAI 结束哨兵
+            try { port.postMessage({ done: true }) } catch {}
+            return
           }
           try {
-            const j = JSON.parse(data)
-            const ch = j?.choices?.[0]
-            const chunk: string = isFim
-              ? (ch?.text || '')
-              : (ch?.delta?.content || ch?.text || '')
-            // 推理模型(deepseek-reasoner 等)把内容放 reasoning_content、content 可能为空;
-            // 一并推回,内容侧作兜底。
-            const reasoning: string = !isFim ? (ch?.delta?.reasoning_content || '') : ''
-            if (chunk) {
-              try {
-                port.postMessage({ chunk })
-              }
-              catch { return }
-            }
-            if (reasoning) {
-              try {
-                port.postMessage({ reasoning })
-              }
-              catch { return }
+            const m = sseJsonToPortMessage(JSON.parse(data), isFim, apiFormat)
+            if (m) {
+              try { port.postMessage(m) } catch { return }
+              if (m.done)
+                return
             }
           }
           catch { /* keep-alive / 非 JSON 行,忽略 */ }

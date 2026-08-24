@@ -13,6 +13,7 @@ import { injectKatexCSS } from '~/utils/markdown'
 import { useSelfTest } from './composables/useSelfTest'
 import SolutionsTab from './components/SolutionsTab.vue'
 import DiscussionsTab from './components/DiscussionsTab.vue'
+import TutorPanel from './components/TutorPanel.vue'
 import { useCodePersistence } from './composables/useCodePersistence'
 import { useContestMode } from './composables/useContestMode'
 import { useProblemSubmit } from './composables/useProblemSubmit'
@@ -95,6 +96,8 @@ function backToTraining() {
 }
 // 默认始终普通题面页;IDE 仅手动按钮进入(不再因 #ide hash 或 contestId 自动进)。
 const ideMode = ref(false)
+// 思路导师抽屉(普通页/IDE 均可用,overlay 在 app 根,内容让位见根元素 marginRight)
+const showTutor = ref(false)
 // 窄屏(<768px)下禁用分屏视图:编辑器和题面会挤到无法阅读,移动端直接走 tab 切换。
 const isNarrow = ref(false)
 if (typeof window !== 'undefined' && window.matchMedia) {
@@ -207,9 +210,12 @@ watchEffect(() => {
     baseURL: m?.baseUrl ?? '',
     apiKey: m?.apiKey ?? '',
     model: m?.modelName ?? '',
+    apiFormat: m?.apiFormat ?? 'openai',
     thinking: mod.thinking,
     fim: mode === 'guide' ? false : settings.value.aiCompletion.fim,
     problemMarkdown: parts.join('\n\n'),
+    // SW 守卫:比赛模式(?contestId=)禁一切 AI 补全
+    isContest: inContestMode.value,
   })
 })
 
@@ -256,8 +262,11 @@ function runSample(sample: any) {
   runTest()
 }
 
-function buildProblemMarkdown(): string {
+/** 完整题目 markdown(题号/标题/题面/IO 格式/样例/提示/来源)——复制与思路导师备课共用。 */
+const problemMarkdownFull = computed(() => {
   const p = problem.value
+  if (!p)
+    return ''
   const lines: string[] = []
   lines.push(`# ${p.pid} ${p.title}\n`)
   if (p.background)
@@ -286,10 +295,10 @@ function buildProblemMarkdown(): string {
   if (p.source)
     lines.push(`\n来源：${p.source}`)
   return lines.join('\n\n')
-}
+})
 
 async function copyMarkdown() {
-  copyText(buildProblemMarkdown())
+  copyText(problemMarkdownFull.value)
   copiedMarkdown.value = true
   setTimeout(() => {
     copiedMarkdown.value = false
@@ -384,7 +393,16 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div class="page-container" w-full h-full p="x-4 md:x-8 lg:x-16" pos="relative">
+  <div
+    class="page-container" w-full h-full p="x-4 md:x-8 lg:x-16" pos="relative"
+    :style="{ marginRight: showTutor ? '376px' : '0' }"
+    style="transition: margin-right var(--bew-dur-cozy) var(--bew-ease)"
+  >
+    <!-- 思路导师抽屉(fixed overlay,teleport 到 app 根) -->
+    <TutorPanel
+      v-if="showTutor" :problem-id="problemId" :problem-markdown="problemMarkdownFull"
+      :code="codeContent" @close="showTutor = false"
+    />
     <Loading v-if="loading" />
     <div
       v-if="!loading && loadError" bg="$bew-content" rounded="$bew-radius" p-8 text="center"
@@ -521,6 +539,16 @@ onUnmounted(() => {
               我的提交
             </button>
           </div>
+          <button
+            v-if="!isSplitView" flex="~ items-center gap-1" p="x-3 y-2" rounded="$bew-radius-half" text="sm"
+            border="none" cursor="pointer"
+            :style="{ background: showTutor ? 'var(--bew-theme-color-20)' : 'var(--bew-fill-1)', color: showTutor ? 'var(--bew-theme-color)' : 'var(--bew-text-2)', fontWeight:600 }"
+            title="思路导师:苏格拉底式引导(基于题解备课)"
+            @click="showTutor = !showTutor"
+          >
+            <span style="display:contents" v-html="renderIcon('mingcute:teaching-line', 16)" />
+            导师
+          </button>
           <button
             v-if="!isSplitView" class="ml-auto" flex="~ items-center gap-1" p="x-3 y-2" rounded="$bew-radius-half" text="sm"
             border="none"
@@ -926,6 +954,10 @@ onUnmounted(() => {
                 <button style="display:flex;align-items:center;gap:4px;background:none;border:1px solid var(--bew-border-color);border-radius:var(--bew-radius-half);padding:4px 10px;cursor:pointer;color:var(--bew-text-2);font-size:1em;white-space:nowrap" title="格式化代码(基于括号深度对齐缩进)" @click="cm.formatDocument()">
                   <span style="display:contents" v-html="renderIcon('mingcute:code-line', 14)" />
                   格式化
+                </button>
+                <button style="display:flex;align-items:center;gap:4px;background:none;border:1px solid var(--bew-border-color);border-radius:var(--bew-radius-half);padding:4px 10px;cursor:pointer;font-size:1em;white-space:nowrap" title="思路导师" :style="{ color: showTutor ? 'var(--bew-theme-color)' : 'var(--bew-text-2)', borderColor: showTutor ? 'var(--bew-theme-color-40)' : 'var(--bew-border-color)' }" @click="showTutor = !showTutor">
+                  <span style="display:contents" v-html="renderIcon('mingcute:teaching-line', 14)" />
+                  导师
                 </button>
                 <button style="display:flex;align-items:center;gap:4px;background:none;border:1px solid var(--bew-border-color);border-radius:var(--bew-radius-half);padding:4px 10px;cursor:pointer;color:var(--bew-text-2);font-size:1em;white-space:nowrap" title="设置(AI 自动补全)" @click="emitter.emit('open-settings', { menu: 'AICompletion' })">
                   <span style="display:contents" v-html="renderIcon('mingcute:settings-3-line', 14)" />
