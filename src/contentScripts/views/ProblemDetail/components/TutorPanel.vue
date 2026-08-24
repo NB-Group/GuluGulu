@@ -64,7 +64,7 @@ function scrollToBottom() {
   endRef.value?.scrollIntoView({ behavior: 'smooth', block: 'end' })
 }
 
-watch(() => [msgs.value.length, streamAcc.value, prepping.value, prepThinking.value.length], () => {
+watch(() => [msgs.value.length, streamShown.value, prepping.value, prepThinking.value.length], () => {
   nextTick(scrollToBottom)
 })
 
@@ -135,24 +135,60 @@ async function send(preset?: string) {
   saveTutorChat(props.problemId, chat)
   sending.value = true
   streamAcc.value = ''
+  streamShown.value = ''
   streamThinking.value = false
+  startTyper()
   const stopTurnTimer = startTimer(v => (turnElapsed.value = v))
   try {
     const final = await tutorRespond(props.problemId, props.problemMarkdown, props.code, chat, {
       onChunk: (acc) => { streamAcc.value = acc },
       onReasoning: () => { streamThinking.value = true },
     })
-    // tutorRespond 内部已持久化;本地同步一份(失败时也把提示语显示出来)
-    msgs.value = loadTutorChat(props.problemId).length
-      ? loadTutorChat(props.problemId)
+    // 等打字机追平服务器全文,再同步终稿(否则终稿+打字气泡同时出现,文字重复)
+    await until(() => streamShown.value.length >= streamAcc.value.length || !streamAcc.value)
+    // 成功:tutorRespond 已持久化 → 读回;失败(⚠️ 错误串,不持久化)→ 本地兜一条
+    const stored = loadTutorChat(props.problemId)
+    msgs.value = stored.length > chat.length
+      ? stored
       : [...chat, { role: 'assistant', content: final || '(网络错误,重试一下?)', ts: Date.now() }]
   }
   finally {
     stopTurnTimer()
     sending.value = false
     streamAcc.value = ''
+    streamShown.value = ''
     streamThinking.value = false
+    stopTyper()
   }
+}
+
+// ---- 打字机平滑:服务器常一次吐大块 chunk(甚至整段),直接渲染「糊」出来不像流式。
+// streamAcc=服务器累积全文,streamShown=逐字揭示;ticker 每 30ms 按剩余量自适应步进。
+const streamShown = ref('')
+let typerTimer: number | null = null
+function startTyper() {
+  stopTyper()
+  typerTimer = window.setInterval(() => {
+    const diff = streamAcc.value.length - streamShown.value.length
+    if (diff > 0) {
+      const step = Math.max(1, Math.min(48, Math.ceil(diff / 8)))
+      streamShown.value = streamAcc.value.slice(0, streamShown.value.length + step)
+    }
+    else if (!sending.value) {
+      stopTyper()
+    }
+  }, 30)
+}
+function stopTyper() {
+  if (typerTimer) { clearInterval(typerTimer); typerTimer = null }
+}
+/** 轮询直到 fn() 为真(打字机追平用;最多等 5s 兜底)。 */
+function until(fn: () => boolean): Promise<void> {
+  return new Promise((resolve) => {
+    const t0 = Date.now()
+    const check = () => (fn() || Date.now() - t0 > 5000) ? resolve() : setTimeout(check, 60)
+    check()
+  })
 }
 
 function resetChat() {
@@ -248,10 +284,10 @@ const prepStatus = computed(() => {
         <div
           flex="~ items-center gap-2" px-4 py-2 shrink-0 text="xs $bew-text-3"
           border="b-1 $bew-border-color" bg="$bew-fill-1"
-          :style="{ color: prepError ? 'var(--bew-error-color)' : plan ? 'var(--bew-success-color)' : undefined }"
+          :style="{ color: prepError ? 'var(--bew-error-color)' : plan && !prepping ? 'var(--bew-success-color)' : undefined }"
         >
           <div v-if="prepping" i-svg-spinners-ring-resize />
-          <span truncate>{{ prepStatus }}</span>
+          <span :class="prepError ? 'tutor-prep-error' : 'truncate'">{{ prepStatus }}</span>
           <span flex-1 />
           <button
             v-if="plan" border="none" bg="transparent" cursor-pointer text="xs $bew-text-3 hover:$bew-theme-color"
@@ -278,12 +314,12 @@ const prepStatus = computed(() => {
               <span v-html="parseMarkdownContent(m.content)" />
             </div>
           </div>
-          <!-- 流式中的导师气泡 -->
+          <!-- 流式中的导师气泡(打字机逐字揭示) -->
           <div v-if="sending" flex="~ justify-start" mb-2>
             <div class="tb tb-tutor markdown-body">
-              <span v-if="streamThinking && !streamAcc" text="xs $bew-text-3">思考中… {{ turnElapsed }}s</span>
+              <span v-if="streamThinking && !streamShown" text="xs $bew-text-3">思考中… {{ turnElapsed }}s</span>
               <!-- eslint-disable-next-line vue/no-v-html -->
-              <span v-else-if="streamAcc" v-html="parseMarkdownContent(streamAcc)" />
+              <span v-else-if="streamShown" v-html="parseMarkdownContent(streamShown)" />
               <span v-else text="xs $bew-text-3">等待响应… {{ turnElapsed }}s</span>
             </div>
           </div>
@@ -347,6 +383,14 @@ const prepStatus = computed(() => {
   white-space: normal;
 }
 .tutor-plan-preview :deep(p) { margin: 0 0 .3em; }
+/* 备课错误:允许换行看全服务器返回的原因(而非单行截断) */
+.tutor-prep-error {
+  white-space: pre-wrap;
+  word-break: break-all;
+  text-align: left;
+  max-height: 96px;
+  overflow-y: auto;
+}
 
 .tutor-slide-enter-active,
 .tutor-slide-leave-active {

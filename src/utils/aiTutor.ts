@@ -95,19 +95,44 @@ function buildPayload(model: AiModel, messages: any[], maxTokens: number, temper
   }
 }
 
+/** streamChat 的结果:text=累积正文;error 非空=失败原因(拿不到正文时据此报错,不再吞)。 */
+export interface StreamResult { text: string, error?: string }
+
 /**
  * 发送一轮 chat(流式)。onChunk 收累积全文,onReasoning 收思考片段(思考模型)。
- * resolve 最终全文(空串=失败/中断)。
+ * 错误不再静默:HTTP 错误/连接中断/超时都会带 error 返回,调用方原样上屏。
+ * 超时看门狗:首个响应 90s 内不到、或总时长 240s,按超时收场(推理模型备课很慢,给足)。
  */
-function streamChat(payload: any, onChunk: (acc: string) => void, onReasoning?: (acc: string) => void): Promise<string> {
+function streamChat(payload: any, onChunk: (acc: string) => void, onReasoning?: (acc: string) => void): Promise<StreamResult> {
   const port = browser.runtime.connect({ name: 'guly-ai-stream' })
   tutorPort = port
   let acc = ''
   let reasoningAcc = ''
-  return new Promise<string>((resolve) => {
+  let firstSeen = false
+  return new Promise<StreamResult>((resolve) => {
+    let settled = false
+    const finish = (r: StreamResult) => {
+      if (settled)
+        return
+      settled = true
+      clearTimeout(gotDataTimer)
+      clearTimeout(hardTimer)
+      cleanup()
+      resolve(r)
+    }
+    // 看门狗:90s 没有任何数据(首字节超时)/ 总 240s 硬超时
+    const bump = () => {
+      clearTimeout(gotDataTimer)
+      gotDataTimer = setTimeout(() => finish({ text: acc, error: `等待模型响应超时(90s 无数据)${acc ? '(已有部分输出)' : ''}` }), 90_000)
+    }
+    let gotDataTimer = setTimeout(() => finish({ text: '', error: '等待模型响应超时(90s 无数据)' }), 90_000)
+    const hardTimer = setTimeout(() => finish({ text: acc, error: `总时长超时(240s)${acc ? '(已有部分输出)' : ''}` }), 240_000)
+
     port.onMessage.addListener((m: any) => {
       if (!m)
         return
+      firstSeen = true
+      bump()
       if (m.chunk) {
         acc += m.chunk
         onChunk(acc)
@@ -119,25 +144,22 @@ function streamChat(payload: any, onChunk: (acc: string) => void, onReasoning?: 
       else if (m.blocked) {
         // SW 的 enforceAiPolicy 拦截(比赛模式全禁等)。注意须在 done 之前判:
         // SW 的 blocked 消息同时带 done:true。
-        cleanup()
-        resolve(m.reason === 'contest' ? '比赛模式下导师休息 🛡️(防作弊守卫,赛后再来)' : `被 AI 守卫拦截(${m.reason})`)
+        finish({ text: m.reason === 'contest' ? '比赛模式下导师休息 🛡️(防作弊守卫,赛后再来)' : `被 AI 守卫拦截(${m.reason})` })
       }
       else if (m.done) {
         // 推理模型 content 可能为空:取 reasoning 末尾兜底
-        cleanup()
-        resolve(acc || reasoningAcc.trim().split('\n').filter(Boolean).slice(-3).join('\n'))
+        const final = acc || reasoningAcc.trim().split('\n').filter(Boolean).slice(-3).join('\n')
+        finish({ text: final, error: final ? undefined : (reasoningAcc ? '模型只输出了思考、没有正文(尝试调大 maxTokens 或换模型)' : undefined) })
       }
       else if (m.error) {
         console.warn('[guly-tutor] stream error', m.error)
-        cleanup()
-        resolve(acc ? `${acc}\n\n(网络错误:${String(m.error).slice(0, 100)})` : '')
+        finish({ text: acc, error: String(m.error).slice(0, 200) })
       }
     })
     port.onDisconnect.addListener(() => {
-      if (tutorPort === port) {
-        cleanup()
-        resolve(acc)
-      }
+      // 中断(新请求主动 abort / SW 被杀)→ 带原因返回,不再静默空串
+      if (tutorPort === port)
+        finish({ text: acc, error: acc ? undefined : (firstSeen ? '连接中断' : '连接立即中断(检查模型 BaseURL/Key 或 SW 控制台报错)') })
     })
     port.postMessage(payload)
   })
@@ -224,16 +246,16 @@ export async function runTutorPrep(
     '\n请输出备课稿。',
   ].filter(Boolean).join('\n')
 
-  const final = await streamChat(
+  const r = await streamChat(
     buildPayload(model, [{ role: 'system', content: sysBase + PREP_THINKING }, { role: 'user', content: user }], 4096, 0.3),
     acc => hooks.onChunk?.(acc),
     acc => hooks.onReasoning?.(acc),
   )
-  if (!final.trim())
-    return { error: '备课失败(模型无返回,检查模型配置/网络)' }
+  if (!r.text.trim())
+    return { error: `备课失败:${r.error || '模型无返回(检查 BaseURL / Key / 模型名,或看 SW 控制台)'}` }
 
   const plan: TutorPlan = {
-    plan: final.trim(),
+    plan: r.text.trim(),
     source: solutions.length ? 'solutions' : 'self',
     ts: Date.now(),
     modelKey: `${model.baseUrl}|${model.modelName}`,
@@ -301,13 +323,15 @@ export async function tutorRespond(
     messages.push({ role: m.role, content: snap ? `${m.content}\n\n【我的当前代码】\n\`\`\`\n${snap}\n\`\`\`` : m.content })
   })
 
-  const final = await streamChat(
+  const r = await streamChat(
     buildPayload(model, messages, settings.value.aiTutor.thinking ? 1600 : 800, 0.5),
     acc => hooks.onChunk?.(acc),
     acc => hooks.onReasoning?.(acc),
   )
-  if (final.trim()) {
-    saveTutorChat(pid, [...chat, { role: 'assistant', content: final.trim(), ts: Date.now() }])
+  if (r.text.trim()) {
+    saveTutorChat(pid, [...chat, { role: 'assistant', content: r.text.trim(), ts: Date.now() }])
+    return r.text
   }
-  return final
+  // 失败:把真实原因作为本轮回复显示(不持久化错误,重试不残留)
+  return `⚠️ ${r.error || '模型无返回,重试一下?'}`
 }
