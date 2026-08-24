@@ -38,7 +38,27 @@ const showPlan = ref(false)
 const listRef = ref<HTMLElement>()
 const endRef = ref<HTMLElement>()
 
+// 备课/授课进度指示:耗时(s)+ 思考字数 + 已输出字数(推理模型可能闷头想很久,没反馈像死机)
+const prepElapsed = ref(0)
+const prepThinkChars = ref(0)
+const prepOutChars = ref(0)
+const turnElapsed = ref(0)
+
 const modelReady = computed(() => !!settings.value.aiTutor.modelId)
+
+function fmtChars(n: number): string {
+  return n >= 1000 ? `${(n / 1000).toFixed(1)}k` : String(n)
+}
+function startTimer(setter: (v: number) => void): () => void {
+  let t: number | null = null
+  let sec = 0
+  setter(0)
+  t = window.setInterval(() => { sec++; setter(sec) }, 1000)
+  return () => { if (t) { clearInterval(t); t = null } }
+}
+
+// 备课没好时发的问题排队,备完自动发出
+const pendingQuestion = ref<string | null>(null)
 
 function scrollToBottom() {
   endRef.value?.scrollIntoView({ behavior: 'smooth', block: 'end' })
@@ -61,28 +81,52 @@ async function prep(force = false) {
   prepping.value = true
   prepError.value = ''
   prepThinking.value = ''
+  prepThinkChars.value = 0
+  prepOutChars.value = 0
+  const stopPrepTimer = startTimer(v => (prepElapsed.value = v))
   try {
     const r = await runTutorPrep(props.problemId, props.problemMarkdown, {
-      onReasoning: acc => (prepThinking.value = acc),
+      onChunk: (acc) => { prepOutChars.value = acc.length },
+      onReasoning: (acc) => {
+        prepThinking.value = acc
+        prepThinkChars.value = acc.length
+      },
     })
-    if ('error' in r && r.error)
+    if ('error' in r && r.error) {
       prepError.value = r.error
-    else if ('plan' in r)
+    }
+    else if ('plan' in r) {
       plan.value = r
+      prepError.value = ''
+    }
   }
   catch (e: any) {
     prepError.value = e?.message || '备课失败'
   }
+  stopPrepTimer()
   prepping.value = false
+  // 备课期间排队的问题自动发出(须在 prepping=false 之后,否则 send 又把它塞回队列)
+  if (plan.value && pendingQuestion.value) {
+    const q = pendingQuestion.value
+    pendingQuestion.value = null
+    send(q)
+  }
 }
 
 /** 发送一轮:持久化 user 消息 → 流式导师回复(tutorRespond 负责持久化 assistant)。 */
 async function send(preset?: string) {
   const text = (preset ?? input.value).trim()
-  if (!text || sending.value || prepping.value)
+  if (!text || sending.value)
     return
-  if (!plan.value) {
-    prepError.value = '备课稿还没好,稍等…'
+  if (prepping.value || !plan.value) {
+    // 备课还没好:排队等备完自动发,不当作错误
+    if (modelReady.value) {
+      pendingQuestion.value = text
+      input.value = ''
+    }
+    else {
+      prepError.value = '请先在 设置 → AI → 思路导师模块 选择模型'
+    }
     return
   }
   input.value = ''
@@ -92,6 +136,7 @@ async function send(preset?: string) {
   sending.value = true
   streamAcc.value = ''
   streamThinking.value = false
+  const stopTurnTimer = startTimer(v => (turnElapsed.value = v))
   try {
     const final = await tutorRespond(props.problemId, props.problemMarkdown, props.code, chat, {
       onChunk: (acc) => { streamAcc.value = acc },
@@ -103,6 +148,7 @@ async function send(preset?: string) {
       : [...chat, { role: 'assistant', content: final || '(网络错误,重试一下?)', ts: Date.now() }]
   }
   finally {
+    stopTurnTimer()
     sending.value = false
     streamAcc.value = ''
     streamThinking.value = false
@@ -141,8 +187,18 @@ onKeyStroke('Escape', () => emit('close'))
 onUnmounted(() => abortTutorStream())
 
 const prepStatus = computed(() => {
-  if (prepping.value)
-    return prepThinking.value ? '备课思考中…' : '备课中…'
+  if (prepping.value) {
+    const parts = [`${prepElapsed.value}s`]
+    if (prepThinkChars.value)
+      parts.push(`思考 ${fmtChars(prepThinkChars.value)} 字`)
+    if (prepOutChars.value)
+      parts.push(`已写 ${fmtChars(prepOutChars.value)} 字`)
+    else if (!prepThinkChars.value)
+      parts.push('等待模型响应…')
+    return `备课中… ${parts.join(' · ')}`
+  }
+  if (pendingQuestion.value)
+    return '备课中,你的问题已排队,备完自动发'
   if (prepError.value)
     return `备课失败:${prepError.value}`
   if (plan.value)
@@ -225,10 +281,10 @@ const prepStatus = computed(() => {
           <!-- 流式中的导师气泡 -->
           <div v-if="sending" flex="~ justify-start" mb-2>
             <div class="tb tb-tutor markdown-body">
-              <span v-if="streamThinking && !streamAcc" text="xs $bew-text-3">思考中…</span>
+              <span v-if="streamThinking && !streamAcc" text="xs $bew-text-3">思考中… {{ turnElapsed }}s</span>
               <!-- eslint-disable-next-line vue/no-v-html -->
               <span v-else-if="streamAcc" v-html="parseMarkdownContent(streamAcc)" />
-              <span v-else text="xs $bew-text-3">…</span>
+              <span v-else text="xs $bew-text-3">等待响应… {{ turnElapsed }}s</span>
             </div>
           </div>
           <div ref="endRef" />
