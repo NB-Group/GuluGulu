@@ -546,7 +546,7 @@ onUnmounted(() => {
             title="思路导师:苏格拉底式引导(基于题解备课)"
             @click="showTutor = !showTutor"
           >
-            <span style="display:contents" v-html="renderIcon('mingcute:teaching-line', 16)" />
+            <span style="display:contents" v-html="renderIcon('mingcute:compass-line', 16)" />
             导师
           </button>
           <button
@@ -956,7 +956,7 @@ onUnmounted(() => {
                   格式化
                 </button>
                 <button style="display:flex;align-items:center;gap:4px;background:none;border:1px solid var(--bew-border-color);border-radius:var(--bew-radius-half);padding:4px 10px;cursor:pointer;font-size:1em;white-space:nowrap" title="思路导师" :style="{ color: showTutor ? 'var(--bew-theme-color)' : 'var(--bew-text-2)', borderColor: showTutor ? 'var(--bew-theme-color-40)' : 'var(--bew-border-color)' }" @click="showTutor = !showTutor">
-                  <span style="display:contents" v-html="renderIcon('mingcute:teaching-line', 14)" />
+                  <span style="display:contents" v-html="renderIcon('mingcute:compass-line', 14)" />
                   导师
                 </button>
                 <button style="display:flex;align-items:center;gap:4px;background:none;border:1px solid var(--bew-border-color);border-radius:var(--bew-radius-half);padding:4px 10px;cursor:pointer;color:var(--bew-text-2);font-size:1em;white-space:nowrap" title="设置(AI 自动补全)" @click="emitter.emit('open-settings', { menu: 'AICompletion' })">

@@ -31,7 +31,8 @@ const prepping = ref(false)
 const prepThinking = ref('') // 备课思考片段长度指示
 const prepError = ref('')
 const sending = ref(false)
-const streamAcc = ref('') // 正在流式生成的导师回复
+const streamAcc = ref('') // 服务器累积全文(流式)
+const streamShown = ref('') // 打字机逐字揭示的可见文本(声明须在上方 watch 之前 —— TDZ)
 const streamThinking = ref(false)
 const input = ref('')
 const showPlan = ref(false)
@@ -164,7 +165,7 @@ async function send(preset?: string) {
 
 // ---- 打字机平滑:服务器常一次吐大块 chunk(甚至整段),直接渲染「糊」出来不像流式。
 // streamAcc=服务器累积全文,streamShown=逐字揭示;ticker 每 30ms 按剩余量自适应步进。
-const streamShown = ref('')
+// (streamShown 声明在文件顶部 refs 区,这里只放定时器)
 let typerTimer: number | null = null
 function startTyper() {
   stopTyper()
@@ -255,7 +256,7 @@ const prepStatus = computed(() => {
       >
         <!-- 头部 -->
         <header flex="~ items-center gap-2" p="x-4 t-4 b-3" border="b-1 $bew-border-color" shrink-0>
-          <span v-html="renderIcon('mingcute:teaching-line', 18)" style="display:contents;color:var(--bew-theme-color)" />
+          <span v-html="renderIcon('mingcute:compass-line', 18)" style="display:contents;color:var(--bew-theme-color)" />
           <span fw-700 style="font-size:var(--bew-base-font-size)">思路导师</span>
           <span flex-1 />
           <button
