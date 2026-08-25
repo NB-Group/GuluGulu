@@ -151,6 +151,9 @@ function streamChat(payload: any, onChunk: (acc: string) => void, onReasoning?: 
       if (!m)
         return
       if (m.ack) {
+        // ack 到了:取消「无应答」计时器(否则 3s 后会把正常在途的请求误杀重试)
+        clearTimeout(ackTimer)
+        firstSeen = true
         console.log('[guly-tutor] SW ack · proto v', m.v)
         // 版本握手:SW 报的协议版本旧于本脚本 → 提示重载扩展(SW 是旧构建,新格式不转发)
         if (typeof m.v === 'number' && m.v < AI_PROTO_VERSION) {
