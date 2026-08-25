@@ -128,7 +128,6 @@ function streamChat(payload: any, onChunk: (acc: string) => void, onReasoning?: 
     //  A. 流从未启动(连 message_start/ka 都没收到)→ 90s 判隧道挂,重试一次;
     //  B. 流已启动但首 token 未到(模型思考)→ 不中断,只受 420s 硬上限保护;
     //  C. 正在输出中途 90s 静默 → 连接断,带已有部分收场。
-    let streamStarted = false // 收到过任何流层信号(ka/chunk/reasoning)
     const bump = () => {
       clearTimeout(gotDataTimer)
       gotDataTimer = setTimeout(() => finish({ text: acc, error: `流中途静默超时(90s)${acc ? '(已有部分输出)' : ''}` }), 90_000)
@@ -176,13 +175,11 @@ function streamChat(payload: any, onChunk: (acc: string) => void, onReasoning?: 
         // 流层保活(message_start/ping/keepalive):进入「已启动」相,中途静默计时重置;
         // 首 token 前不再受 90s 判死(深思考模型思考期上游零输出是常态)
         firstSeen = true
-        streamStarted = true
         clearTimeout(gotDataTimer) // 阶段B:等首 token,只受硬上限管
         onKa?.()
         return
       }
       firstSeen = true
-      streamStarted = true
       bump()
       if (m.chunk) {
         acc += m.chunk
