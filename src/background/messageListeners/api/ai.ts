@@ -157,6 +157,29 @@ function sseJsonToPortMessage(j: any, isFim: boolean, apiFormat: string): { chun
 // 流式:port 收到首条参数消息后开 SSE 流,逐 chunk post 回内容脚本
 export function handleAiStreamPort(port: any) {
   port.onMessage.addListener(async (message: any) => {
+    // 立刻 ack:内容脚本据此区分「SW 没收到消息」与「fetch 在途」。
+    // 整个 listener 包 try/catch:任何崩溃(异常/上下文失效)都把原因回传+打到 SW 控制台,
+    // 不再让内容脚本只能看到「连接中断」猜原因。
+    try {
+      port.postMessage({ ack: true })
+    }
+    catch {}
+    try {
+      await streamOnce(port, message)
+    }
+    catch (e: any) {
+      const why = `${e?.message || e}\n${String(e?.stack || '').split('\n').slice(1, 3).join(' | ')}`
+      console.error('[guly-ai SW] stream handler crashed:', why)
+      try {
+        port.postMessage({ error: `SW 异常:${String(why).slice(0, 200)}` })
+      }
+      catch { /* port 已死 */ }
+    }
+  })
+}
+
+async function streamOnce(port: any, message: any) {
+  {
     const pol = enforceAiPolicy(message)
     if (!pol.allowed) {
       try {
@@ -174,7 +197,7 @@ export function handleAiStreamPort(port: any) {
       if (!res.ok || !res.body) {
         const text = res.ok ? 'no body' : await res.text()
         try {
-          port.postMessage({ error: text.slice(0, 240) || `HTTP ${res.status}` })
+          port.postMessage({ error: `HTTP ${res.status} ${res.statusText || ''} · ${text.slice(0, 200)}`.trim() })
         }
         catch {}
         return
@@ -218,12 +241,13 @@ export function handleAiStreamPort(port: any) {
       catch {}
     }
     catch (e: any) {
+      // fetch/SSE 阶段错误:带 HTTP 状态与响应体片段回传,内容脚本原样上屏
       try {
         port.postMessage({ error: e?.message || 'network error' })
       }
       catch {}
     }
-  })
+  }
 }
 
 export default API_AI

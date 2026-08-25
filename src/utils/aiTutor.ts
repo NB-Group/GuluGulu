@@ -131,6 +131,8 @@ function streamChat(payload: any, onChunk: (acc: string) => void, onReasoning?: 
     port.onMessage.addListener((m: any) => {
       if (!m)
         return
+      if (m.ack)
+        return // SW 已收到,仅确认存活
       firstSeen = true
       bump()
       if (m.chunk) {
@@ -157,9 +159,20 @@ function streamChat(payload: any, onChunk: (acc: string) => void, onReasoning?: 
       }
     })
     port.onDisconnect.addListener(() => {
-      // 中断(新请求主动 abort / SW 被杀)→ 带原因返回,不再静默空串
-      if (tutorPort === port)
-        finish({ text: acc, error: acc ? undefined : (firstSeen ? '连接中断' : '连接立即中断(检查模型 BaseURL/Key 或 SW 控制台报错)') })
+      // 中断(新请求主动 abort / SW 被杀 / 上下文失效)→ 读断开原因原样带回,不再猜
+      if (tutorPort === port) {
+        const why: string = (port as any).error?.message
+          || (browser.runtime as any).lastError?.message
+          || ''
+        finish({
+          text: acc,
+          error: acc
+            ? undefined
+            : (firstSeen
+                ? `连接中断${why ? `:${why}` : ''}`
+                : `SW 未发任何消息即断开${why ? `:${why}` : '(若刚重载过扩展,请刷新洛谷页面;否则看 SW 控制台)'}`),
+        })
+      }
     })
     port.postMessage(payload)
   })
