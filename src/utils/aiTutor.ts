@@ -106,7 +106,7 @@ export interface StreamResult { text: string, error?: string }
  * 错误不再静默:HTTP 错误/连接中断/超时都会带 error 返回,调用方原样上屏。
  * 超时看门狗:首个响应 90s 内不到、或总时长 240s,按超时收场(推理模型备课很慢,给足)。
  */
-function streamChat(payload: any, onChunk: (acc: string) => void, onReasoning?: (acc: string) => void, _attempt = 0): Promise<StreamResult> {
+function streamChat(payload: any, onChunk: (acc: string) => void, onReasoning?: (acc: string) => void, onKa?: () => void, _attempt = 0): Promise<StreamResult> {
   const port = browser.runtime.connect({ name: 'guly-ai-stream' })
   tutorPort = port
   let acc = ''
@@ -124,25 +124,26 @@ function streamChat(payload: any, onChunk: (acc: string) => void, onReasoning?: 
       cleanup()
       resolve(r)
     }
-    // 看门狗:90s 没有任何数据(首字节超时)/ 总 240s 硬超时
+    // 看门狗:90s 完全静默(无数据**且无保活**)→ 视为连接挂了;总 420s 硬超时(深思考模型+中转排队很慢)。
+    // ka 保活会 bump 续命,所以 90s 只在「真的一字节都没有」时触发。
     const bump = () => {
       clearTimeout(gotDataTimer)
-      gotDataTimer = setTimeout(() => finish({ text: acc, error: `等待模型响应超时(90s 无数据)${acc ? '(已有部分输出)' : ''}` }), 90_000)
+      gotDataTimer = setTimeout(() => finish({ text: acc, error: `连接静默超时(90s 无任何数据/保活)${acc ? '(已有部分输出)' : ''}` }), 90_000)
     }
     let gotDataTimer = setTimeout(() => {
-      // 一个数据都没有 → 先自动重试一次(cpolar 类隧道常见抖动:连接挂着不出字节)
+      // 完全静默 → 先自动重试一次(隧道抖动:连接挂着不出字节)
       clearTimeout(hardTimer)
       clearTimeout(ackTimer)
       cleanup()
       if (_attempt === 0) {
-        console.warn('[guly-tutor] no data in 90s — retrying once (tunnel flake?)')
-        streamChat(payload, onChunk, onReasoning, _attempt + 1).then(r => !settled && (settled = true, resolve(r)))
+        console.warn('[guly-tutor] silent 90s — retrying once (tunnel flake?)')
+        streamChat(payload, onChunk, onReasoning, onKa, _attempt + 1).then(r => !settled && (settled = true, resolve(r)))
         return
       }
       settled = true
-      resolve({ text: '', error: '等待模型响应超时(两轮 90s 无数据)——中转连接挂起:SW 控制台看该请求是 fetching 后无 HTTP、还是 HTTP 后无流;本机直测端点若通即隧道抖动,稍后再试' })
+      resolve({ text: '', error: '连接静默超时(两轮 90s 无任何字节)——SW 控制台看该请求是 fetching 后无 HTTP、还是 HTTP 后无流;本机直测端点若通即隧道抖动,稍后再试' })
     }, 90_000)
-    const hardTimer = setTimeout(() => finish({ text: acc, error: `总时长超时(240s)${acc ? '(已有部分输出)' : ''}` }), 240_000)
+    const hardTimer = setTimeout(() => finish({ text: acc, error: `总时长超时(420s,模型太慢或中转排队)${acc ? '(已有部分输出)' : ''}` }), 420_000)
     // ack 仅作体检,不作判死依据(MV3 port 唤醒竞态会偶发丢 ack,实测时有时无)。
     // 3s 没 ack → 发 ping 探活,继续等;真正的生死判据 = port 断开 / 90s 零数据 / done、error。
     const ackTimer = setTimeout(() => {
@@ -166,6 +167,13 @@ function streamChat(payload: any, onChunk: (acc: string) => void, onReasoning?: 
       if (m.ack || m.pong) {
         console.log(`[guly-tutor] SW ${m.pong ? 'pong' : 'ack'} · proto v`, m.v)
         onAlive(m.v)
+        return
+      }
+      if (m.ka) {
+        // 连接保活(模型在思考/排队,还没吐首 token):看门狗续命,不算数据也不算死
+        firstSeen = true
+        bump()
+        onKa?.()
         return
       }
       firstSeen = true
@@ -261,7 +269,7 @@ const PREP_THINKING
 export async function runTutorPrep(
   pid: string,
   problemMarkdown: string,
-  hooks: { onChunk?: (acc: string) => void, onReasoning?: (acc: string) => void } = {},
+  hooks: { onChunk?: (acc: string) => void, onReasoning?: (acc: string) => void, onKa?: () => void } = {},
 ): Promise<TutorPlan | { error: string }> {
   const model = resolveAiModel(settings.value.aiTutor.modelId)
   if (!model || !model.modelName || !model.baseUrl)
@@ -298,6 +306,7 @@ export async function runTutorPrep(
     buildPayload(model, [{ role: 'system', content: sysBase + PREP_THINKING }, { role: 'user', content: user }], 4096, 0.3),
     acc => hooks.onChunk?.(acc),
     acc => hooks.onReasoning?.(acc),
+    () => hooks.onKa?.(),
   )
   if (!r.text.trim())
     return { error: `备课失败:${r.error || '模型无返回(检查 BaseURL / Key / 模型名,或看 SW 控制台)'}` }
@@ -353,7 +362,7 @@ export async function tutorRespond(
   problemMarkdown: string,
   code: string,
   chat: TutorMsg[],
-  hooks: { onChunk?: (acc: string) => void, onReasoning?: (acc: string) => void } = {},
+  hooks: { onChunk?: (acc: string) => void, onReasoning?: (acc: string) => void, onKa?: () => void } = {},
 ): Promise<string> {
   const plan = loadTutorPlan(pid)
   const model = resolveAiModel(settings.value.aiTutor.modelId)
@@ -375,6 +384,7 @@ export async function tutorRespond(
     buildPayload(model, messages, settings.value.aiTutor.thinking ? 1600 : 800, 0.5),
     acc => hooks.onChunk?.(acc),
     acc => hooks.onReasoning?.(acc),
+    () => hooks.onKa?.(),
   )
   if (r.text.trim()) {
     saveTutorChat(pid, [...chat, { role: 'assistant', content: r.text.trim(), ts: Date.now() }])

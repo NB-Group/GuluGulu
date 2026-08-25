@@ -43,6 +43,7 @@ const endRef = ref<HTMLElement>()
 const prepElapsed = ref(0)
 const prepThinkChars = ref(0)
 const prepOutChars = ref(0)
+const prepAlive = ref(false) // 收到过保活(连接活着,模型在思考/排队)
 const turnElapsed = ref(0)
 
 const modelReady = computed(() => !!settings.value.aiTutor.modelId)
@@ -84,6 +85,7 @@ async function prep(force = false) {
   prepThinking.value = ''
   prepThinkChars.value = 0
   prepOutChars.value = 0
+  prepAlive.value = false
   const stopPrepTimer = startTimer(v => (prepElapsed.value = v))
   try {
     const r = await runTutorPrep(props.problemId, props.problemMarkdown, {
@@ -92,6 +94,7 @@ async function prep(force = false) {
         prepThinking.value = acc
         prepThinkChars.value = acc.length
       },
+      onKa: () => { prepAlive.value = true },
     })
     if ('error' in r && r.error) {
       prepError.value = r.error
@@ -231,7 +234,7 @@ const prepStatus = computed(() => {
     if (prepOutChars.value)
       parts.push(`已写 ${fmtChars(prepOutChars.value)} 字`)
     else if (!prepThinkChars.value)
-      parts.push('等待模型响应…')
+      parts.push(prepAlive.value ? '已连接,模型思考/排队中…' : '等待模型响应…')
     return `备课中… ${parts.join(' · ')}`
   }
   if (pendingQuestion.value)

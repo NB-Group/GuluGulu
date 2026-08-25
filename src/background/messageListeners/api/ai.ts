@@ -219,6 +219,17 @@ async function streamOnce(port: any, message: any) {
       const reader = (res.body as any).getReader()
       const decoder = new TextDecoder()
       let buf = ''
+      let lastKa = 0
+      const ka = () => {
+        // 保活信号透传(≥5s 节流):HTTP 200 后模型可能思考/排队很久才吐首 token,
+        // 中转靠 : keepalive / ping 维持连接;内容脚本据此给看门狗续命,区分「模型慢」与「连接挂」
+        const now = Date.now()
+        if (now - lastKa > 5000) {
+          lastKa = now
+          try { port.postMessage({ ka: 1 }) }
+          catch { /* port 已死 */ }
+        }
+      }
       for (;;) {
         const { done, value } = await reader.read()
         if (done)
@@ -228,6 +239,10 @@ async function streamOnce(port: any, message: any) {
         while (nl >= 0) {
           const line = buf.slice(0, nl).trim()
           buf = buf.slice(nl + 1)
+          if (line.startsWith(':')) { // SSE 注释行(: keepalive)
+            ka()
+            continue
+          }
           if (!line.startsWith('data:'))
             continue // anthropic 的 event: 行天然跳过
           const data = line.slice(5).trim()
@@ -243,6 +258,9 @@ async function streamOnce(port: any, message: any) {
               try { port.postMessage(m) } catch { return }
               if (m.done)
                 return
+            }
+            else {
+              ka() // message_start/ping 等无负载事件:也算连接活着
             }
           }
           catch { /* keep-alive / 非 JSON 行,忽略 */ }
