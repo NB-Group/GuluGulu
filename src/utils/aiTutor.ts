@@ -121,6 +121,7 @@ function streamChat(payload: any, onChunk: (acc: string) => void, onReasoning?: 
       clearTimeout(gotDataTimer)
       clearTimeout(hardTimer)
       clearTimeout(ackTimer)
+      clearInterval(kaKeepalive)
       cleanup()
       resolve(r)
     }
@@ -136,6 +137,7 @@ function streamChat(payload: any, onChunk: (acc: string) => void, onReasoning?: 
       // 阶段A:完全没启动 → 隧道挂,重试一次
       clearTimeout(hardTimer)
       clearTimeout(ackTimer)
+      clearInterval(kaKeepalive)
       cleanup()
       if (_attempt === 0) {
         console.warn('[guly-tutor] stream never started in 90s — retrying once (tunnel hang?)')
@@ -155,6 +157,16 @@ function streamChat(payload: any, onChunk: (acc: string) => void, onReasoning?: 
       try { port.postMessage({ ping: 1 }) }
       catch { /* port 已死则等 onDisconnect */ }
     }, 3000)
+
+    // ★ MV3 SW 保活(Chrome 官方文档推荐模式):扩展 SW 30s 无「活动」会被休眠,而
+    // 流式 fetch 的 body 读取不算活动(Chromium 已知坑)→ 模型思考/排队期间 SW 被杀,
+    // 流死、port 断(日志停在 ← HTTP 200 即此;DevTools 开着会保活,所以开着控制台
+    // 反而"看起来正常")。页面每 20s 发一次 ping:入站消息重置 SW 空闲计时器,pong
+    // 回来同时给看门狗续命。
+    const kaKeepalive = setInterval(() => {
+      try { port.postMessage({ ping: 1 }) }
+      catch { finish({ text: acc, error: acc ? undefined : '保活 ping 失败(SW 已死)——请重试' }) }
+    }, 20_000)
 
     const onAlive = (v: any) => {
       clearTimeout(ackTimer)
