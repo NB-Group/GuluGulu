@@ -124,26 +124,29 @@ function streamChat(payload: any, onChunk: (acc: string) => void, onReasoning?: 
       cleanup()
       resolve(r)
     }
-    // 看门狗:90s 完全静默(无数据**且无保活**)→ 视为连接挂了;总 420s 硬超时(深思考模型+中转排队很慢)。
-    // ka 保活会 bump 续命,所以 90s 只在「真的一字节都没有」时触发。
+    // 看门狗分相(实测教训:glm 等深思考模型思考期上游零输出,连 keepalive 都只在开头发一次):
+    //  A. 流从未启动(连 message_start/ka 都没收到)→ 90s 判隧道挂,重试一次;
+    //  B. 流已启动但首 token 未到(模型思考)→ 不中断,只受 420s 硬上限保护;
+    //  C. 正在输出中途 90s 静默 → 连接断,带已有部分收场。
+    let streamStarted = false // 收到过任何流层信号(ka/chunk/reasoning)
     const bump = () => {
       clearTimeout(gotDataTimer)
-      gotDataTimer = setTimeout(() => finish({ text: acc, error: `连接静默超时(90s 无任何数据/保活)${acc ? '(已有部分输出)' : ''}` }), 90_000)
+      gotDataTimer = setTimeout(() => finish({ text: acc, error: `流中途静默超时(90s)${acc ? '(已有部分输出)' : ''}` }), 90_000)
     }
     let gotDataTimer = setTimeout(() => {
-      // 完全静默 → 先自动重试一次(隧道抖动:连接挂着不出字节)
+      // 阶段A:完全没启动 → 隧道挂,重试一次
       clearTimeout(hardTimer)
       clearTimeout(ackTimer)
       cleanup()
       if (_attempt === 0) {
-        console.warn('[guly-tutor] silent 90s — retrying once (tunnel flake?)')
+        console.warn('[guly-tutor] stream never started in 90s — retrying once (tunnel hang?)')
         streamChat(payload, onChunk, onReasoning, onKa, _attempt + 1).then(r => !settled && (settled = true, resolve(r)))
         return
       }
       settled = true
-      resolve({ text: '', error: '连接静默超时(两轮 90s 无任何字节)——SW 控制台看该请求是 fetching 后无 HTTP、还是 HTTP 后无流;本机直测端点若通即隧道抖动,稍后再试' })
+      resolve({ text: '', error: '流从未启动(两轮 90s 连 message_start 都没到)——SW 控制台看该请求是 fetching 后无 HTTP、还是 HTTP 后无字节;本机直测端点若通即隧道/代理问题' })
     }, 90_000)
-    const hardTimer = setTimeout(() => finish({ text: acc, error: `总时长超时(420s,模型太慢或中转排队)${acc ? '(已有部分输出)' : ''}` }), 420_000)
+    const hardTimer = setTimeout(() => finish({ text: acc, error: `总时长超时(420s,模型思考太久或中转排队)${acc ? '(已有部分输出)' : ''}` }), 420_000)
     // ack 仅作体检,不作判死依据(MV3 port 唤醒竞态会偶发丢 ack,实测时有时无)。
     // 3s 没 ack → 发 ping 探活,继续等;真正的生死判据 = port 断开 / 90s 零数据 / done、error。
     const ackTimer = setTimeout(() => {
@@ -170,13 +173,16 @@ function streamChat(payload: any, onChunk: (acc: string) => void, onReasoning?: 
         return
       }
       if (m.ka) {
-        // 连接保活(模型在思考/排队,还没吐首 token):看门狗续命,不算数据也不算死
+        // 流层保活(message_start/ping/keepalive):进入「已启动」相,中途静默计时重置;
+        // 首 token 前不再受 90s 判死(深思考模型思考期上游零输出是常态)
         firstSeen = true
-        bump()
+        streamStarted = true
+        clearTimeout(gotDataTimer) // 阶段B:等首 token,只受硬上限管
         onKa?.()
         return
       }
       firstSeen = true
+      streamStarted = true
       bump()
       if (m.chunk) {
         acc += m.chunk
@@ -221,6 +227,9 @@ function streamChat(payload: any, onChunk: (acc: string) => void, onReasoning?: 
   })
 
   function cleanup() {
+    // 先请 SW 取消在途 fetch(释放中转并发,别让放弃的请求继续占着模型),再断 port
+    try { port.postMessage({ abort: 1 }) }
+    catch { /* ignore */ }
     try { port.disconnect() }
     catch { /* ignore */ }
     if (tutorPort === port)

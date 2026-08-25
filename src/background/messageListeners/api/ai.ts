@@ -217,6 +217,15 @@ async function streamOnce(port: any, message: any) {
         return
       }
       const reader = (res.body as any).getReader()
+      // 内容脚本放弃(超时/关面板/新请求)→ 取消在途 fetch,释放中转/模型并发
+      const onAbort = (m: any) => {
+        if (m?.abort) {
+          try { reader.cancel() }
+          catch { /* ignore */ }
+        }
+      }
+      port.onMessage.addListener(onAbort)
+      let firstChunkLogged = false
       const decoder = new TextDecoder()
       let buf = ''
       let lastKa = 0
@@ -234,6 +243,10 @@ async function streamOnce(port: any, message: any) {
         const { done, value } = await reader.read()
         if (done)
           break
+        if (!firstChunkLogged) {
+          firstChunkLogged = true
+          console.log('[guly-ai SW] first body chunk arrived', value?.length, 'bytes')
+        }
         buf += decoder.decode(value, { stream: true })
         let nl = buf.indexOf('\n')
         while (nl >= 0) {
