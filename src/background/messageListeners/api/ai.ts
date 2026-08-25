@@ -160,6 +160,12 @@ export function sseJsonToPortMessage(j: any, isFim: boolean, apiFormat: string):
 // 流式:port 收到首条参数消息后开 SSE 流,逐 chunk post 回内容脚本
 export function handleAiStreamPort(port: any) {
   port.onMessage.addListener(async (message: any) => {
+    // 探活:内容脚本 ack 丢失(MV3 port 竞态)时发 ping,回 pong(带协议版本)
+    if (message?.ping) {
+      try { port.postMessage({ pong: true, v: AI_PROTO_VERSION }) }
+      catch { /* port 已死 */ }
+      return
+    }
     // 立刻 ack:内容脚本据此区分「SW 没收到消息」与「fetch 在途」。
     // 整个 listener 包 try/catch:任何崩溃(异常/上下文失效)都把原因回传+打到 SW 控制台,
     // 不再让内容脚本只能看到「连接中断」猜原因。

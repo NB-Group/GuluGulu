@@ -143,34 +143,29 @@ function streamChat(payload: any, onChunk: (acc: string) => void, onReasoning?: 
       resolve({ text: '', error: '等待模型响应超时(两轮 90s 无数据)——中转连接挂起:SW 控制台看该请求是 fetching 后无 HTTP、还是 HTTP 后无流;本机直测端点若通即隧道抖动,稍后再试' })
     }, 90_000)
     const hardTimer = setTimeout(() => finish({ text: acc, error: `总时长超时(240s)${acc ? '(已有部分输出)' : ''}` }), 240_000)
-    // 3s 内连 ack 都没有 → 先自动重试一次(排除 SW 唤醒竞态);再不行提示重载
+    // ack 仅作体检,不作判死依据(MV3 port 唤醒竞态会偶发丢 ack,实测时有时无)。
+    // 3s 没 ack → 发 ping 探活,继续等;真正的生死判据 = port 断开 / 90s 零数据 / done、error。
     const ackTimer = setTimeout(() => {
       if (firstSeen)
         return
-      clearTimeout(gotDataTimer)
-      clearTimeout(hardTimer)
-      cleanup()
-      if (_attempt === 0) {
-        console.warn('[guly-tutor] no ack in 3s — retrying once (SW wake race?)')
-        streamChat(payload, onChunk, onReasoning, _attempt + 1).then(r => !settled && (settled = true, resolve(r)))
-        return
-      }
-      settled = true
-      resolve({ text: '', error: '后台 SW 两次未应答 —— 打开 SW 控制台(chrome://extensions → service worker)看有无 [guly-ai SW] booted 日志:没有=扩展没加载新构建,有 booted 但没有 port connected=路由断了,把看到的那行发我' })
+      console.warn('[guly-tutor] no ack in 3s (MV3 port race?) — pinging SW, keep waiting')
+      try { port.postMessage({ ping: 1 }) }
+      catch { /* port 已死则等 onDisconnect */ }
     }, 3000)
+
+    const onAlive = (v: any) => {
+      clearTimeout(ackTimer)
+      firstSeen = true
+      if (typeof v === 'number' && v < AI_PROTO_VERSION)
+        finish({ text: '', error: `后台是旧版(协议 v${v} < v${AI_PROTO_VERSION})——请到 chrome://extensions 点「刷新」重载扩展,然后 F5 刷新本页` })
+    }
 
     port.onMessage.addListener((m: any) => {
       if (!m)
         return
-      if (m.ack) {
-        // ack 到了:取消「无应答」计时器(否则 3s 后会把正常在途的请求误杀重试)
-        clearTimeout(ackTimer)
-        firstSeen = true
-        console.log('[guly-tutor] SW ack · proto v', m.v)
-        // 版本握手:SW 报的协议版本旧于本脚本 → 提示重载扩展(SW 是旧构建,新格式不转发)
-        if (typeof m.v === 'number' && m.v < AI_PROTO_VERSION) {
-          finish({ text: '', error: `后台是旧版(协议 v${m.v} < v${AI_PROTO_VERSION})——请到 chrome://extensions 点「刷新」重载扩展,然后 F5 刷新本页` })
-        }
+      if (m.ack || m.pong) {
+        console.log(`[guly-tutor] SW ${m.pong ? 'pong' : 'ack'} · proto v`, m.v)
+        onAlive(m.v)
         return
       }
       firstSeen = true
