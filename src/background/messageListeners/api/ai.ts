@@ -163,10 +163,13 @@ export function handleAiStreamPort(port: any) {
     // 立刻 ack:内容脚本据此区分「SW 没收到消息」与「fetch 在途」。
     // 整个 listener 包 try/catch:任何崩溃(异常/上下文失效)都把原因回传+打到 SW 控制台,
     // 不再让内容脚本只能看到「连接中断」猜原因。
+    console.log('[guly-ai SW] stream req received · apiFormat=', message?.apiFormat, '· mode=', message?.mode, '· intensity=', message?.intensity)
     try {
       port.postMessage({ ack: true, v: AI_PROTO_VERSION })
     }
-    catch {}
+    catch (e: any) {
+      console.error('[guly-ai SW] ack postMessage failed:', e?.message || e)
+    }
     try {
       await streamOnce(port, message)
     }

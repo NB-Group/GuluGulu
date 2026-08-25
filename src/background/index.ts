@@ -44,3 +44,6 @@ if (process.env.FIREFOX) {
 // Setup all message listeners
 setupApiMsgLstnrs()
 setupTabMsgLstnrs()
+
+// 启动灯日志:SW 控制台看到这行 = 新版后台确实在跑(排查「旧构建/未应答」类问题第一步)
+console.log('[guly-ai SW] booted · proto v2 · listeners ready')

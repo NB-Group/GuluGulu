@@ -33,6 +33,7 @@ export function setupApiMsgLstnrs() {
 function handleConnect(port: any) {
   // AI 流式补全专用通道:逐 chunk 推 ghost
   if (port.name === 'guly-ai-stream') {
+    console.log('[guly-ai SW] stream port connected')
     handleAiStreamPort(port)
     return
   }

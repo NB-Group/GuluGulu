@@ -106,7 +106,7 @@ export interface StreamResult { text: string, error?: string }
  * 错误不再静默:HTTP 错误/连接中断/超时都会带 error 返回,调用方原样上屏。
  * 超时看门狗:首个响应 90s 内不到、或总时长 240s,按超时收场(推理模型备课很慢,给足)。
  */
-function streamChat(payload: any, onChunk: (acc: string) => void, onReasoning?: (acc: string) => void): Promise<StreamResult> {
+function streamChat(payload: any, onChunk: (acc: string) => void, onReasoning?: (acc: string) => void, _attempt = 0): Promise<StreamResult> {
   const port = browser.runtime.connect({ name: 'guly-ai-stream' })
   tutorPort = port
   let acc = ''
@@ -131,16 +131,27 @@ function streamChat(payload: any, onChunk: (acc: string) => void, onReasoning?: 
     }
     let gotDataTimer = setTimeout(() => finish({ text: '', error: '等待模型响应超时(90s 无数据)' }), 90_000)
     const hardTimer = setTimeout(() => finish({ text: acc, error: `总时长超时(240s)${acc ? '(已有部分输出)' : ''}` }), 240_000)
-    // 3s 内连 ack 都没有 → SW 是旧构建(没有 ack 机制),直接提示重载而不是干等超时
+    // 3s 内连 ack 都没有 → 先自动重试一次(排除 SW 唤醒竞态);再不行提示重载
     const ackTimer = setTimeout(() => {
-      if (!firstSeen)
-        finish({ text: '', error: '后台 SW 未应答(旧版构建?)——请到 chrome://extensions 点「刷新」重载扩展,再 F5 本页' })
+      if (firstSeen)
+        return
+      clearTimeout(gotDataTimer)
+      clearTimeout(hardTimer)
+      cleanup()
+      if (_attempt === 0) {
+        console.warn('[guly-tutor] no ack in 3s — retrying once (SW wake race?)')
+        streamChat(payload, onChunk, onReasoning, _attempt + 1).then(r => !settled && (settled = true, resolve(r)))
+        return
+      }
+      settled = true
+      resolve({ text: '', error: '后台 SW 两次未应答 —— 打开 SW 控制台(chrome://extensions → service worker)看有无 [guly-ai SW] booted 日志:没有=扩展没加载新构建,有 booted 但没有 port connected=路由断了,把看到的那行发我' })
     }, 3000)
 
     port.onMessage.addListener((m: any) => {
       if (!m)
         return
       if (m.ack) {
+        console.log('[guly-tutor] SW ack · proto v', m.v)
         // 版本握手:SW 报的协议版本旧于本脚本 → 提示重载扩展(SW 是旧构建,新格式不转发)
         if (typeof m.v === 'number' && m.v < AI_PROTO_VERSION) {
           finish({ text: '', error: `后台是旧版(协议 v${m.v} < v${AI_PROTO_VERSION})——请到 chrome://extensions 点「刷新」重载扩展,然后 F5 刷新本页` })

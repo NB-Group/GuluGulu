@@ -237,7 +237,7 @@ const prepStatus = computed(() => {
   if (pendingQuestion.value)
     return '备课中,你的问题已排队,备完自动发'
   if (prepError.value)
-    return `备课失败:${prepError.value}`
+    return prepError.value.startsWith('备课失败') ? prepError.value : `备课失败:${prepError.value}`
   if (plan.value)
     return `备课完成 ✓(${plan.value.source === 'solutions' ? '基于题解' : '模型自解,未经社区验证'})`
   return modelReady.value ? '尚未备课' : '未选导师模型'
