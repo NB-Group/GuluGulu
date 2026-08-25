@@ -20,6 +20,9 @@ import { resolveAiModel, settings } from '~/logic'
 import type { AiModel } from '~/logic'
 import { fetchLentilleContext } from './luogu-api'
 
+/** port 协议版本(与 background/messageListeners/api/ai.ts 的 AI_PROTO_VERSION 同步,改协议时两边 +1)。 */
+const AI_PROTO_VERSION = 2
+
 // ============================================================
 // 持久化
 // ============================================================
@@ -117,6 +120,7 @@ function streamChat(payload: any, onChunk: (acc: string) => void, onReasoning?: 
       settled = true
       clearTimeout(gotDataTimer)
       clearTimeout(hardTimer)
+      clearTimeout(ackTimer)
       cleanup()
       resolve(r)
     }
@@ -127,12 +131,22 @@ function streamChat(payload: any, onChunk: (acc: string) => void, onReasoning?: 
     }
     let gotDataTimer = setTimeout(() => finish({ text: '', error: '等待模型响应超时(90s 无数据)' }), 90_000)
     const hardTimer = setTimeout(() => finish({ text: acc, error: `总时长超时(240s)${acc ? '(已有部分输出)' : ''}` }), 240_000)
+    // 3s 内连 ack 都没有 → SW 是旧构建(没有 ack 机制),直接提示重载而不是干等超时
+    const ackTimer = setTimeout(() => {
+      if (!firstSeen)
+        finish({ text: '', error: '后台 SW 未应答(旧版构建?)——请到 chrome://extensions 点「刷新」重载扩展,再 F5 本页' })
+    }, 3000)
 
     port.onMessage.addListener((m: any) => {
       if (!m)
         return
-      if (m.ack)
-        return // SW 已收到,仅确认存活
+      if (m.ack) {
+        // 版本握手:SW 报的协议版本旧于本脚本 → 提示重载扩展(SW 是旧构建,新格式不转发)
+        if (typeof m.v === 'number' && m.v < AI_PROTO_VERSION) {
+          finish({ text: '', error: `后台是旧版(协议 v${m.v} < v${AI_PROTO_VERSION})——请到 chrome://extensions 点「刷新」重载扩展,然后 F5 刷新本页` })
+        }
+        return
+      }
       firstSeen = true
       bump()
       if (m.chunk) {

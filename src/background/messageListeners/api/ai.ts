@@ -16,6 +16,9 @@
  */
 import { enforceAiPolicy } from './ai.policy'
 
+/** port 协议版本:内容脚本(aiTutor.ts 有同名常量)据此检测「SW 是旧构建」并提示重载。改协议时 +1。 */
+const AI_PROTO_VERSION = 2
+
 function buildUrlAndBody(message: any): { url: string, body: any } {
   const {
     mode = 'chat',
@@ -123,8 +126,8 @@ const API_AI = {
   },
 }
 
-/** 单条 SSE data JSON → 归一化 {chunk?}/{reasoning?}/{done?}/{error?},两格式通用。 */
-function sseJsonToPortMessage(j: any, isFim: boolean, apiFormat: string): { chunk?: string, reasoning?: string, done?: boolean, error?: string } | null {
+/** 单条 SSE data JSON → 归一化 {chunk?}/{reasoning?}/{done?}/{error?},两格式通用。(导出供单测) */
+export function sseJsonToPortMessage(j: any, isFim: boolean, apiFormat: string): { chunk?: string, reasoning?: string, done?: boolean, error?: string } | null {
   if (apiFormat === 'anthropic') {
     const t = j?.type
     if (t === 'content_block_delta') {
@@ -161,7 +164,7 @@ export function handleAiStreamPort(port: any) {
     // 整个 listener 包 try/catch:任何崩溃(异常/上下文失效)都把原因回传+打到 SW 控制台,
     // 不再让内容脚本只能看到「连接中断」猜原因。
     try {
-      port.postMessage({ ack: true })
+      port.postMessage({ ack: true, v: AI_PROTO_VERSION })
     }
     catch {}
     try {
