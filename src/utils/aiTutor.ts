@@ -129,7 +129,19 @@ function streamChat(payload: any, onChunk: (acc: string) => void, onReasoning?: 
       clearTimeout(gotDataTimer)
       gotDataTimer = setTimeout(() => finish({ text: acc, error: `等待模型响应超时(90s 无数据)${acc ? '(已有部分输出)' : ''}` }), 90_000)
     }
-    let gotDataTimer = setTimeout(() => finish({ text: '', error: '等待模型响应超时(90s 无数据)' }), 90_000)
+    let gotDataTimer = setTimeout(() => {
+      // 一个数据都没有 → 先自动重试一次(cpolar 类隧道常见抖动:连接挂着不出字节)
+      clearTimeout(hardTimer)
+      clearTimeout(ackTimer)
+      cleanup()
+      if (_attempt === 0) {
+        console.warn('[guly-tutor] no data in 90s — retrying once (tunnel flake?)')
+        streamChat(payload, onChunk, onReasoning, _attempt + 1).then(r => !settled && (settled = true, resolve(r)))
+        return
+      }
+      settled = true
+      resolve({ text: '', error: '等待模型响应超时(两轮 90s 无数据)——中转连接挂起:SW 控制台看该请求是 fetching 后无 HTTP、还是 HTTP 后无流;本机直测端点若通即隧道抖动,稍后再试' })
+    }, 90_000)
     const hardTimer = setTimeout(() => finish({ text: acc, error: `总时长超时(240s)${acc ? '(已有部分输出)' : ''}` }), 240_000)
     // 3s 内连 ack 都没有 → 先自动重试一次(排除 SW 唤醒竞态);再不行提示重载
     const ackTimer = setTimeout(() => {

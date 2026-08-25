@@ -199,7 +199,9 @@ async function streamOnce(port: any, message: any) {
     const apiFormat = guarded.apiFormat || 'openai'
     const { url, body } = buildUrlAndBody(guarded)
     try {
+      console.log('[guly-ai SW] fetching →', url.replace(/\/\/[^/]+/, '//<host>'), `(${Math.round(JSON.stringify(body).length / 1024)}KB body)`)
       const res = await fetch(url, { method: 'POST', headers: authHeaders(message.apiKey || '', apiFormat), body: JSON.stringify(body) })
+      console.log('[guly-ai SW] ← HTTP', res.status, res.statusText)
       if (!res.ok || !res.body) {
         const text = res.ok ? 'no body' : await res.text()
         try {
