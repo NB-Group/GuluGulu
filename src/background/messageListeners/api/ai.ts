@@ -196,6 +196,12 @@ export function handleAiStreamPort(port: any) {
       reply({ pong: true, v: AI_PROTO_VERSION })
       return
     }
+    // ⚠️ abort 只给 streamOnce 内的 onAbort 用(取消在途 fetch),绝不能落进主流程 ——
+    // 否则页面 cleanup 发 {abort} 会被当成新流请求,再起一条垃圾 fetch + 搅浑回传。
+    if (message?.abort) {
+      console.log('[guly-ai SW] abort received(由 streamOnce 的 onAbort 处理)')
+      return
+    }
     // 立刻 ack:内容脚本据此区分「SW 没收到消息」与「fetch 在途」。
     // 整个 listener 包 try/catch:任何崩溃(异常/上下文失效)都把原因回传+打到 SW 控制台,
     // 不再让内容脚本只能看到「连接中断」猜原因。
