@@ -119,6 +119,13 @@ function streamChat(payload: any, onChunk: (acc: string) => void, onReasoning?: 
   tlog(`S2 port connect 'guly-ai-stream' (attempt ${_attempt + 1}) →`, (payload.baseURL || '').replace(/\/\/.*@/, '//***@'), payload.model, `fmt=${payload.apiFormat} msgs=${payload.messages?.length} maxTok=${payload.maxTokens} disableThinking=${payload.disableThinking}`)
   const port = browser.runtime.connect({ name: 'guly-ai-stream' })
   tutorPort = port
+  // ★ SW→页面的 port 投递在 MV3 下不可靠(实测:SW 已 ack/推 chunk,页面 port.onMessage 3s 零到达)。
+  // 双通道:payload 带 tutorId,新 SW 走 tabs.sendMessage 定向回传(本监听器收);
+  // 旧 SW(未重载)仍走 port.onMessage —— 两条不会同时来,无重复。
+  const tutorId = `t${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`
+  let viaTabs = 0
+  let viaPort = 0
+  let detachTabs: () => void = () => {}
   tlog('S3 port 已建立,postMessage 发送中, payloadBytes≈', JSON.stringify(payload).length)
   let acc = ''
   let reasoningAcc = ''
@@ -162,8 +169,8 @@ function streamChat(payload: any, onChunk: (acc: string) => void, onReasoning?: 
     const ackTimer = setTimeout(() => {
       if (firstSeen)
         return
-      console.warn('[guly-tutor] no ack in 3s (MV3 port race?) — pinging SW, keep waiting')
-      try { port.postMessage({ ping: 1 }) }
+      console.warn('[guly-tutor] no ack in 3s — pinging SW, keep waiting')
+      try { port.postMessage({ ping: 1, tutorId }) }
       catch { /* port 已死则等 onDisconnect */ }
     }, 3000)
 
@@ -174,12 +181,11 @@ function streamChat(payload: any, onChunk: (acc: string) => void, onReasoning?: 
         finish({ text: '', error: `后台是旧版(协议 v${v} < v${AI_PROTO_VERSION})——请到 chrome://extensions 点「刷新」重载扩展,然后 F5 刷新本页` })
     }
 
-    port.onMessage.addListener((m: any) => {
-      tlog('S4 ← SW msg:', m && (m.ack ? `ack v${m.v}` : m.pong ? `pong v${m.v}` : m.ka ? 'ka' : m.chunk ? `chunk +${m.chunk.length} (acc=${acc.length + m.chunk.length})` : m.reasoning ? `reasoning +${m.reasoning.length}` : m.done ? 'DONE' : m.blocked ? `blocked:${m.reason}` : m.error ? `error:${String(m.error).slice(0, 120)}` : JSON.stringify(m).slice(0, 120)))
+    const handleMsg = (m: any, ch: 'tabs' | 'port') => {
+      tlog(`S4 ← SW msg(${ch}):`, m && (m.ack ? `ack v${m.v}` : m.pong ? `pong v${m.v}` : m.ka ? 'ka' : m.chunk ? `chunk +${m.chunk.length} (acc=${acc.length + m.chunk.length})` : m.reasoning ? `reasoning +${m.reasoning.length}` : m.done ? 'DONE' : m.blocked ? `blocked:${m.reason}` : m.error ? `error:${String(m.error).slice(0, 120)}` : JSON.stringify(m).slice(0, 120)))
       if (!m)
         return
       if (m.ack || m.pong) {
-        console.log(`[guly-tutor] SW ${m.pong ? 'pong' : 'ack'} · proto v`, m.v)
         onAlive(m.v)
         return
       }
@@ -215,30 +221,43 @@ function streamChat(payload: any, onChunk: (acc: string) => void, onReasoning?: 
         console.warn('[guly-tutor] stream error', m.error)
         finish({ text: acc, error: String(m.error).slice(0, 200) })
       }
+    }
+
+    // 通道1:tabs.sendMessage 定向回传(新 SW 主通道)
+    const onTabsMsg = (msg: any) => {
+      if (msg && msg.tutorStream === tutorId && msg.m) {
+        viaTabs++
+        handleMsg(msg.m, 'tabs')
+      }
+    }
+    browser.runtime.onMessage.addListener(onTabsMsg)
+    detachTabs = () => browser.runtime.onMessage.removeListener(onTabsMsg)
+    // 通道2:port 回传(旧 SW 兼容)
+    port.onMessage.addListener((m: any) => {
+      viaPort++
+      handleMsg(m, 'port')
     })
     port.onDisconnect.addListener(() => {
-      // 中断(新请求主动 abort / SW 被杀 / 上下文失效)→ 读断开原因原样带回,不再猜
-      tlog('S5 port onDisconnect · firstSeen=', firstSeen, 'accLen=', acc.length, 'err=', (port as any).error?.message || (browser.runtime as any).lastError?.message || '(无)')
-      if (tutorPort === port) {
+      // 中断(新请求主动 abort / SW 被杀 / 上下文失效)→ 读断开原因原样带回,不再猜。
+      // tabs 通道不依赖 port,port 断了但已收到过 tabs 数据 → 正常等 done,不当失败。
+      tlog('S5 port onDisconnect · firstSeen=', firstSeen, 'viaTabs=', viaTabs, 'viaPort=', viaPort, 'accLen=', acc.length, 'err=', (port as any).error?.message || '(无)')
+      if (tutorPort === port && !settled && !firstSeen) {
         const why: string = (port as any).error?.message
           || (browser.runtime as any).lastError?.message
           || ''
         finish({
           text: acc,
-          error: acc
-            ? undefined
-            : (firstSeen
-                ? `连接中断${why ? `:${why}` : ''}`
-                : `SW 未发任何消息即断开${why ? `:${why}` : '(若刚重载过扩展,请刷新洛谷页面;否则看 SW 控制台)'}`),
+          error: `SW 未发任何消息即断开${why ? `:${why}` : '(若刚重载过扩展,请刷新洛谷页面;否则看 SW 控制台)'}`,
         })
       }
     })
-    port.postMessage(payload)
+    port.postMessage({ ...payload, tutorId })
   })
 
   function cleanup() {
+    detachTabs()
     // 先请 SW 取消在途 fetch(释放中转并发,别让放弃的请求继续占着模型),再断 port
-    try { port.postMessage({ abort: 1 }) }
+    try { port.postMessage({ abort: 1, tutorId }) }
     catch { /* ignore */ }
     try { port.disconnect() }
     catch { /* ignore */ }
