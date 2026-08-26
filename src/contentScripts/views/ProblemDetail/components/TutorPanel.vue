@@ -12,7 +12,7 @@ import { parseMarkdownContent } from '~/utils/markdown'
 import { renderIcon } from '~/utils/icons'
 import {
   clearTutorChat, consumeTutorAc, loadTutorChat, loadTutorPlan, runTutorPrep,
-  saveTutorChat, tutorRespond, abortTutorStream,
+  saveTutorChat, tutorRespond, abortTutorStream, tlog,
 } from '~/utils/aiTutor'
 import type { TutorMsg, TutorPlan } from '~/utils/aiTutor'
 
@@ -124,6 +124,7 @@ async function prep(force = false) {
 /** 发送一轮:持久化 user 消息 → 流式导师回复(tutorRespond 负责持久化 assistant)。 */
 async function send(preset?: string) {
   const text = (preset ?? input.value).trim()
+  tlog('T2 send:', text.slice(0, 40), 'prepping=', prepping.value, 'plan=', !!plan.value)
   if (!text || sending.value)
     return
   if (prepping.value || !plan.value) {
@@ -214,6 +215,7 @@ watch(() => props.problemId, (pid) => {
 })
 
 onMounted(() => {
+  tlog('T0 面板挂载, pid=', props.problemId, 'mdLen=', props.problemMarkdown.length, '已有plan=', !!loadTutorPlan(props.problemId), 'modelId=', settings.value.aiTutor.modelId || '(未选!)')
   msgs.value = loadTutorChat(props.problemId)
   plan.value = loadTutorPlan(props.problemId)
   // AC 庆祝:提交后回来自动报喜(还没备课时,等备课完成再发,免得被 send 的备课检查挡掉)

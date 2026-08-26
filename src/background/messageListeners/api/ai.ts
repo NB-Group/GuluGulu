@@ -231,6 +231,7 @@ async function streamOnce(port: any, message: any) {
       // 内容脚本放弃(超时/关面板/新请求)→ 取消在途 fetch,释放中转/模型并发
       const onAbort = (m: any) => {
         if (m?.abort) {
+          console.log('[guly-ai SW] 收到 abort,取消在途 fetch')
           try { reader.cancel() }
           catch { /* ignore */ }
         }
@@ -240,6 +241,8 @@ async function streamOnce(port: any, message: any) {
       const decoder = new TextDecoder()
       let buf = ''
       let lastKa = 0
+      let lineCount = 0
+      let chunkCount = 0
       const ka = () => {
         // 保活信号透传(≥5s 节流):HTTP 200 后模型可能思考/排队很久才吐首 token,
         // 中转靠 : keepalive / ping 维持连接;内容脚本据此给看门狗续命,区分「模型慢」与「连接挂」
@@ -252,11 +255,13 @@ async function streamOnce(port: any, message: any) {
       }
       for (;;) {
         const { done, value } = await reader.read()
-        if (done)
+        if (done) {
+          console.log('[guly-ai SW] body 流结束 · SSE行=', lineCount, 'chunk=', chunkCount)
           break
+        }
         if (!firstChunkLogged) {
           firstChunkLogged = true
-          console.log('[guly-ai SW] first body chunk arrived', value?.length, 'bytes')
+          console.log('[guly-ai SW] first body chunk arrived', value?.length, 'bytes · ct=', res.headers?.get?.('content-type'))
         }
         buf += decoder.decode(value, { stream: true })
         let nl = buf.indexOf('\n')
@@ -272,13 +277,20 @@ async function streamOnce(port: any, message: any) {
           const data = line.slice(5).trim()
           if (!data)
             continue
+          lineCount++
+          if (lineCount <= 3 || lineCount % 20 === 0)
+            console.log('[guly-ai SW] SSE line', lineCount, ':', data.slice(0, 140))
           if (data === '[DONE]') { // OpenAI 结束哨兵
+            console.log('[guly-ai SW] [DONE] · 共', lineCount, '行')
             try { port.postMessage({ done: true }) } catch {}
             return
           }
           try {
             const m = sseJsonToPortMessage(JSON.parse(data), isFim, apiFormat)
             if (m) {
+              chunkCount++
+              if (m.error)
+                console.warn('[guly-ai SW] SSE error event:', m.error)
               try { port.postMessage(m) } catch { return }
               if (m.done)
                 return

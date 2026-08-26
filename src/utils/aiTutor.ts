@@ -23,6 +23,12 @@ import { fetchLentilleContext } from './luogu-api'
 /** port 协议版本(与 background/messageListeners/api/ai.ts 的 AI_PROTO_VERSION 同步,改协议时两边 +1)。 */
 const AI_PROTO_VERSION = 2
 
+/** 密集调试日志(毫秒时间戳 + 步骤号)。排查「点了没反应」:页面控制台看 [guly-tutor] 停在哪一步。 */
+let __seq = 0
+export function tlog(...args: any[]) {
+  console.log(`[guly-tutor +${Date.now() % 1000000} #${++__seq}]`, ...args)
+}
+
 // ============================================================
 // 持久化
 // ============================================================
@@ -110,8 +116,10 @@ export interface StreamResult { text: string, error?: string }
  * 超时看门狗:首个响应 90s 内不到、或总时长 240s,按超时收场(推理模型备课很慢,给足)。
  */
 function streamChat(payload: any, onChunk: (acc: string) => void, onReasoning?: (acc: string) => void, onKa?: () => void, _attempt = 0): Promise<StreamResult> {
+  tlog(`S2 port connect 'guly-ai-stream' (attempt ${_attempt + 1}) →`, (payload.baseURL || '').replace(/\/\/.*@/, '//***@'), payload.model, `fmt=${payload.apiFormat} msgs=${payload.messages?.length} maxTok=${payload.maxTokens} disableThinking=${payload.disableThinking}`)
   const port = browser.runtime.connect({ name: 'guly-ai-stream' })
   tutorPort = port
+  tlog('S3 port 已建立,postMessage 发送中, payloadBytes≈', JSON.stringify(payload).length)
   let acc = ''
   let reasoningAcc = ''
   let firstSeen = false
@@ -167,6 +175,7 @@ function streamChat(payload: any, onChunk: (acc: string) => void, onReasoning?: 
     }
 
     port.onMessage.addListener((m: any) => {
+      tlog('S4 ← SW msg:', m && (m.ack ? `ack v${m.v}` : m.pong ? `pong v${m.v}` : m.ka ? 'ka' : m.chunk ? `chunk +${m.chunk.length} (acc=${acc.length + m.chunk.length})` : m.reasoning ? `reasoning +${m.reasoning.length}` : m.done ? 'DONE' : m.blocked ? `blocked:${m.reason}` : m.error ? `error:${String(m.error).slice(0, 120)}` : JSON.stringify(m).slice(0, 120)))
       if (!m)
         return
       if (m.ack || m.pong) {
@@ -209,6 +218,7 @@ function streamChat(payload: any, onChunk: (acc: string) => void, onReasoning?: 
     })
     port.onDisconnect.addListener(() => {
       // 中断(新请求主动 abort / SW 被杀 / 上下文失效)→ 读断开原因原样带回,不再猜
+      tlog('S5 port onDisconnect · firstSeen=', firstSeen, 'accLen=', acc.length, 'err=', (port as any).error?.message || (browser.runtime as any).lastError?.message || '(无)')
       if (tutorPort === port) {
         const why: string = (port as any).error?.message
           || (browser.runtime as any).lastError?.message
@@ -253,10 +263,12 @@ export async function fetchSolutionTexts(pid: string, limit = 3, maxLen = 4000):
     return solutionCache.get(pid)!
   let texts: string[] = []
   try {
+    tlog('S1 抓题解 start', pid)
     const ctx = await Promise.race([
       fetchLentilleContext(`${location.origin}/problem/solution/${pid}`),
-      new Promise<null>(resolve => setTimeout(() => resolve(null), 15_000)),
+      new Promise<null>(resolve => setTimeout(() => { tlog('S1 抓题解 15s 超时,放弃题解回退自解'); resolve(null) }, 15_000)),
     ])
+    tlog('S1 抓题解 done, ctx=', ctx ? (ctx.__needLogin ? 'needLogin' : 'ok') : 'null/timeout')
     const cd: any = (ctx as any)?.data || (ctx as any)?.currentData || {}
     const raw = cd.solutions?.result || cd.solutions || []
     const items = (Array.isArray(raw) ? raw : [])
@@ -267,8 +279,9 @@ export async function fetchSolutionTexts(pid: string, limit = 3, maxLen = 4000):
       const body = s.content.length > maxLen ? `${s.content.slice(0, maxLen)}…` : s.content
       return `【题解 ${i + 1}${s.verified ? ' · 官方/审核通过' : ''}】\n${body}`
     })
+    tlog('S1 题解解析:', items.length, '篇含正文, 取', texts.length)
   }
-  catch { /* 401 / 网络错误等 → 空数组 */ }
+  catch (e: any) { tlog('S1 抓题解异常(回退自解):', e?.message || e) /* 401 / 网络错误等 → 空数组 */ }
   solutionCache.set(pid, texts)
   return texts
 }
@@ -285,13 +298,16 @@ export async function runTutorPrep(
   problemMarkdown: string,
   hooks: { onChunk?: (acc: string) => void, onReasoning?: (acc: string) => void, onKa?: () => void, onPhase?: (p: 'solutions' | 'model') => void } = {},
 ): Promise<TutorPlan | { error: string }> {
+  tlog('P0 prep start, pid=', pid, 'markdownLen=', problemMarkdown.length)
   const model = resolveAiModel(settings.value.aiTutor.modelId)
+  tlog('P1 模型解析:', model ? `${model.name} · ${model.modelName} · ${(model.baseUrl || '').replace(/\/\/.*@/, '//***@')} · fmt=${model.apiFormat ?? 'openai'}` : 'null')
   if (!model || !model.modelName || !model.baseUrl)
     return { error: '请先在 设置 → AI → 思路导师模块 选择模型' }
 
   hooks.onPhase?.('solutions')
   const solutions = await fetchSolutionTexts(pid)
   hooks.onPhase?.('model')
+  tlog('P2 题解就绪:', solutions.length, '篇')
   const sysBase = solutions.length
     ? [
         '你是一名算法竞赛教练,正在为一道真题「备课」。题解原文已提供(社区/官方,视为 ground truth)。',
