@@ -45,6 +45,8 @@ const prepThinkChars = ref(0)
 const prepOutChars = ref(0)
 const prepAlive = ref(false) // 收到过保活(连接活着,模型在思考/排队)
 const turnElapsed = ref(0)
+// 备课阶段:solutions=页面侧抓题解(不经 SW!卡住则 SW 永远没请求)/ model=流式问模型
+const prepPhase = ref<'solutions' | 'model'>('solutions')
 
 const modelReady = computed(() => !!settings.value.aiTutor.modelId)
 
@@ -86,6 +88,7 @@ async function prep(force = false) {
   prepThinkChars.value = 0
   prepOutChars.value = 0
   prepAlive.value = false
+  prepPhase.value = 'solutions'
   const stopPrepTimer = startTimer(v => (prepElapsed.value = v))
   try {
     const r = await runTutorPrep(props.problemId, props.problemMarkdown, {
@@ -95,6 +98,7 @@ async function prep(force = false) {
         prepThinkChars.value = acc.length
       },
       onKa: () => { prepAlive.value = true },
+      onPhase: (p) => { prepPhase.value = p },
     })
     if ('error' in r && r.error) {
       prepError.value = r.error
@@ -228,6 +232,8 @@ onUnmounted(() => abortTutorStream())
 
 const prepStatus = computed(() => {
   if (prepping.value) {
+    if (prepPhase.value === 'solutions')
+      return `抓题解中… ${prepElapsed.value}s(页面侧请求,15s 超时回退自解)`
     const parts = [`${prepElapsed.value}s`]
     if (prepThinkChars.value)
       parts.push(`思考 ${fmtChars(prepThinkChars.value)} 字`)

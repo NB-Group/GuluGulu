@@ -81,7 +81,7 @@ export function abortTutorStream() {
   tutorPort = null
 }
 
-function buildPayload(model: AiModel, messages: any[], maxTokens: number, temperature: number) {
+function buildPayload(model: AiModel, messages: any[], maxTokens: number, temperature: number, disableThinking = true) {
   return {
     mode: 'chat',
     // SW 的 enforceAiPolicy 守卫字段:导师属「纯文字引导」(guide 类,苏格拉底不代写整段代码);
@@ -92,6 +92,9 @@ function buildPayload(model: AiModel, messages: any[], maxTokens: number, temper
     apiKey: model.apiKey,
     model: model.modelName,
     apiFormat: model.apiFormat ?? 'openai',
+    // 关键:关思考。GLM 经中转思考时上游长时间零输出(实测 >420s),备课/授课都要默认直出。
+    // Anthropic 协议 → SW 译成 body.thinking={type:'disabled'}(new-api 类中转再译 enable_thinking=false)。
+    disableThinking,
     messages,
     maxTokens,
     temperature,
@@ -121,7 +124,6 @@ function streamChat(payload: any, onChunk: (acc: string) => void, onReasoning?: 
       clearTimeout(gotDataTimer)
       clearTimeout(hardTimer)
       clearTimeout(ackTimer)
-      clearInterval(kaKeepalive)
       cleanup()
       resolve(r)
     }
@@ -137,7 +139,6 @@ function streamChat(payload: any, onChunk: (acc: string) => void, onReasoning?: 
       // 阶段A:完全没启动 → 隧道挂,重试一次
       clearTimeout(hardTimer)
       clearTimeout(ackTimer)
-      clearInterval(kaKeepalive)
       cleanup()
       if (_attempt === 0) {
         console.warn('[guly-tutor] stream never started in 90s — retrying once (tunnel hang?)')
@@ -157,16 +158,6 @@ function streamChat(payload: any, onChunk: (acc: string) => void, onReasoning?: 
       try { port.postMessage({ ping: 1 }) }
       catch { /* port 已死则等 onDisconnect */ }
     }, 3000)
-
-    // ★ MV3 SW 保活(Chrome 官方文档推荐模式):扩展 SW 30s 无「活动」会被休眠,而
-    // 流式 fetch 的 body 读取不算活动(Chromium 已知坑)→ 模型思考/排队期间 SW 被杀,
-    // 流死、port 断(日志停在 ← HTTP 200 即此;DevTools 开着会保活,所以开着控制台
-    // 反而"看起来正常")。页面每 20s 发一次 ping:入站消息重置 SW 空闲计时器,pong
-    // 回来同时给看门狗续命。
-    const kaKeepalive = setInterval(() => {
-      try { port.postMessage({ ping: 1 }) }
-      catch { finish({ text: acc, error: acc ? undefined : '保活 ping 失败(SW 已死)——请重试' }) }
-    }, 20_000)
 
     const onAlive = (v: any) => {
       clearTimeout(ackTimer)
@@ -253,14 +244,19 @@ const solutionCache = new Map<string, string[]>()
 
 /**
  * 取题解正文(前 limit 篇,官方/高赞优先),各截 maxLen 字符。
- * 未登录(401)/无题解/出错 → 空数组(备课回退模型自解)。
+ * 未登录(401)/无题解/出错/**挂起 15s** → 空数组(备课回退模型自解)。
+ * ⚠️ 必须带超时:fetchLentilleContext 是裸 fetch,题解页被 WAF/网络挂起时
+ * 若无超时会永远卡在连模型之前 —— 表现为「点了导师,SW 一个请求都没有」。
  */
 export async function fetchSolutionTexts(pid: string, limit = 3, maxLen = 4000): Promise<string[]> {
   if (solutionCache.has(pid))
     return solutionCache.get(pid)!
   let texts: string[] = []
   try {
-    const ctx = await fetchLentilleContext(`${location.origin}/problem/solution/${pid}`)
+    const ctx = await Promise.race([
+      fetchLentilleContext(`${location.origin}/problem/solution/${pid}`),
+      new Promise<null>(resolve => setTimeout(() => resolve(null), 15_000)),
+    ])
     const cd: any = (ctx as any)?.data || (ctx as any)?.currentData || {}
     const raw = cd.solutions?.result || cd.solutions || []
     const items = (Array.isArray(raw) ? raw : [])
@@ -280,37 +276,39 @@ export async function fetchSolutionTexts(pid: string, limit = 3, maxLen = 4000):
 // ============================================================
 // 备课
 // ============================================================
-const PREP_THINKING
-  = '\n\n开课备课:请先在内部完整推导、用样例手算验证、核对复杂度与数据范围,再输出备课稿。不要输出推导过程。'
+// ⚠️ 不再让模型「先内部完整推导再输出」:GLM 经中转思考时上游长时间(>420s)零输出,
+// 题解在手也没必要重新推理。直出、不思考。
 
-/** 备课结果:成功返回 TutorPlan,失败返回 {error}。 */
+/** 备课结果:成功返回 TutorPlan,失败返回 {error}。onPhase 报告当前阶段(solutions=抓题解 / model=问模型)。 */
 export async function runTutorPrep(
   pid: string,
   problemMarkdown: string,
-  hooks: { onChunk?: (acc: string) => void, onReasoning?: (acc: string) => void, onKa?: () => void } = {},
+  hooks: { onChunk?: (acc: string) => void, onReasoning?: (acc: string) => void, onKa?: () => void, onPhase?: (p: 'solutions' | 'model') => void } = {},
 ): Promise<TutorPlan | { error: string }> {
   const model = resolveAiModel(settings.value.aiTutor.modelId)
   if (!model || !model.modelName || !model.baseUrl)
     return { error: '请先在 设置 → AI → 思路导师模块 选择模型' }
 
+  hooks.onPhase?.('solutions')
   const solutions = await fetchSolutionTexts(pid)
+  hooks.onPhase?.('model')
   const sysBase = solutions.length
     ? [
         '你是一名算法竞赛教练,正在为一道真题「备课」。题解原文已提供(社区/官方,视为 ground truth)。',
-        '请通读题目与题解,消化成教学地图:',
+        '请直接消化题目与题解,整理成教学地图(不需要重新解题,立即开始写):',
         '1. 提炼题目本质与正解路线,核对复杂度与数据范围。',
         '2. 从题解中梳理「做法阶梯」:暴力 → 各优化阶段 → 正解,每档写清做法+复杂度。分数/子任务分布仅在题面明确给出时引用,禁止编造分数。',
         '3. 列出学生常见误区(想当然的地方)。',
         '4. 为每个阶段准备 1-2 条「指方向」级别提示语(不给答案的问句/方向)。',
-        '输出结构化 markdown 备课稿。',
+        '输出结构化 markdown 备课稿。不要内部推理,直接输出。',
       ].join('\n')
     : [
-        '你是一名算法竞赛教练,正在为一道真题「备课」。没有题解可参考,请先独立完整解出此题:',
-        '1. 认真解题:推导正解,验证复杂度是否满足数据范围,用样例手算验证。',
+        '你是一名算法竞赛教练,正在为一道真题「备课」。没有题解可参考,请基于你的知识直接整理:',
+        '1. 给出你认为的正解与复杂度,并对照数据范围判断是否可行。',
         '2. 梳理「做法阶梯」:暴力 → 各优化阶段 → 正解,每档写清做法+复杂度。分数/子任务分布仅在题面明确给出时引用,禁止编造分数。',
         '3. 列出学生常见误区(想当然的地方)。',
         '4. 为每个阶段准备 1-2 条「指方向」级别提示语(不给答案的问句/方向)。',
-        '推不出满足数据范围的解法时,如实写出你认为的最优解与复杂度,禁止编造。',
+        '不确定的地方如实标注,禁止编造。不要内部推理,直接输出。',
         '输出结构化 markdown 备课稿,开头标注「⚠️ 未参考题解,思路未经社区验证」。',
       ].join('\n')
 
@@ -321,7 +319,7 @@ export async function runTutorPrep(
   ].filter(Boolean).join('\n')
 
   const r = await streamChat(
-    buildPayload(model, [{ role: 'system', content: sysBase + PREP_THINKING }, { role: 'user', content: user }], 4096, 0.3),
+    buildPayload(model, [{ role: 'system', content: sysBase }, { role: 'user', content: user }], 4096, 0.3),
     acc => hooks.onChunk?.(acc),
     acc => hooks.onReasoning?.(acc),
     () => hooks.onKa?.(),

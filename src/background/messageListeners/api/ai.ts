@@ -31,6 +31,7 @@ function buildUrlAndBody(message: any): { url: string, body: any } {
     temperature = 0.2,
     stop = [],
     apiFormat = 'openai',
+    disableThinking = false,
   } = message
   const base = baseURL.replace(/\/+$/, '')
 
@@ -55,6 +56,10 @@ function buildUrlAndBody(message: any): { url: string, body: any } {
       body.system = sys
     if (temperature != null)
       body.temperature = temperature
+    // 关思考:GLM 等经中转思考时上游长时间零输出(>420s),导师默认直出。
+    // new-api 类中转会把它译成 enable_thinking=false。
+    if (disableThinking)
+      body.thinking = { type: 'disabled' }
     return { url, body }
   }
 
@@ -66,9 +71,15 @@ function buildUrlAndBody(message: any): { url: string, body: any } {
   if (isFim && /deepseek\.com/i.test(base) && !/\/beta$/i.test(base))
     fimBase = `${base.replace(/\/v1$/i, '')}/beta`
   const url = `${isFim ? fimBase : base}${isFim ? '/completions' : '/chat/completions'}`
-  const body = isFim
+  const body: any = isFim
     ? { model, prompt, suffix, max_tokens: maxTokens, temperature, stop, stream: true }
     : { model, messages, max_tokens: maxTokens, temperature, stop, stream: true }
+  // 关思考(chat only):GLM 惯例 thinking:{type:'disabled'},Qwen/new-api 惯例 enable_thinking:false。
+  // 两字段都带 —— 不认识的服务端按未知字段忽略,无副作用。
+  if (disableThinking && !isFim) {
+    body.thinking = { type: 'disabled' }
+    body.enable_thinking = false
+  }
   return { url, body }
 }
 
