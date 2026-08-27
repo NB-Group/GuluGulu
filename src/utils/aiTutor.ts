@@ -87,7 +87,7 @@ export function abortTutorStream() {
   tutorPort = null
 }
 
-function buildPayload(model: AiModel, messages: any[], maxTokens: number, temperature: number, disableThinking = true) {
+function buildPayload(model: AiModel, messages: any[], maxTokens: number, temperature: number, thinking: boolean) {
   return {
     mode: 'chat',
     // SW 的 enforceAiPolicy 守卫字段:导师属「纯文字引导」(guide 类,苏格拉底不代写整段代码);
@@ -98,9 +98,10 @@ function buildPayload(model: AiModel, messages: any[], maxTokens: number, temper
     apiKey: model.apiKey,
     model: model.modelName,
     apiFormat: model.apiFormat ?? 'openai',
-    // 关键:关思考。GLM 经中转思考时上游长时间零输出(实测 >420s),备课/授课都要默认直出。
-    // Anthropic 协议 → SW 译成 body.thinking={type:'disabled'}(new-api 类中转再译 enable_thinking=false)。
-    disableThinking,
+    // 思考开关(2026-08-27 恢复):早前「GLM 经中转思考 >420s 零输出」实为 SSE 行循环
+    // stale-nl 死循环吞流所致,已修,思考无罪。备课永远 true(深想验证),授课跟设置开关。
+    // SW 把 disableThinking 译成 anthropic body.thinking={type:'disabled'} / openai enable_thinking=false。
+    disableThinking: !thinking,
     messages,
     maxTokens,
     temperature,
@@ -358,20 +359,20 @@ export async function runTutorPrep(
   const sysBase = solutions.length
     ? [
         '你是一名算法竞赛教练,正在为一道真题「备课」。题解原文已提供(社区/官方,视为 ground truth)。',
-        '请直接消化题目与题解,整理成教学地图(不需要重新解题,立即开始写):',
+        '请先在内部消化题目与题解(核对复杂度与数据范围、用样例验证题解说法),再输出教学地图:',
         '1. 提炼题目本质与正解路线,核对复杂度与数据范围。',
         '2. 从题解中梳理「做法阶梯」:暴力 → 各优化阶段 → 正解,每档写清做法+复杂度。分数/子任务分布仅在题面明确给出时引用,禁止编造分数。',
         '3. 列出学生常见误区(想当然的地方)。',
         '4. 为每个阶段准备 1-2 条「指方向」级别提示语(不给答案的问句/方向)。',
-        '输出结构化 markdown 备课稿。不要内部推理,直接输出。',
+        '输出结构化 markdown 备课稿。内部推导不要输出,只输出备课稿。',
       ].join('\n')
     : [
-        '你是一名算法竞赛教练,正在为一道真题「备课」。没有题解可参考,请基于你的知识直接整理:',
-        '1. 给出你认为的正解与复杂度,并对照数据范围判断是否可行。',
+        '你是一名算法竞赛教练,正在为一道真题「备课」。没有题解可参考,请先独立解出此题:',
+        '1. 认真推导:给出你认为的正解与复杂度,对照数据范围判断是否可行,用样例手算验证。',
         '2. 梳理「做法阶梯」:暴力 → 各优化阶段 → 正解,每档写清做法+复杂度。分数/子任务分布仅在题面明确给出时引用,禁止编造分数。',
         '3. 列出学生常见误区(想当然的地方)。',
         '4. 为每个阶段准备 1-2 条「指方向」级别提示语(不给答案的问句/方向)。',
-        '不确定的地方如实标注,禁止编造。不要内部推理,直接输出。',
+        '推不出满足数据范围的解法时,如实写出你认为的最优解与复杂度,禁止编造。内部推导不要输出,只输出备课稿。',
         '输出结构化 markdown 备课稿,开头标注「⚠️ 未参考题解,思路未经社区验证」。',
       ].join('\n')
 
@@ -381,8 +382,9 @@ export async function runTutorPrep(
     '\n请输出备课稿。',
   ].filter(Boolean).join('\n')
 
+  // 备课永远深想(核对题解/自解验证),不受用户思考开关影响
   const r = await streamChatAuto(
-    { ...buildPayload(model, [{ role: 'system', content: sysBase }, { role: 'user', content: user }], 8192, 0.3) },
+    { ...buildPayload(model, [{ role: 'system', content: sysBase }, { role: 'user', content: user }], 8192, 0.3, true) },
     { onChunk: hooks.onChunk, onReasoning: hooks.onReasoning, onKa: hooks.onKa },
   )
   if (!r.text.trim())
@@ -459,7 +461,8 @@ export async function tutorRespond(
   })
 
   const r = await streamChatAuto(
-    { ...buildPayload(model, messages, settings.value.aiTutor.thinking ? 1600 : 800, 0.5) },
+    // 授课思考跟用户开关:思考开时预算放宽(推理模型把 token 花在 reasoning)
+    { ...buildPayload(model, messages, settings.value.aiTutor.thinking ? 3000 : 800, 0.5, settings.value.aiTutor.thinking) },
     { onChunk: hooks.onChunk, onReasoning: hooks.onReasoning, onKa: hooks.onKa },
     2,
   )
