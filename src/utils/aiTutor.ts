@@ -107,8 +107,8 @@ function buildPayload(model: AiModel, messages: any[], maxTokens: number, temper
   }
 }
 
-/** streamChat 的结果:text=累积正文;error 非空=失败原因(拿不到正文时据此报错,不再吞)。 */
-export interface StreamResult { text: string, error?: string }
+/** streamChat 的结果:text=累积正文;error 非空=失败原因;truncated 非空=流被掐断(max_tokens/连接硬剪),可续写。 */
+export interface StreamResult { text: string, error?: string, truncated?: string }
 
 /**
  * 发送一轮 chat(流式)。onChunk 收累积全文,onReasoning 收思考片段(思考模型)。
@@ -130,6 +130,7 @@ function streamChat(payload: any, onChunk: (acc: string) => void, onReasoning?: 
   let acc = ''
   let reasoningAcc = ''
   let firstSeen = false
+  let truncatedReason = ''
   return new Promise<StreamResult>((resolve) => {
     let settled = false
     const finish = (r: StreamResult) => {
@@ -148,7 +149,9 @@ function streamChat(payload: any, onChunk: (acc: string) => void, onReasoning?: 
     //  C. 正在输出中途 90s 静默 → 连接断,带已有部分收场。
     const bump = () => {
       clearTimeout(gotDataTimer)
-      gotDataTimer = setTimeout(() => finish({ text: acc, error: `流中途静默超时(90s)${acc ? '(已有部分输出)' : ''}` }), 90_000)
+      gotDataTimer = setTimeout(() => finish(acc
+        ? { text: acc, truncated: 'mid-silence-90s' } // 有部分输出:按掐断处理,上层自动续写
+        : { text: '', error: '流中途静默超时(90s)' }), 90_000)
     }
     let gotDataTimer = setTimeout(() => {
       // 阶段A:完全没启动 → 隧道挂,重试一次
@@ -203,6 +206,11 @@ function streamChat(payload: any, onChunk: (acc: string) => void, onReasoning?: 
         acc += m.chunk
         onChunk(acc)
       }
+      else if (m.truncated) {
+        // 中转/上游掐断标记(max_tokens / 连接硬剪):不是终点,标记后续写
+        tlog('S4 掐断标记:', m.truncated)
+        truncatedReason = String(m.truncated)
+      }
       else if (m.reasoning) {
         reasoningAcc += m.reasoning
         onReasoning?.(reasoningAcc)
@@ -215,7 +223,7 @@ function streamChat(payload: any, onChunk: (acc: string) => void, onReasoning?: 
       else if (m.done) {
         // 推理模型 content 可能为空:取 reasoning 末尾兜底
         const final = acc || reasoningAcc.trim().split('\n').filter(Boolean).slice(-3).join('\n')
-        finish({ text: final, error: final ? undefined : (reasoningAcc ? '模型只输出了思考、没有正文(尝试调大 maxTokens 或换模型)' : undefined) })
+        finish({ text: final, error: final ? undefined : (reasoningAcc ? '模型只输出了思考、没有正文(尝试调大 maxTokens 或换模型)' : undefined), truncated: truncatedReason || undefined })
       }
       else if (m.error) {
         console.warn('[guly-tutor] stream error', m.error)
@@ -264,6 +272,26 @@ function streamChat(payload: any, onChunk: (acc: string) => void, onReasoning?: 
     if (tutorPort === port)
       tutorPort = null
   }
+}
+
+/**
+ * 带自动续写的流:流被掐断(truncated)时,把已写内容作为 assistant 上下文发回去接着写,
+ * 最多续 maxRounds 轮,把中转/上游硬剪的响应缝合成完整全文(onChunk 收缝合后的全文)。
+ */
+async function streamChatAuto(payload: any, hooks: { onChunk?: (acc: string) => void, onReasoning?: (acc: string) => void, onKa?: () => void } = {}, maxRounds = 3): Promise<StreamResult> {
+  const messages: any[] = [...payload.messages]
+  let r = await streamChat({ ...payload, messages }, acc => hooks.onChunk?.(acc), hooks.onReasoning, hooks.onKa)
+  let text = r.text
+  let round = 0
+  while (r.truncated && text.trim() && round < maxRounds) {
+    round++
+    tlog(`流被掐断(${r.truncated}),自动续写第 ${round}/${maxRounds} 轮,已写 ${text.length} 字`)
+    messages.push({ role: 'assistant', content: text })
+    messages.push({ role: 'user', content: '继续。从你刚才停下的地方接着写,不要重复已写内容,直接续上。' })
+    r = await streamChat({ ...payload, messages }, acc => hooks.onChunk?.(text + acc), hooks.onReasoning, hooks.onKa)
+    text += r.text
+  }
+  return { text, error: r.error, truncated: r.truncated }
 }
 
 // ============================================================
@@ -353,17 +381,16 @@ export async function runTutorPrep(
     '\n请输出备课稿。',
   ].filter(Boolean).join('\n')
 
-  const r = await streamChat(
-    buildPayload(model, [{ role: 'system', content: sysBase }, { role: 'user', content: user }], 4096, 0.3),
-    acc => hooks.onChunk?.(acc),
-    acc => hooks.onReasoning?.(acc),
-    () => hooks.onKa?.(),
+  const r = await streamChatAuto(
+    { ...buildPayload(model, [{ role: 'system', content: sysBase }, { role: 'user', content: user }], 8192, 0.3) },
+    { onChunk: hooks.onChunk, onReasoning: hooks.onReasoning, onKa: hooks.onKa },
   )
   if (!r.text.trim())
     return { error: `备课失败:${r.error || '模型无返回(检查 BaseURL / Key / 模型名,或看 SW 控制台)'}` }
 
   const plan: TutorPlan = {
-    plan: r.text.trim(),
+    // 仍被掐断(续写 3 轮也没缝完):保留但显式标注,不假装完整
+    plan: (r.truncated ? `> ⚠️ 备课稿在 ${r.text.length} 字处被掐断(${r.truncated}),自动续写后仍不完整\n\n` : '') + r.text.trim(),
     source: solutions.length ? 'solutions' : 'self',
     ts: Date.now(),
     modelKey: `${model.baseUrl}|${model.modelName}`,
@@ -431,14 +458,13 @@ export async function tutorRespond(
     messages.push({ role: m.role, content: snap ? `${m.content}\n\n【我的当前代码】\n\`\`\`\n${snap}\n\`\`\`` : m.content })
   })
 
-  const r = await streamChat(
-    buildPayload(model, messages, settings.value.aiTutor.thinking ? 1600 : 800, 0.5),
-    acc => hooks.onChunk?.(acc),
-    acc => hooks.onReasoning?.(acc),
-    () => hooks.onKa?.(),
+  const r = await streamChatAuto(
+    { ...buildPayload(model, messages, settings.value.aiTutor.thinking ? 1600 : 800, 0.5) },
+    { onChunk: hooks.onChunk, onReasoning: hooks.onReasoning, onKa: hooks.onKa },
+    2,
   )
   if (r.text.trim()) {
-    saveTutorChat(pid, [...chat, { role: 'assistant', content: r.text.trim(), ts: Date.now() }])
+    saveTutorChat(pid, [...chat, { role: 'assistant', content: r.text.trim() + (r.truncated ? '\n\n*(此条被掐断,可能不完整)*' : ''), ts: Date.now() }])
     return r.text
   }
   // 失败:把真实原因作为本轮回复显示(不持久化错误,重试不残留)

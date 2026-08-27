@@ -274,10 +274,18 @@ async function streamOnce(port: any, reply: (m: any) => void, message: any) {
           console.log('[guly-ai SW] first body chunk arrived', value?.length, 'bytes · ct=', res.headers?.get?.('content-type'))
         }
         buf += decoder.decode(value, { stream: true })
-        let nl = buf.indexOf('\n')
-        while (nl >= 0) {
+        // ⚠️ 行循环必须用 for(;;)+break:continue 不能跳过「重扫换行下标」。
+        // 旧 while(nl>=0) 写法里 event:/注释行/空行的 continue 路径带着过期 nl 回到
+        // 条件判断 → buffer 切片错位 → 吞数据行 / 空 buf 死循环(anthropic 流每条
+        // data: 前都有 event: 行,必中;OpenAI 无 event: 行,从不触发 —— 故补全正常导师必死)。
+        for (;;) {
+          const nl = buf.indexOf('\n')
+          if (nl < 0)
+            break
           const line = buf.slice(0, nl).trim()
           buf = buf.slice(nl + 1)
+          if (!line)
+            continue
           if (line.startsWith(':')) { // SSE 注释行(: keepalive)
             ka()
             continue
@@ -310,7 +318,6 @@ async function streamOnce(port: any, reply: (m: any) => void, message: any) {
             }
           }
           catch { /* keep-alive / 非 JSON 行,忽略 */ }
-          nl = buf.indexOf('\n')
         }
       }
       reply({ done: true })
