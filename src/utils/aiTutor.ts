@@ -275,22 +275,55 @@ function streamChat(payload: any, onChunk: (acc: string) => void, onReasoning?: 
   }
 }
 
+/** 可重试错误:中转 5xx/429/无可用通道/upstream_error/网络超时 —— 指数退避重试,不换请求。 */
+function isRetryableError(err?: string): boolean {
+  if (!err)
+    return false
+  return /HTTP 5\d\d/.test(err)
+    || /HTTP 429/.test(err)
+    || /upstream_error|No available channel/i.test(err)
+    || /network|timeout|超时|连接中断/i.test(err)
+}
+
 /**
- * 带自动续写的流:流被掐断(truncated)时,把已写内容作为 assistant 上下文发回去接着写,
- * 最多续 maxRounds 轮,把中转/上游硬剪的响应缝合成完整全文(onChunk 收缝合后的全文)。
+ * 带自动恢复的流(备课/授课统一入口):
+ *  - 流被掐断(truncated)→ 把已写内容作为 assistant 上下文续写,≤maxRounds 轮缝合全文;
+ *  - 可重试错误(中转 503「No available channel」等)→ 指数退避 2s/4s/8s/16s 重试 ≤4 次
+ *    (尚无正文时同请求重发;已有正文则并入续写路径接着缝)。
+ * onChunk 全程收「已缝合的全文」。
  */
 async function streamChatAuto(payload: any, hooks: { onChunk?: (acc: string) => void, onReasoning?: (acc: string) => void, onKa?: () => void } = {}, maxRounds = 3): Promise<StreamResult> {
   const messages: any[] = [...payload.messages]
-  let r = await streamChat({ ...payload, messages }, acc => hooks.onChunk?.(acc), hooks.onReasoning, hooks.onKa)
+  const run = (prefix: string) =>
+    streamChat({ ...payload, messages }, acc => hooks.onChunk?.(prefix + acc), hooks.onReasoning, hooks.onKa)
+  let r = await run('')
   let text = r.text
   let round = 0
-  while (r.truncated && text.trim() && round < maxRounds) {
-    round++
-    tlog(`流被掐断(${r.truncated}),自动续写第 ${round}/${maxRounds} 轮,已写 ${text.length} 字`)
-    messages.push({ role: 'assistant', content: text })
-    messages.push({ role: 'user', content: '继续。从你刚才停下的地方接着写,不要重复已写内容,直接续上。' })
-    r = await streamChat({ ...payload, messages }, acc => hooks.onChunk?.(text + acc), hooks.onReasoning, hooks.onKa)
-    text += r.text
+  let attempt = 0
+  for (;;) {
+    if (!r.error && !r.truncated)
+      break // 干净完成
+    // ① 可重试错误且还没写过正文 → 指数退避后同请求重试
+    if (r.error && isRetryableError(r.error) && !text.trim() && attempt < 4) {
+      attempt++
+      const wait = Math.min(16_000, 2000 * 2 ** (attempt - 1))
+      tlog(`可重试错误(${String(r.error).slice(0, 90)}),退避 ${wait / 1000}s 后重试 ${attempt}/4`)
+      await new Promise(res => setTimeout(res, wait))
+      r = await run('')
+      text = r.text
+      continue
+    }
+    // ② 有部分正文(掐断/中途出错/重试后仍错)→ 续写缝合
+    if (text.trim() && round < maxRounds && (r.truncated || (r.error && isRetryableError(r.error)))) {
+      round++
+      tlog(`续写第 ${round}/${maxRounds} 轮(${r.truncated || String(r.error).slice(0, 60)}),已缝 ${text.length} 字`)
+      messages.push({ role: 'assistant', content: text })
+      messages.push({ role: 'user', content: '继续。从你刚才停下的地方接着写,不要重复已写内容,直接续上。' })
+      r = await run(text)
+      text += r.text
+      continue
+    }
+    break // 不可重试/超限 → 按现状返回
   }
   return { text, error: r.error, truncated: r.truncated }
 }
