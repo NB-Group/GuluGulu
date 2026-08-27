@@ -208,7 +208,7 @@ export function handleAiStreamPort(port: any) {
     console.log('[guly-ai SW] stream req received · apiFormat=', message?.apiFormat, '· mode=', message?.mode, '· intensity=', message?.intensity)
     reply({ ack: true, v: AI_PROTO_VERSION })
     try {
-      await streamOnce(reply, message, () => tutorRoute)
+      await streamOnce(port, reply, message)
     }
     catch (e: any) {
       const why = `${e?.message || e}\n${String(e?.stack || '').split('\n').slice(1, 3).join(' | ')}`
