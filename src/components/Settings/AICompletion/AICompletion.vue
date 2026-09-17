@@ -19,6 +19,8 @@ const replyTokenOptions = [
   { label: '3000 · 默认', value: 3000 },
   { label: '6000 · 宽裕', value: 6000 },
   { label: '12000 · 深思考模型', value: 12000 },
+  { label: '24000 · 超大', value: 24000 },
+  { label: '48000 · 拉满(吃多少给多少)', value: 48000 },
 ]
 
 // ---- 模型池 增/删/改 ----
