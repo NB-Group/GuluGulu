@@ -13,6 +13,14 @@ const activeModeOptions = computed(() => [
   { label: '思路指引 · 只给提示', value: 'guide' },
 ])
 
+// 授课每轮 max tokens 档位:思考开时 reasoning 也吃这份预算,太小会「只输出了思考、没有正文」
+const replyTokenOptions = [
+  { label: '800 · 精简(仅关思考时够用)', value: 800 },
+  { label: '3000 · 默认', value: 3000 },
+  { label: '6000 · 宽裕', value: 6000 },
+  { label: '12000 · 深思考模型', value: 12000 },
+]
+
 // ---- 模型池 增/删/改 ----
 const dialogVisible = ref(false)
 const editing = ref<AiModel | null>(null) // null=添加
@@ -158,6 +166,9 @@ function maskKey(k: string) {
       </SettingsItem>
       <SettingsItem title="思考模式" desc="授课轮次的深度思考开关;备课永远强制深想,不受此开关影响">
         <Radio v-model="settings.aiTutor.thinking" />
+      </SettingsItem>
+      <SettingsItem title="回复预算" desc="授课每轮的 max tokens。思考开启时模型推理也消耗这份预算,太小会报「只输出了思考、没有正文」">
+        <Select v-model="settings.aiTutor.replyTokens" :options="replyTokenOptions" w="full" />
       </SettingsItem>
     </SettingsItemGroup>
 

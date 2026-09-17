@@ -96,6 +96,8 @@ export interface AiGuideModule {
 export interface AiTutorModule {
   modelId: string | null
   thinking: boolean
+  /** 授课每轮 max tokens。思考开时 reasoning 也吃这份预算,太小会「只输出了思考、没有正文」 */
+  replyTokens: number
 }
 
 /** 「开始」看板 widget 的尺寸档:小=4 列 / 中=6 列 / 大=12 列(整行) */
@@ -163,7 +165,7 @@ export const originalSettings: Settings = {
   aiActiveMode: 'off',
   aiCompletion: { modelId: null, fim: true, thinking: false },
   aiGuide: { modelId: null, thinking: false },
-  aiTutor: { modelId: null, thinking: true },
+  aiTutor: { modelId: null, thinking: true, replyTokens: 3000 },
 }
 
 /** 旧单模型配置 → 新统一模型池的一次性迁移(幂等)。 */
@@ -212,7 +214,10 @@ migrateAiModels()
 ;(() => {
   const s = settings.value as any
   if (!s.aiTutor)
-    s.aiTutor = { modelId: s.aiGuide?.modelId ?? null, thinking: true }
+    s.aiTutor = { modelId: s.aiGuide?.modelId ?? null, thinking: true, replyTokens: 3000 }
+  // replyTokens 后补:老配置缺省回填
+  if (!s.aiTutor.replyTokens)
+    s.aiTutor.replyTokens = 3000
 })()
 
 /** 按 id 从模型池解析出完整模型配置(找不到返回 null)。供各 AI 模块在发请求前解析用。 */

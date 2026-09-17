@@ -495,8 +495,9 @@ export async function tutorRespond(
   })
 
   const r = await streamChatAuto(
-    // 授课思考跟用户开关:思考开时预算放宽(推理模型把 token 花在 reasoning)
-    { ...buildPayload(model, messages, settings.value.aiTutor.thinking ? 3000 : 800, 0.5, settings.value.aiTutor.thinking) },
+    // 回复预算客户端可调(设置 → 思路导师模块):思考开时 reasoning 也吃这份预算,
+    // 预算太小 → content 空 → 报「只输出了思考、没有正文」(绝不拿思考兜底上屏)
+    { ...buildPayload(model, messages, settings.value.aiTutor.replyTokens || 3000, 0.5, settings.value.aiTutor.thinking) },
     { onChunk: hooks.onChunk, onReasoning: hooks.onReasoning, onKa: hooks.onKa },
     2,
   )
