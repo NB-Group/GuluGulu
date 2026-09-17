@@ -222,9 +222,10 @@ function streamChat(payload: any, onChunk: (acc: string) => void, onReasoning?: 
         finish({ text: m.reason === 'contest' ? '比赛模式下导师休息 🛡️(防作弊守卫,赛后再来)' : `被 AI 守卫拦截(${m.reason})` })
       }
       else if (m.done) {
-        // 推理模型 content 可能为空:取 reasoning 末尾兜底
-        const final = acc || reasoningAcc.trim().split('\n').filter(Boolean).slice(-3).join('\n')
-        finish({ text: final, error: final ? undefined : (reasoningAcc ? '模型只输出了思考、没有正文(尝试调大 maxTokens 或换模型)' : undefined), truncated: truncatedReason || undefined })
+        // ⚠️ 思考内容绝不当正文兜底(2026-09-17 泄漏事故):导师的 reasoning 是教学策略
+        // 独白(「我先肯定他,再引导」),上屏=剧透;且一旦非空还会被 streamChatAuto 当
+        // 部分正文拿去续写缝合,越缝越漏。content 空 → 明确报错(多为思考耗尽 maxTokens)。
+        finish({ text: acc, error: acc ? undefined : (reasoningAcc ? '模型只输出了思考、没有正文(思考耗尽了 maxTokens,请调大预算或关闭思考)' : undefined), truncated: truncatedReason || undefined })
       }
       else if (m.error) {
         console.warn('[guly-tutor] stream error', m.error)
