@@ -12,13 +12,19 @@
  *    system 是顶层参数(从 messages 里拎出),流式事件 content_block_delta 的
  *    delta.text → chunk、delta.thinking → reasoning,message_stop → done。
  *
- * port 协议统一为 {chunk}/{reasoning}/{done}/{error},格式差异全部在本层消化。
+ * port 协议统一为 {chunk}/{reasoning}/{done}/{error}/{truncated}/{toolCalls},格式差异全部在本层消化。
+ *  - {truncated:'max_tokens'}:OpenAI finish_reason==='length' / Anthropic stop_reason==='max_tokens',
+ *    上层据此走续写缝合(此前 SW 从不发这个消息,m.truncated 是死代码,本次补上)。
+ *  - {toolCalls:[{id,name,argsJson}]}:流式 tool_calls 归一(SseToolCallTracker),永远先于 {done}。
+ *    工具本体由内容脚本在本地 dispatch,SW 只透传 tools 数组并翻译格式。
  */
 import browser from 'webextension-polyfill'
+
 import { enforceAiPolicy } from './ai.policy'
+import { SseToolCallTracker } from './aiTools'
 
 /** port 协议版本:内容脚本(aiTutor.ts 有同名常量)据此检测「SW 是旧构建」并提示重载。改协议时 +1。 */
-const AI_PROTO_VERSION = 2
+const AI_PROTO_VERSION = 3
 
 function buildUrlAndBody(message: any): { url: string, body: any } {
   const {
@@ -33,6 +39,7 @@ function buildUrlAndBody(message: any): { url: string, body: any } {
     stop = [],
     apiFormat = 'openai',
     disableThinking = false,
+    tools = [],
   } = message
   const base = baseURL.replace(/\/+$/, '')
 
@@ -46,7 +53,9 @@ function buildUrlAndBody(message: any): { url: string, body: any } {
       .map((m: any) => String(m.content ?? ''))
       .filter(Boolean)
       .join('\n\n')
-    const rest = messages.filter((m: any) => m?.role !== 'system')
+    // 内容脚本统一发 OpenAI 形状的工具轮消息(assistant.tool_calls / role:'tool'),
+    // Anthropic 格式在这里翻译:tool_use 块 / user+tool_result 块,并折叠连续同 role。
+    const rest = toAnthropicMessages(messages.filter((m: any) => m?.role !== 'system'))
     const body: any = {
       model,
       messages: rest,
@@ -61,6 +70,13 @@ function buildUrlAndBody(message: any): { url: string, body: any } {
     // new-api 类中转会把它译成 enable_thinking=false。
     if (disableThinking)
       body.thinking = { type: 'disabled' }
+    if (tools.length) {
+      body.tools = tools.map((t: any) => ({
+        name: t?.function?.name,
+        description: t?.function?.description,
+        input_schema: t?.function?.parameters ?? { type: 'object', properties: {} },
+      }))
+    }
     return { url, body }
   }
 
@@ -81,7 +97,52 @@ function buildUrlAndBody(message: any): { url: string, body: any } {
     body.thinking = { type: 'disabled' }
     body.enable_thinking = false
   }
+  // 工具(chat only,原生 tool calling;schema 走 body 不进 system prompt)
+  if (tools.length && !isFim) {
+    body.tools = tools
+    body.tool_choice = 'auto'
+  }
   return { url, body }
+}
+
+/**
+ * OpenAI 形状 → Anthropic Messages 形状(工具轮翻译 + role 折叠):
+ *  - assistant + tool_calls → content:[已有文本?, tool_use...] (arguments JSON.parse → input,失败 {})
+ *  - role:'tool'            → { role:'user', content:[{type:'tool_result', tool_use_id, content}] }
+ *  - 折叠连续同 role(content 数组合并):并行 tool_result、续写轮的「继续」user 都需要
+ *    (部分 Anthropic 版本校验 user/assistant 严格交替)。
+ */
+function toAnthropicMessages(messages: any[]): any[] {
+  const out: any[] = []
+  const push = (role: string, content: any[]) => {
+    const last = out[out.length - 1]
+    if (last && last.role === role && Array.isArray(last.content))
+      last.content.push(...content) // 折叠连续同 role
+    else
+      out.push({ role, content })
+  }
+  for (const m of messages) {
+    if (m?.role === 'tool') {
+      push('user', [{ type: 'tool_result', tool_use_id: String(m.tool_call_id || ''), content: String(m.content ?? '') }])
+      continue
+    }
+    if (m?.role === 'assistant' && Array.isArray(m.tool_calls) && m.tool_calls.length) {
+      const blocks: any[] = []
+      const text = String(m.content ?? '').trim()
+      if (text)
+        blocks.push({ type: 'text', text })
+      for (const tc of m.tool_calls) {
+        let input: any = {}
+        try { input = JSON.parse(tc?.function?.arguments || '{}') }
+        catch { /* 截断的 arguments → 空 input,内容脚本会给 tool_result 报错让模型重调 */ }
+        blocks.push({ type: 'tool_use', id: String(tc?.id || ''), name: String(tc?.function?.name || ''), input })
+      }
+      push('assistant', blocks)
+      continue
+    }
+    push(String(m?.role || 'user'), [{ type: 'text', text: String(m.content ?? '') }])
+  }
+  return out
 }
 
 function authHeaders(apiKey: string, apiFormat = 'openai') {
@@ -138,8 +199,8 @@ const API_AI = {
   },
 }
 
-/** 单条 SSE data JSON → 归一化 {chunk?}/{reasoning?}/{done?}/{error?},两格式通用。(导出供单测) */
-export function sseJsonToPortMessage(j: any, isFim: boolean, apiFormat: string): { chunk?: string, reasoning?: string, done?: boolean, error?: string } | null {
+/** 单条 SSE data JSON → 归一化 {chunk?}/{reasoning?}/{done?}/{error?}/{truncated?},两格式通用。(导出供单测) */
+export function sseJsonToPortMessage(j: any, isFim: boolean, apiFormat: string): { chunk?: string, reasoning?: string, done?: boolean, error?: string, truncated?: string } | null {
   if (apiFormat === 'anthropic') {
     const t = j?.type
     if (t === 'content_block_delta') {
@@ -147,6 +208,11 @@ export function sseJsonToPortMessage(j: any, isFim: boolean, apiFormat: string):
         return { chunk: j.delta.text }
       if (j?.delta?.thinking)
         return { reasoning: j.delta.thinking }
+      return null
+    }
+    if (t === 'message_delta') {
+      if (j?.delta?.stop_reason === 'max_tokens')
+        return { truncated: 'max_tokens' }
       return null
     }
     if (t === 'message_stop')
@@ -166,6 +232,8 @@ export function sseJsonToPortMessage(j: any, isFim: boolean, apiFormat: string):
     return { chunk }
   if (reasoning)
     return { reasoning }
+  if (ch?.finish_reason === 'length')
+    return { truncated: 'max_tokens' }
   return null
 }
 
@@ -254,6 +322,15 @@ async function streamOnce(port: any, reply: (m: any) => void, message: any) {
       let lastKa = 0
       let lineCount = 0
       let chunkCount = 0
+      // 流式 tool_calls 累积(协议 v3):归一后一次性 {toolCalls} 回传,内容脚本本地 dispatch
+      const tracker = new SseToolCallTracker(apiFormat)
+      const flushTools = () => {
+        const calls = tracker.flush()
+        if (calls.length) {
+          console.log('[guly-ai SW] tool calls completed:', calls.map(c => c.name).join(','))
+          reply({ toolCalls: calls }) // ⚠️ 永远先于 {done:true} 发出,内容脚本靠 done 触发工具轮
+        }
+      }
       const ka = () => {
         // 保活信号透传(≥5s 节流):HTTP 200 后模型可能思考/排队很久才吐首 token,
         // 中转靠 : keepalive / ping 维持连接;内容脚本据此给看门狗续命,区分「模型慢」与「连接挂」
@@ -300,15 +377,20 @@ async function streamOnce(port: any, reply: (m: any) => void, message: any) {
             console.log('[guly-ai SW] SSE line', lineCount, ':', data.slice(0, 140))
           if (data === '[DONE]') { // OpenAI 结束哨兵
             console.log('[guly-ai SW] [DONE] · 共', lineCount, '行')
+            flushTools()
             reply({ done: true })
             return
           }
           try {
-            const m = sseJsonToPortMessage(JSON.parse(data), isFim, apiFormat)
+            const j = JSON.parse(data)
+            tracker.feed(j)
+            const m = sseJsonToPortMessage(j, isFim, apiFormat)
             if (m) {
               chunkCount++
               if (m.error)
                 console.warn('[guly-ai SW] SSE error event:', m.error)
+              if (m.done)
+                flushTools() // anthropic message_stop:工具调用先于 done 回传
               reply(m)
               if (m.done)
                 return
@@ -320,6 +402,8 @@ async function streamOnce(port: any, reply: (m: any) => void, message: any) {
           catch { /* keep-alive / 非 JSON 行,忽略 */ }
         }
       }
+      // body 流自然结束(无 [DONE]/message_stop):同样先 flush 工具再收场
+      flushTools()
       reply({ done: true })
     }
     catch (e: any) {
