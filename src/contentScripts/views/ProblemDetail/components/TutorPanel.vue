@@ -6,15 +6,25 @@
  * UI 气泡模式抄 Messages.vue;Teleport 到 app 根避开页内 transform 祖先(同 Dialog/Select)。
  */
 import { onKeyStroke } from '@vueuse/core'
+
 import { useGuluApp } from '~/composables/useAppProvider'
 import { settings } from '~/logic'
-import { parseMarkdownContent } from '~/utils/markdown'
-import { renderIcon } from '~/utils/icons'
-import {
-  clearTutorChat, consumeTutorAc, loadTutorChat, loadTutorPlan, runTutorPrep,
-  saveTutorChat, tutorRespond, abortTutorStream, tlog,
-} from '~/utils/aiTutor'
 import type { TutorMsg, TutorPlan } from '~/utils/aiTutor'
+import {
+  abortTutorStream,
+  clearTutorChat,
+  consumeTutorAc,
+  loadTutorChat,
+  loadTutorPlan,
+  runTutorPrep,
+  saveTutorChat,
+  tlog,
+  tutorRespond,
+} from '~/utils/aiTutor'
+import { renderIcon } from '~/utils/icons'
+import { parseMarkdownContent } from '~/utils/markdown'
+import type { MemoryEntry, MemoryKind } from '~/utils/tutorMemory'
+import { clearTutorMemory, loadTutorMemory, removeTutorMemory } from '~/utils/tutorMemory'
 
 const props = defineProps<{
   problemId: string
@@ -49,6 +59,33 @@ const turnElapsed = ref(0)
 const prepPhase = ref<'solutions' | 'model'>('solutions')
 
 const modelReady = computed(() => !!settings.value.aiTutor.modelId)
+
+// ---- 导师的印象(长期记忆查看/删除;照 showPlan 折叠模式) ----
+const showMem = ref(false)
+const memEntries = ref<MemoryEntry[]>([])
+const MEM_KIND_LABELS: Record<MemoryKind, string> = { 'weak-point': '易错点', 'style': '偏好', 'progress': '进度', 'fact': '其它' }
+const memGroups = computed(() => {
+  const groups: { kind: MemoryKind, label: string, items: MemoryEntry[] }[] = []
+  for (const kind of Object.keys(MEM_KIND_LABELS) as MemoryKind[]) {
+    const items = memEntries.value.filter(e => e.kind === kind).sort((a, b) => b.ts - a.ts)
+    if (items.length)
+      groups.push({ kind, label: MEM_KIND_LABELS[kind], items })
+  }
+  return groups
+})
+const memoryOn = computed(() => settings.value.aiTutor.memory !== false)
+function refreshMem() { memEntries.value = loadTutorMemory() }
+function toggleMem() {
+  showMem.value = !showMem.value
+  if (showMem.value)
+    refreshMem()
+}
+function delMem(id: string) { memEntries.value = removeTutorMemory(id) }
+function wipeMem() {
+  clearTutorMemory()
+  memEntries.value = []
+}
+refreshMem() // 挂载即取,角标计数正确
 
 function fmtChars(n: number): string {
   return n >= 1000 ? `${(n / 1000).toFixed(1)}k` : String(n)
@@ -168,6 +205,7 @@ async function send(preset?: string) {
     streamShown.value = ''
     streamThinking.value = false
     stopTyper()
+    refreshMem() // 本轮工具调用可能写了记忆,「导师的印象」即时更新
   }
 }
 
@@ -222,10 +260,15 @@ onMounted(() => {
   const hasAc = consumeTutorAc(props.problemId)
   prep()
   if (hasAc) {
-    if (plan.value)
+    if (plan.value) {
       send('(我刚 AC 了这题!🎉)')
-    else
-      watch(plan, (p) => { if (p) send('(我刚 AC 了这题!🎉)') })
+    }
+    else {
+      watch(plan, (p) => {
+        if (p)
+          send('(我刚 AC 了这题!🎉)')
+      })
+    }
   }
 })
 
@@ -267,7 +310,7 @@ const prepStatus = computed(() => {
       >
         <!-- 头部 -->
         <header flex="~ items-center gap-2" p="x-4 t-4 b-3" border="b-1 $bew-border-color" shrink-0>
-          <span v-html="renderIcon('mingcute:compass-line', 18)" style="display:contents;color:var(--bew-theme-color)" />
+          <span style="display:contents;color:var(--bew-theme-color)" v-html="renderIcon('mingcute:compass-line', 18)" />
           <span fw-700 style="font-size:var(--bew-base-font-size)">思路导师</span>
           <span flex-1 />
           <button
@@ -304,11 +347,53 @@ const prepStatus = computed(() => {
           <button
             v-if="plan" border="none" bg="transparent" cursor-pointer text="xs $bew-text-3 hover:$bew-theme-color"
             style="white-space:nowrap" @click="showPlan = !showPlan"
-          >{{ showPlan ? '收起备课稿' : '偷看备课稿 ⚠️剧透' }}</button>
+          >
+            {{ showPlan ? '收起备课稿' : '偷看备课稿 ⚠️剧透' }}
+          </button>
+          <button
+            v-if="memoryOn" border="none" bg="transparent" cursor-pointer text="xs $bew-text-3 hover:$bew-theme-color"
+            style="white-space:nowrap" @click="toggleMem"
+          >
+            {{ showMem ? '收起印象' : `导师的印象${memEntries.length ? ` (${memEntries.length})` : ''}` }}
+          </button>
         </div>
-        <div v-if="showPlan && plan" px-4 py-2 shrink-0 max-h-200px overflow-y-auto border="b-1 $bew-border-color" text="xs $bew-text-2" class="tutor-plan-preview">
+        <div
+          v-if="showPlan && plan" px-4 py-2 shrink-0 max-h-200px
+          overflow-y-auto border="b-1 $bew-border-color" text="xs $bew-text-2" class="tutor-plan-preview"
+        >
           <!-- eslint-disable-next-line vue/no-v-html -->
           <span v-html="parseMarkdownContent(plan.plan)" />
+        </div>
+        <!-- 导师的印象:长期记忆查看/删除(学生可纠正记错的条目) -->
+        <div
+          v-if="showMem && memoryOn" px-4 py-2 shrink-0 max-h-220px
+          overflow-y-auto border="b-1 $bew-border-color" text="xs $bew-text-2"
+        >
+          <template v-if="memGroups.length">
+            <div v-for="g in memGroups" :key="g.kind" mb-2>
+              <div text="xs $bew-text-3" mb-1>
+                [{{ g.label }}]
+              </div>
+              <div v-for="e in g.items" :key="e.id" flex="~ items-center gap-1" py-0.5>
+                <span flex-1>{{ e.text }}<span v-if="e.pid" text="$bew-text-3">({{ e.pid }})</span></span>
+                <button
+                  title="删除这条记忆" border="none" bg="transparent" cursor-pointer
+                  text="xs $bew-text-3 hover:$bew-error-color" p-1 @click="delMem(e.id)"
+                >
+                  <span style="display:contents" v-html="renderIcon('mingcute:close-line', 12)" />
+                </button>
+              </div>
+            </div>
+            <button
+              border="none" bg="transparent" cursor-pointer text="xs $bew-text-3 hover:$bew-error-color"
+              @click="wipeMem"
+            >
+              清空全部记忆
+            </button>
+          </template>
+          <div v-else text="$bew-text-3" py-2>
+            还没有印象 —— 导师会在对话中发现你的稳定模式(易错点/偏好/进度)并记下来
+          </div>
         </div>
 
         <!-- 消息区 -->
@@ -320,7 +405,9 @@ const prepStatus = computed(() => {
             v-for="(m, i) in msgs" :key="i" flex="~" mb-2
             :style="{ justifyContent: m.role === 'user' ? 'flex-end' : 'flex-start' }"
           >
-            <div v-if="m.role === 'user'" class="tb tb-mine">{{ m.content }}</div>
+            <div v-if="m.role === 'user'" class="tb tb-mine">
+              {{ m.content }}
+            </div>
             <div v-else class="tb tb-tutor markdown-body">
               <!-- eslint-disable-next-line vue/no-v-html -->
               <span v-html="parseMarkdownContent(m.content)" />
@@ -371,8 +458,15 @@ const prepStatus = computed(() => {
 <style lang="scss" scoped>
 .tutor-panel :deep(.markdown-body) {
   font-size: var(--bew-base-font-size);
-  p { margin: 0 0 .4em; &:last-child { margin-bottom: 0; } }
-  pre { max-width: 100%; }
+  p {
+    margin: 0 0 0.4em;
+    &:last-child {
+      margin-bottom: 0;
+    }
+  }
+  pre {
+    max-width: 100%;
+  }
 }
 .tb {
   max-width: 86%;
@@ -394,7 +488,9 @@ const prepStatus = computed(() => {
   border-bottom-left-radius: 4px;
   white-space: normal;
 }
-.tutor-plan-preview :deep(p) { margin: 0 0 .3em; }
+.tutor-plan-preview :deep(p) {
+  margin: 0 0 0.3em;
+}
 /* 备课错误:允许换行看全服务器返回的原因(而非单行截断) */
 .tutor-prep-error {
   white-space: pre-wrap;
@@ -406,7 +502,9 @@ const prepStatus = computed(() => {
 
 .tutor-slide-enter-active,
 .tutor-slide-leave-active {
-  transition: transform var(--bew-dur-cozy) var(--bew-ease), opacity var(--bew-dur-cozy) ease;
+  transition:
+    transform var(--bew-dur-cozy) var(--bew-ease),
+    opacity var(--bew-dur-cozy) ease;
 }
 .tutor-slide-enter-from,
 .tutor-slide-leave-to {

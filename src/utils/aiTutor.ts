@@ -16,12 +16,16 @@
  *   gulu:tutor-ac:{pid}    AC 待庆祝标记(useProblemSubmit 落,TutorPanel 消费)
  */
 import browser from 'webextension-polyfill'
-import { resolveAiModel, settings } from '~/logic'
+
 import type { AiModel } from '~/logic'
+import { resolveAiModel, settings } from '~/logic'
+
 import { fetchLentilleContext } from './luogu-api'
+import type { MemoryKind } from './tutorMemory'
+import { addTutorMemory, loadTutorMemory, renderMemorySection } from './tutorMemory'
 
 /** port 协议版本(与 background/messageListeners/api/ai.ts 的 AI_PROTO_VERSION 同步,改协议时两边 +1)。 */
-const AI_PROTO_VERSION = 2
+const AI_PROTO_VERSION = 3
 
 /** 密集调试日志(毫秒时间戳 + 步骤号)。排查「点了没反应」:页面控制台看 [guly-tutor] 停在哪一步。 */
 let __seq = 0
@@ -58,13 +62,16 @@ export function loadTutorChat(pid: string): TutorMsg[] {
   catch { return [] }
 }
 export function saveTutorChat(pid: string, msgs: TutorMsg[]) {
-  try { localStorage.setItem(chatKey(pid), JSON.stringify({ messages: msgs.slice(-80) })) } catch { /* ignore */ }
+  try { localStorage.setItem(chatKey(pid), JSON.stringify({ messages: msgs.slice(-80) })) }
+  catch { /* ignore */ }
 }
 export function clearTutorChat(pid: string) {
-  try { localStorage.removeItem(chatKey(pid)) } catch { /* ignore */ }
+  try { localStorage.removeItem(chatKey(pid)) }
+  catch { /* ignore */ }
 }
 export function markTutorAc(pid: string) {
-  try { localStorage.setItem(acKey(pid), '1') } catch { /* ignore */ }
+  try { localStorage.setItem(acKey(pid), '1') }
+  catch { /* ignore */ }
 }
 export function consumeTutorAc(pid: string): boolean {
   try {
@@ -108,8 +115,11 @@ function buildPayload(model: AiModel, messages: any[], maxTokens: number, temper
   }
 }
 
-/** streamChat 的结果:text=累积正文;error 非空=失败原因;truncated 非空=流被掐断(max_tokens/连接硬剪),可续写。 */
-export interface StreamResult { text: string, error?: string, truncated?: string }
+/** streamChat 的结果:text=累积正文;error 非空=失败原因;truncated 非空=流被掐断(max_tokens/连接硬剪),可续写;toolCalls=本轮的模型工具调用(协议 v3)。 */
+export interface StreamResult { text: string, error?: string, truncated?: string, toolCalls?: TutorToolCall[] }
+
+/** SW 归一后的工具调用(argsJson 为原始参数字符串,可能被截断)。 */
+export interface TutorToolCall { id: string, name: string, argsJson: string }
 
 /**
  * 发送一轮 chat(流式)。onChunk 收累积全文,onReasoning 收思考片段(思考模型)。
@@ -132,6 +142,7 @@ function streamChat(payload: any, onChunk: (acc: string) => void, onReasoning?: 
   let reasoningAcc = ''
   let firstSeen = false
   let truncatedReason = ''
+  const pendingToolCalls: TutorToolCall[] = []
   return new Promise<StreamResult>((resolve) => {
     let settled = false
     const finish = (r: StreamResult) => {
@@ -216,12 +227,21 @@ function streamChat(payload: any, onChunk: (acc: string) => void, onReasoning?: 
         reasoningAcc += m.reasoning
         onReasoning?.(reasoningAcc)
       }
+      else if (m.toolCalls) {
+        // SW flush 的完整工具调用(先于 done 到达);dispatch 在上层工具循环做
+        pendingToolCalls.push(...m.toolCalls)
+      }
       else if (m.blocked) {
         // SW 的 enforceAiPolicy 拦截(比赛模式全禁等)。注意须在 done 之前判:
         // SW 的 blocked 消息同时带 done:true。
         finish({ text: m.reason === 'contest' ? '比赛模式下导师休息 🛡️(防作弊守卫,赛后再来)' : `被 AI 守卫拦截(${m.reason})` })
       }
       else if (m.done) {
+        // 有工具调用的轮次正文本就常为空(模型想完直接调工具)→ 带着工具收场,不算失败
+        if (pendingToolCalls.length) {
+          finish({ text: acc, toolCalls: pendingToolCalls, truncated: truncatedReason || undefined })
+          return
+        }
         // ⚠️ 思考内容绝不当正文兜底(2026-09-17 泄漏事故):导师的 reasoning 是教学策略
         // 独白(「我先肯定他,再引导」),上屏=剧透;且一旦非空还会被 streamChatAuto 当
         // 部分正文拿去续写缝合,越缝越漏。content 空 → 明确报错(多为思考耗尽 maxTokens)。
@@ -288,12 +308,15 @@ function isRetryableError(err?: string): boolean {
 
 /**
  * 带自动恢复的流(备课/授课统一入口):
- *  - 流被掐断(truncated)→ 把已写内容作为 assistant 上下文续写,≤maxRounds 轮缝合全文;
+ *  - 模型发起工具调用(payload.tools 非空时)→ 本地 dispatch(memory_write/read 等),
+ *    回显 assistant(tool_calls)+tool 消息重开流,同一回合内 ≤maxToolRounds 轮;
+ *  - 流被掐断(truncated)→ 把已写内容作为 assistant 上下文续写,≤maxRounds 轮缝合全文
+ *    (带工具调用的截断不走续写:让模型收到 dispatch 报错后用更短参数重调);
  *  - 可重试错误(中转 503「No available channel」等)→ 指数退避 2s/4s/8s/16s 重试 ≤4 次
  *    (尚无正文时同请求重发;已有正文则并入续写路径接着缝)。
  * onChunk 全程收「已缝合的全文」。
  */
-async function streamChatAuto(payload: any, hooks: { onChunk?: (acc: string) => void, onReasoning?: (acc: string) => void, onKa?: () => void } = {}, maxRounds = 3): Promise<StreamResult> {
+async function streamChatAuto(payload: any, hooks: { onChunk?: (acc: string) => void, onReasoning?: (acc: string) => void, onKa?: () => void } = {}, maxRounds = 3, pid = ''): Promise<StreamResult> {
   const messages: any[] = [...payload.messages]
   const run = (prefix: string) =>
     streamChat({ ...payload, messages }, acc => hooks.onChunk?.(prefix + acc), hooks.onReasoning, hooks.onKa)
@@ -301,7 +324,32 @@ async function streamChatAuto(payload: any, hooks: { onChunk?: (acc: string) => 
   let text = r.text
   let round = 0
   let attempt = 0
+  let toolRound = 0
+  const MAX_TOOL_ROUNDS = 3
   for (;;) {
+    // ⓪ 干净完成且模型调了工具 → 本地执行,回显工具轮消息,同回合重开流
+    if (!r.error && r.toolCalls?.length) {
+      if (toolRound >= MAX_TOOL_ROUNDS) {
+        tlog(`工具轮超限(${MAX_TOOL_ROUNDS}),中止工具循环`)
+        break
+      }
+      toolRound++
+      messages.push({
+        role: 'assistant',
+        content: text || null, // 工具轮正文常为空;GLM/DeepSeek 接受 null,严格中转不认则改 ''
+        tool_calls: r.toolCalls.map(c => ({
+          id: c.id,
+          type: 'function',
+          function: { name: c.name, arguments: c.argsJson || '{}' },
+        })),
+      })
+      for (const c of r.toolCalls)
+        messages.push({ role: 'tool', tool_call_id: c.id, content: dispatchTutorTool(pid, c) })
+      tlog(`工具轮 ${toolRound}/${MAX_TOOL_ROUNDS}:`, r.toolCalls.map(c => c.name).join(','))
+      r = await run(text) // 前缀=工具轮前的正文,缝合无缝
+      text += r.text
+      continue
+    }
     if (!r.error && !r.truncated)
       break // 干净完成
     // ① 可重试错误且还没写过正文 → 指数退避后同请求重试
@@ -314,8 +362,8 @@ async function streamChatAuto(payload: any, hooks: { onChunk?: (acc: string) => 
       text = r.text
       continue
     }
-    // ② 有部分正文(掐断/中途出错/重试后仍错)→ 续写缝合
-    if (text.trim() && round < maxRounds && (r.truncated || (r.error && isRetryableError(r.error)))) {
+    // ② 有部分正文(掐断/中途出错/重试后仍错)→ 续写缝合(工具调用流除外,见上注)
+    if (text.trim() && !r.toolCalls?.length && round < maxRounds && (r.truncated || (r.error && isRetryableError(r.error)))) {
       round++
       tlog(`续写第 ${round}/${maxRounds} 轮(${r.truncated || String(r.error).slice(0, 60)}),已缝 ${text.length} 字`)
       messages.push({ role: 'assistant', content: text })
@@ -438,25 +486,86 @@ export async function runTutorPrep(
 // ============================================================
 // 授课
 // ============================================================
-const TUTOR_PERSONA = (plan: string) => [
-  '你是一道算法题的「思路导师」,苏格拉底式渐进引导,绝不直接给完整解法。像同学一样自然讨论。',
-  '',
-  '【备课稿】(你已备好课,以下是你的教学地图,必须以此为准,不得编造)',
-  plan,
-  '',
-  '【教学协议】',
-  '1. 阶梯递进:暴力→部分分→正解。每轮只给「指方向」级提示(如「考虑X的深层含义」「此时Y还适用吗」),不给答案。',
-  '2. 学生连续2轮卡住或明确说「下一层/再多点」才升一级。',
-  '3. 以问题回应问题,逼学生自己完成关键突破;学生说出好想法立即肯定。',
-  '4. 学生思路超出备课稿时诚实评估,不确定就说「这超出我的备课范围」,不懂装懂。',
-  '5. 可以认错:「你说得对,我之前那个说法有问题」。',
-  '6. 中文,简洁(一般≤120字/轮),可用 666/妙 等自然反应。',
-  '7. 学生报喜 AC 时真诚庆祝。',
-  '8. 学生坚持要看正解:先确认,给后要求他复述关键一步。',
-].join('\n')
+function TUTOR_PERSONA(plan: string, memorySection?: string) {
+  return [
+    '你是一道算法题的「思路导师」,苏格拉底式渐进引导,绝不直接给完整解法。像同学一样自然讨论。',
+    '',
+    '【备课稿】(你已备好课,以下是你的教学地图,必须以此为准,不得编造)',
+    plan,
+    ...(memorySection != null
+      ? ['', '【学生档案】(你对这名学生的长期记忆,跨题累积;据此因材施教,仅供你参考,不要原样念给学生听)', memorySection]
+      : []),
+    '',
+    '【教学协议】',
+    '1. 阶梯递进:暴力→部分分→正解。每轮只给「指方向」级提示(如「考虑X的深层含义」「此时Y还适用吗」),不给答案。',
+    '2. 学生连续2轮卡住或明确说「下一层/再多点」才升一级。',
+    '3. 以问题回应问题,逼学生自己完成关键突破;学生说出好想法立即肯定。',
+    '4. 学生思路超出备课稿时诚实评估,不确定就说「这超出我的备课范围」,不懂装懂。',
+    '5. 可以认错:「你说得对,我之前那个说法有问题」。',
+    '6. 中文,简洁(一般≤120字/轮),可用 666/妙 等自然反应。',
+    '7. 学生报喜 AC 时真诚庆祝。',
+    '8. 学生坚持要看正解:先确认,给后要求他复述关键一步。',
+    ...(memorySection != null
+      ? ['9. 记忆:发现学生的稳定模式(反复易错点/表达偏好/已掌握的进度)时用 memory_write 记下,写入前可 memory_read 查重;不要记一次性细节(某行代码、某次笔误),档案里已有的不重复记。记录是后台动作,不要跟学生念叨「我记下了」。']
+      : []),
+  ].join('\n')
+}
 
 const TURN_THINKING
   = '\n\nTHINKING MODE ON: 回应前先在内部对照备课稿核对事实(复杂度/做法是否记错),再输出简短回应。不要输出推理过程。'
+
+// ============================================================
+// 记忆工具(原生 tool calling:schema 只走请求体 tools,绝不写进 system prompt)
+// ============================================================
+const TUTOR_TOOLS = [{
+  type: 'function',
+  function: {
+    name: 'memory_write',
+    description: '把关于学生的稳定观察写入长期记忆。只记跨题目仍然成立的模式(反复易错点/表达偏好/已掌握的进度/明确事实),不要记一次性细节(某行代码、某次笔误)。写入前可先 memory_read 查重。',
+    parameters: {
+      type: 'object',
+      properties: {
+        kind: { type: 'string', enum: ['weak-point', 'style', 'progress', 'fact'], description: 'weak-point=易错点 style=学习偏好 progress=进度事实 fact=其它稳定事实' },
+        text: { type: 'string', description: '一句话记忆内容,≤80字' },
+        pid: { type: 'string', description: '相关题号(可选)' },
+      },
+      required: ['kind', 'text'],
+    },
+  },
+}, {
+  type: 'function',
+  function: {
+    name: 'memory_read',
+    description: '读取当前学生记忆列表(kind/text/题号),用于写入前查重或回顾。',
+    parameters: { type: 'object', properties: {} },
+  },
+}] as const
+
+const MEMORY_KINDS = ['weak-point', 'style', 'progress', 'fact']
+
+/** 本地执行一个工具调用,返回给模型的 tool 消息内容(字符串;错误也走这里让模型自愈)。 */
+function dispatchTutorTool(pid: string, c: TutorToolCall): string {
+  try {
+    if (c.name === 'memory_write') {
+      const a = JSON.parse(c.argsJson || '{}')
+      const kind: MemoryKind = MEMORY_KINDS.includes(a.kind) ? a.kind : 'fact'
+      const text = String(a.text || '').trim().slice(0, 120)
+      if (!text)
+        return '错误:text 为空,未写入'
+      addTutorMemory(kind, text, typeof a.pid === 'string' && a.pid ? a.pid : pid)
+      return 'ok,已记录'
+    }
+    if (c.name === 'memory_read') {
+      const list = loadTutorMemory()
+      return list.length ? JSON.stringify(list.map(e => ({ kind: e.kind, text: e.text, pid: e.pid }))) : '(记忆为空)'
+    }
+    return `错误:未知工具 ${c.name}`
+  }
+  catch (e: any) {
+    // 多为 max_tokens 掐断 arguments → JSON 解析失败:让模型换更短的 text 重调
+    return `错误:参数解析失败(${String(e?.message || e).slice(0, 80)}),请重新调用(可缩短 text)`
+  }
+}
 
 /** 学生代码快照:太长只留尾部(写到哪里比从哪开始重要)。 */
 function codeSnapshot(code: string, maxLen = 3000): string {
@@ -485,7 +594,10 @@ export async function tutorRespond(
   if (!plan)
     return '备课稿还没好,稍等我一下(或点「重新备课」)。'
 
-  const sys = TUTOR_PERSONA(plan.plan) + (settings.value.aiTutor.thinking ? TURN_THINKING : '')
+  // 记忆开 → 注入【学生档案】+ 挂工具(schema 走请求体,不进 prompt);关 → 与从前完全一致
+  const memoryOn = settings.value.aiTutor.memory !== false
+  const memSection = memoryOn ? renderMemorySection(loadTutorMemory()) : undefined
+  const sys = TUTOR_PERSONA(plan.plan, memSection) + (settings.value.aiTutor.thinking ? TURN_THINKING : '')
   // 请求侧消息:历史照传;最后一条 user 附当前代码快照(不落盘,免得聊天记录膨胀)
   const messages: any[] = [{ role: 'system', content: sys }]
   chat.forEach((m, i) => {
@@ -497,9 +609,13 @@ export async function tutorRespond(
   const r = await streamChatAuto(
     // 回复预算客户端可调(设置 → 思路导师模块):思考开时 reasoning 也吃这份预算,
     // 预算太小 → content 空 → 报「只输出了思考、没有正文」(绝不拿思考兜底上屏)
-    { ...buildPayload(model, messages, settings.value.aiTutor.replyTokens || 3000, 0.5, settings.value.aiTutor.thinking) },
+    {
+      ...buildPayload(model, messages, settings.value.aiTutor.replyTokens || 3000, 0.5, settings.value.aiTutor.thinking),
+      ...(memoryOn ? { tools: TUTOR_TOOLS } : {}), // 原生 tool calling:工具循环在 streamChatAuto
+    },
     { onChunk: hooks.onChunk, onReasoning: hooks.onReasoning, onKa: hooks.onKa },
     2,
+    pid, // 工具 dispatch 记忆时关联当前题
   )
   if (r.text.trim()) {
     saveTutorChat(pid, [...chat, { role: 'assistant', content: r.text.trim() + (r.truncated ? '\n\n*(此条被掐断,可能不完整)*' : ''), ts: Date.now() }])
