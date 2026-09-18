@@ -25,7 +25,7 @@ export interface Settings {
   topBarAutoHide: boolean
   showTopBarThemeColorGradient: boolean
   searchBarMode: 'currentTab' | 'newTab'
-	  dockMessageBadge: boolean
+  dockMessageBadge: boolean
 
   // Wallpaper / background
   wallpaper: string
@@ -98,6 +98,8 @@ export interface AiTutorModule {
   thinking: boolean
   /** 授课每轮 max tokens。思考开时 reasoning 也吃这份预算,太小会「只输出了思考、没有正文」 */
   replyTokens: number
+  /** 导师长期记忆(跨题学生画像,模型经 memory_write 工具自己维护,存本地) */
+  memory: boolean
 }
 
 /** 「开始」看板 widget 的尺寸档:小=4 列 / 中=6 列 / 大=12 列(整行) */
@@ -165,7 +167,7 @@ export const originalSettings: Settings = {
   aiActiveMode: 'off',
   aiCompletion: { modelId: null, fim: true, thinking: false },
   aiGuide: { modelId: null, thinking: false },
-  aiTutor: { modelId: null, thinking: true, replyTokens: 3000 },
+  aiTutor: { modelId: null, thinking: true, replyTokens: 3000, memory: true },
 }
 
 /** 旧单模型配置 → 新统一模型池的一次性迁移(幂等)。 */
@@ -214,10 +216,12 @@ migrateAiModels()
 ;(() => {
   const s = settings.value as any
   if (!s.aiTutor)
-    s.aiTutor = { modelId: s.aiGuide?.modelId ?? null, thinking: true, replyTokens: 3000 }
-  // replyTokens 后补:老配置缺省回填
+    s.aiTutor = { modelId: s.aiGuide?.modelId ?? null, thinking: true, replyTokens: 3000, memory: true }
+  // replyTokens / memory 后补:老配置缺省回填
   if (!s.aiTutor.replyTokens)
     s.aiTutor.replyTokens = 3000
+  if (s.aiTutor.memory === undefined)
+    s.aiTutor.memory = true
 })()
 
 /** 按 id 从模型池解析出完整模型配置(找不到返回 null)。供各 AI 模块在发请求前解析用。 */

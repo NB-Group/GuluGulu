@@ -1,10 +1,11 @@
 <script lang="ts" setup>
-import { settings } from '~/logic'
 import type { AiModel } from '~/logic'
+import { settings } from '~/logic'
+
 import SettingsItem from '../components/SettingsItem.vue'
 import SettingsItemGroup from '../components/SettingsItemGroup.vue'
-import ModelSelect from './ModelSelect.vue'
 import ModelEditDialog from './ModelEditDialog.vue'
+import ModelSelect from './ModelSelect.vue'
 
 const activeModeOptions = computed(() => [
   { label: '关闭', value: 'off' },
@@ -31,7 +32,8 @@ function openEdit(m: AiModel) { editing.value = m; dialogVisible.value = true }
 function onConfirm(p: { id?: string, name: string, baseUrl: string, apiKey: string, modelName: string, apiFormat: 'openai' | 'anthropic' }) {
   if (p.id) {
     const m = settings.value.aiModels.find(x => x.id === p.id)
-    if (m) Object.assign(m, { name: p.name, baseUrl: p.baseUrl, apiKey: p.apiKey, modelName: p.modelName, apiFormat: p.apiFormat })
+    if (m)
+      Object.assign(m, { name: p.name, baseUrl: p.baseUrl, apiKey: p.apiKey, modelName: p.modelName, apiFormat: p.apiFormat })
   }
   else {
     const id = (globalThis.crypto?.randomUUID?.() || `m_${Date.now()}_${Math.random().toString(36).slice(2)}`)
@@ -69,10 +71,10 @@ async function testModel(m: AiModel) {
     })
     resultMap.value[m.id] = r && r.ok
       ? '✓ 连接成功'
-      : '✗ ' + (r?.error || `状态 ${r?.status}` || '失败')
+      : `✗ ${r?.error || `状态 ${r?.status}` || '失败'}`
   }
   catch (e: any) {
-    resultMap.value[m.id] = '✗ ' + (e?.message || '失败')
+    resultMap.value[m.id] = `✗ ${e?.message || '失败'}`
   }
   testingId.value = null
 }
@@ -171,6 +173,9 @@ function maskKey(k: string) {
       </SettingsItem>
       <SettingsItem title="回复预算" desc="授课每轮的 max tokens。思考开启时模型推理也消耗这份预算,太小会报「只输出了思考、没有正文」">
         <Select v-model="settings.aiTutor.replyTokens" :options="replyTokenOptions" w="full" />
+      </SettingsItem>
+      <SettingsItem title="导师记忆" desc="导师通过工具调用把对你的稳定观察(易错点/偏好/进度)写入本地长期记忆,跨题生效。可在导师面板「导师的印象」中查看/删除">
+        <Radio v-model="settings.aiTutor.memory" />
       </SettingsItem>
     </SettingsItemGroup>
 

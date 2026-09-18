@@ -1,9 +1,11 @@
-import { ref, type Ref } from 'vue'
-import { AppPage } from '~/enums/appEnums'
+import { type Ref, ref } from 'vue'
+
 import { useGuluApp } from '~/composables/useAppProvider'
-import type { LuoguLanguage } from '~/utils/luogu-api'
-import { RECORD_STATUS_MAP, pollRecordVerdict, submitCode } from '~/utils/luogu-api'
+import { AppPage } from '~/enums/appEnums'
 import { markTutorAc } from '~/utils/aiTutor'
+import type { LuoguLanguage } from '~/utils/luogu-api'
+import { pollRecordVerdict, RECORD_STATUS_MAP, submitCode } from '~/utils/luogu-api'
+import { addTutorMemory } from '~/utils/tutorMemory'
 
 /**
  * 题目提交:提交态 / 验证码 / 提交历史 / 我的提交记录。
@@ -89,8 +91,11 @@ export function useProblemSubmit(opts: {
       navigateTo(AppPage.Record, `${location.origin}/record/${result.rid}?from=submit`)
       // 思路导师 AC 庆祝:后台轮询测评结果,AC 则落标记;下次打开导师面板自动报喜
       pollRecordVerdict(result.rid).then((v) => {
-        if (v.verdict === 'AC')
+        if (v.verdict === 'AC') {
           markTutorAc(problemId.value)
+          // 确定性进度记忆(不经模型,upsert 按 kind+text 去重,重复 AC 幂等)
+          addTutorMemory('progress', `已 AC ${problemId.value}`, problemId.value)
+        }
       }).catch(() => { /* 不影响提交流程 */ })
       return
     }
@@ -129,8 +134,20 @@ export function useProblemSubmit(opts: {
   }
 
   return {
-    submitting, submitError, submitResult, lastRid, submitHistory,
-    captchaSrc, captchaCode, loadCaptcha, handleSubmit, resetSubmit,
-    myRecordsVisible, myRecords, myRecordsLoading, recStatus, toggleMyRecords,
+    submitting,
+    submitError,
+    submitResult,
+    lastRid,
+    submitHistory,
+    captchaSrc,
+    captchaCode,
+    loadCaptcha,
+    handleSubmit,
+    resetSubmit,
+    myRecordsVisible,
+    myRecords,
+    myRecordsLoading,
+    recStatus,
+    toggleMyRecords,
   }
 }
