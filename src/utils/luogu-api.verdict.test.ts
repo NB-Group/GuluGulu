@@ -27,6 +27,10 @@ describe('derivedRecordStatus', () => {
   it('CE: compileResult 有 message 无 judge(success 缺失)→ 10', () => {
     expect(derivedRecordStatus(mkRecord({ compileResult: { message: 'err' } }))).toBe(10)
   })
+  it('假CE回归: compileResult.success=true + message(编译警告)且无 judgeResult → undefined 继续轮询', () => {
+    // 2026-09-19 事故:编译成功带警告、judgeResult 未生成的窗口期曾被判 CE 并停轮询,实际是 AC
+    expect(derivedRecordStatus(mkRecord({ status: 2, compileResult: { success: true, message: '[Warning] xxx' } }))).toBeUndefined()
+  })
   it('AC: 全部 case status=12 → 12', () => {
     expect(derivedRecordStatus(mkRecord({ status: 2, cases: [12, 12, 12] }))).toBe(12)
   })

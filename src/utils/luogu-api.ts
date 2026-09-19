@@ -401,8 +401,11 @@ export function derivedRecordStatus(record: any): number | undefined {
     return undefined
   if (d.compileResult?.success === false)
     return 10
-  // CE 有时 compileResult.success 不是 false(undefined),但有编译输出且无评测结果 → 也是 CE
-  if (d.compileResult && !d.judgeResult && d.compileResult.message)
+  // CE 有时 compileResult.success 不是 false(undefined),但有编译输出且无评测结果 → 也是 CE。
+  // ⚠️ 但 success===true 时 message 也可能非空(编译器警告)——那是「编译成功、judgeResult
+  // 还没生成」的窗口期(2026-09-19 假CE事故:实际 AC 的记录被判成 CE 且轮询提前停止),
+  // 必须返回 undefined 让轮询继续等 judgeResult。
+  if (d.compileResult && d.compileResult.success !== true && !d.judgeResult && d.compileResult.message)
     return 10
   const jr = d.judgeResult
   if (!jr)
